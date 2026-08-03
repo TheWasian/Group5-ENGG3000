@@ -1,0 +1,9 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "Display_Graphic") (type "Legacy") (uri "${KIPRJMOD}/lib/symbols/Display_Graphic.lib") (options "") (descr ""))
+	(lib (name "DM-OLED096-636") (type "KiCad") (uri "${KIPRJMOD}/DM-OLED096-636/DM-OLED096-636.kicad_sym") (options "") (descr ""))
+	(lib (name "TF-01A") (type "KiCad") (uri "${KIPRJMOD}/lib/symbols/TF-01A.kicad_sym") (options "") (descr ""))
+	(lib (name "JLCPCB_Logic_ICs") (type "KiCad") (uri "${KIPRJMOD}/library/JLCPCB_Logic_ICs.kicad_sym") (options "") (descr ""))
+	(lib (name "JLCPCB_Switches") (type "KiCad") (uri "${KIPRJMOD}/library/JLCPCB_Switches.kicad_sym") (options "") (descr ""))
+	(lib (name "JLCPCB_Power_Management_ICs") (type "KiCad") (uri "${KIPRJMOD}/library/JLCPCB_Power_Management_ICs.kicad_sym") (options "") (descr ""))
+)

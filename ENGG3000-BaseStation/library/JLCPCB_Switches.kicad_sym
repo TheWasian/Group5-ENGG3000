@@ -1,0 +1,155 @@
+(kicad_symbol_lib
+  (version 20211014)
+  (generator https://github.com/uPesy/easyeda2kicad.py)
+
+    (symbol "TS-1187A-B-A-B"
+    (in_bom yes)
+    (on_board yes)
+    (property
+      "Reference"
+      "SW"
+      
+      (at 0 7.62 0)
+      (effects (font (size 1.27 1.27) ) )
+    )
+    (property
+      "Value"
+      "TS-1187A-B-A-B"
+      
+      (at 0 -10.16 0)
+      (effects (font (size 1.27 1.27) ) )
+    )
+    (property
+      "Footprint"
+      "JLCPCB_Switches:SW-SMD_4P-L5.1-W5.1-P3.70-LS6.5-TL_H1.5"
+      
+      (at 0 -12.70 0)
+      (effects (font (size 1.27 1.27) ) hide)
+    )
+    (property
+      "Datasheet"
+      "https://lcsc.com/product-detail/Tactile-Switches_XKB-Enterprise-TS-1187-B-A-A_C318884.html"
+      
+      (at 0 -15.24 0)
+      (effects (font (size 1.27 1.27) ) hide)
+    )
+    (property
+      "Manufacturer"
+      "XKB Connection(中国星坤)"
+      
+      (at 0 -17.78 0)
+      (effects (font (size 1.27 1.27) ) hide)
+    )
+    (property
+      "MPN"
+      "TS-1187A-B-A-B"
+      
+      (at 0 -20.32 0)
+      (effects (font (size 1.27 1.27) ) hide)
+    )
+    (property
+      "LCSC Part"
+      "C318884"
+      
+      (at 0 -22.86 0)
+      (effects (font (size 1.27 1.27) ) hide)
+    )
+    (property
+      "ki_keywords"
+      "Tactile Switches"
+      
+      (at 0 -25.40 0)
+      (effects (font (size 1.27 1.27) ) hide)
+    )
+    (symbol "TS-1187A-B-A-B_0_1"
+      (circle
+        (center 0.00 0.51)
+        (radius 0.32)
+        (stroke (width 0) (type default))
+        (fill (type none))
+      )
+      (circle
+        (center 0.00 -2.79)
+        (radius 0.32)
+        (stroke (width 0) (type default))
+        (fill (type none))
+      )
+      (polyline
+        (pts
+          (xy -2.54 -5.08) (xy 2.54 -5.08)
+        )
+        (stroke (width 0) (type default))
+        (fill (type none))
+      )
+      (polyline
+        (pts
+          (xy -2.54 2.54) (xy 2.54 2.54)
+        )
+        (stroke (width 0) (type default))
+        (fill (type none))
+      )
+      (polyline
+        (pts
+          (xy 0.00 0.76) (xy 0.00 2.54)
+        )
+        (stroke (width 0) (type default))
+        (fill (type none))
+      )
+      (polyline
+        (pts
+          (xy 0.00 -3.30) (xy 0.00 -5.08)
+        )
+        (stroke (width 0) (type default))
+        (fill (type none))
+      )
+      (polyline
+        (pts
+          (xy -0.51 0.76) (xy -1.27 -2.54)
+        )
+        (stroke (width 0) (type default))
+        (fill (type none))
+      )
+      (pin unspecified line
+        (at 5.08 2.54 180)
+        (length 2.54)
+        (name "B" (effects (font (size 1.27 1.27))))
+        (number "2" (effects (font (size 1.27 1.27))))
+      )
+      (pin unspecified line
+        (at -5.08 2.54 0)
+        (length 2.54)
+        (name "A" (effects (font (size 1.27 1.27))))
+        (number "1" (effects (font (size 1.27 1.27))))
+      )
+      (pin unspecified line
+        (at 5.08 -5.08 180)
+        (length 2.54)
+        (name "D" (effects (font (size 1.27 1.27))))
+        (number "4" (effects (font (size 1.27 1.27))))
+      )
+      (pin unspecified line
+        (at -5.08 -5.08 0)
+        (length 2.54)
+        (name "C" (effects (font (size 1.27 1.27))))
+        (number "3" (effects (font (size 1.27 1.27))))
+      )
+    )
+    (property "Description" "-30℃~+85℃ 1.5mm 1.6N 100,000 cycles 12V 5.1mm 5.1mm 50mA Gold No Round Button SPST Surface Mount,Vertical Without Bracket" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Mounting Style" "Brick nogging" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Operating Temperature" "-30℃~+85℃" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Contact Current" "50mA" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Switch Width" "5.1mm" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Actuator Style" "Round Button" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Switch Height" "1.5mm" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Circuit" "SPST" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Strike Gundam" "NO" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Mechanical Life" "100000 Times" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Actuator/Cap Color" "Golden" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Operating Force" "160gf" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "With Lamp" "No" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Insulation Resistance" "-" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Voltage Rating (DC)" "12V" (effects (font (size 1.27 1.27)) (hide yes)))
+    (property "Switch Length" "5.1mm" (effects (font (size 1.27 1.27)) (hide yes)))
+  )
+
+)
