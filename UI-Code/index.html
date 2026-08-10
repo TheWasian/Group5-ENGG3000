@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h2>Score: <span id="score">0</span></h2>
+    <p>Level: <span id="level">1</span> &nbsp;|&nbsp; Time: <span id="timer">60</span>s</p>
+    <button id="start-btn">Start</button>
+    <div id="grid">
+        <div class="hole"></div>
+        <div class="hole"></div>
+        <div class="hole"></div> 
+        <div class="hole"></div>
+        <div class="hole"></div>
+        <div class="hole"></div>
+        <div class="hole"></div>
+        <div class="hole"></div>
+        <div class="hole"></div>
+    </div>
+
+<div id="win-screen" class="overlay hidden">
+    <div class="modal">
+        <h2>You Win!</h2>
+        <button class="restart-btn" onclick="startGame()">Play Again</button>
+    </div>
+</div>
+
+<div id="lose-screen" class="overlay hidden">
+    <div class="modal">
+        <h2>Game Over!</h2>
+        <button class="restart-btn" onclick="startGame()">Try Again</button>
+    </div>
+</div>
+
+<script src="backend/gameLogic.js"></script>
+</body>
+
+</html>
+
