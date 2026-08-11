@@ -1,0 +1,77 @@
+# Group 5: University Engineering Scrum
+
+## Project Overview
+
+Project name: Whack a Moll (ultra sensor game)
+
+Course: Eng3000
+
+Supervisor: Yue
+
+Attendance (Present / Absent)
+
+| Name                    | Student ID | Discipline | Team Roles (this week) | Attendance<br><br>(P / A) |
+| ----------------------- | ---------- | ---------- | ---------------------- | ------------------------- |
+| Alleluya Hamisi (Alley) | 48455032   | SE         | Minutes Taker          | p                         |
+| Matthew Thompson        | 48234559   | SE         | Scrum Master           | p                         |
+| Fouad Ayoub             | 48421650   | SE         | Engineer               | p                         |
+| Cammilus John Baptist   | 48322288   | EE         | Engineer               | p                         |
+| Shreenidhi Arunachalam  | 48552453   | SE         | Engineer               | P                         |
+
+## Scrum Board
+
+![Week 1: Github Scrum](images/scrumweek1.png)   
+
+## Sprint Backlog
+
+<div class="joplin-table-wrapper"><table><tbody><tr><th><p>Task ID</p></th><th><p>No. Subtasks</p></th><th><p>Project Status</p></th><th><p>Issues / Solution</p></th><th><p>Assignee</p></th></tr><tr><td><p>Code GUI</p></td><td><p>3</p></td><td><p>2 subtasks in progress</p></td><td><ul><li>Conceptual plan reconfigured due to change in project outline</li><li>Resolved by creating a MVP approach to front end design (skeleton level design), reducing the risk of fixating into a specific format</li></ul></td><td><p>Fouad</p><p>[girl name]</p></td></tr><tr><td><p>Program ESP32 Access Point</p></td><td><p>2</p></td><td><p>1 sub task in progress</p></td><td><ul><li>Discovering ESP32 limitations (range &amp; inconsistency), project scope changes and budget constraints.</li><li>Wireless requirements and latency concerns introduced</li><li>Pivoted to a PCB and wireless system design, while finalising c as the primary language.</li></ul></td><td><p>Matthew</p></td></tr><tr><td><p>Game logic (Backend)</p></td><td><p>6</p></td><td><p>2 sub tasks in progress</p></td><td><ul><li>Introducing latency and complexity concerns in relation to the revising project scope outlined by our client.</li><li>Pivoted to a streamlined Api approach to integrate HTML,CSS &amp; JavaScript. May also require more system and unit testing to reduce latency.</li></ul></td><td><p>Alley</p></td></tr><tr><td><p>Electrical Design &amp; Proto Typing</p></td><td><p>3</p></td><td><p>1 sub task in progress</p></td><td><ul><li>Initial electrical design didn't fully meet client requirements and due to a more refined client overview and requirement will require a rework.</li><li>Upon refining client needs a PCB design has been perceived as the best alternative for wireless compared to ESP32. Although this may increase budget concerns.</li></ul></td><td><p>[EE team members name]</p></td></tr></tbody></table></div>
+
+## Sprint Actions (This week)
+
+| Sub Task ID                     | Main Task                        | Estimation (days) | Assignee      |
+| ------------------------------- | -------------------------------- | ----------------- | ------------- |
+| Add basic scoreboard system     | Code GUI                         | 7                 | Fouad         |
+| Add lose/win screen             | Code GUI                         | 7                 | Fouad         |
+| GUI levels + GUI rewards        | Code GUI                         | 7                 | \[Girl name\] |
+| Scoring /Scoreboard (Backend)   | Game logic (Backend)             | 7                 | Alley         |
+| Mole Generation Logic (Backend) | Game logic (Backend)             | 7                 | Alley         |
+| Create basic Access point       | Program ESP32 Access Point       | 7                 | Matthew       |
+| Redesign PCB layout             | Electrical Design & Proto Typing | 7 - 10            | \[EE name\]   |
+
+## Weekly Scrum
+
+Date | Yesterday | Today | Blockers | Cross-team dependency
+
+## Meeting Notes
+
+- The customer wants us to make the game components wireless
+- The customer wants to only use 2 boxes at the minimum and an infinite amount if needed but they want to remain within the \$100 budget
+  - The budget only works for 3 boxes at best
+  - The boxes need to be 10cm apart at minimum
+  - The boxes need to have triangulation (mathematical formula for complexity)
+  - To remain in budget, we will need to laser print boxes to reduce cost
+  - Boxes must be on the floor but can be raised a bit (still ironing out these requirements with the client)
+- The customer wants us to only have a 1m x 1.5m radius of scanning for the ultra-sonics
+  - Ultra sonics has a reduced radius on no reflective material i.e cloths (may require us to give players a foil armor plate
+  - Ultra sonics cost \$5 each
+  - Ultra sonics have a short wide view may require us to put multiple to reduce blind spots
+- Some of our team know HTML, CSS and JS better then C++ resulting in us using an application approach with an API stream to reduce the need of coding directly on the PCB but using the PC as both the home for the game logic and Access point.
+- The initial MVP is not expected to be perfect just need to have some form of functionality even if it isn't all integrating but works independently from one another.
+
+## Testing
+
+- Software need to do some unit testing to ensure that section works (backend logic testing the code is applicable)
+- Access point needs to be tested to ensure at least 1 device is connected
+- PCB design can't be tested until built but it can be reviewed by supervisor to ensure it is applicable for the clients requirements prior to contracting (reduce the risk of building the wrong PCB that doesn't meet client needs)
+- GUI doesn't need to be unit tested but might require external review to ensure it is easy for a user to understand the UI and the game objective
+
+## Sprint Review
+
+- Everyone is expected to have something prior to the Tuesday workshop
+- We will be reviewing the UI code to ensure at least some components have been designed and is ready to code or has at least a skeleton or sketch out of the potential code
+- The PCB isn't expected to be complete, but a sketch or potential design is expected to be drafted
+- The Access point isn't expected to be complete since the ESP32 currently doesn't have an antenna, but the skeleton of the code is expected to be ready for our prototype PCB to be able to use in the coming fortnight workshop
+
+## Sprint Retrospective
+
+We had a proactive and in-depth debrief of all the events that occurred in the workshop and outlined some tasks and expectoration each member will be needing to do and some potential methods of contact if someone requires assistance or information from our other members.
