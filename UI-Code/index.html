@@ -6,7 +6,7 @@
     <title>Whack-A-Mole</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -23,12 +23,20 @@
             <span>LEVEL</span>
             <strong id="level">1</strong>
         </div>
+        <div class="info-box">
+            <span>TIME</span>
+            <strong id="timer">60</strong>
+        </div>
+        <div class="info-box">
+            <span>LIVES</span>
+            <strong id="lives">3</strong>
+        </div>
     </div>
 
     <div class="progress-container">
         <div id="progress-bar"></div>
     </div>
-    <p id="progress-text">0 / 10</p>
+    <p id="progress-text">0 / 500 (Level 2)</p>
 
     <div id="rewards">
         <div id="bronze-reward" class="reward locked">
@@ -89,8 +97,18 @@
 
     <button id="start-button" onclick="startGame()">START GAME</button>
 
+    <div id="win-screen" class="screen hidden">
+        <h2>You Won!</h2>
+        <p>Congratulations! You reached 2000 points!</p>
+    </div>
+
+    <div id="lose-screen" class="screen hidden">
+        <h2>Game Over!</h2>
+        <p>Time's up! Better luck next time!</p>
+    </div>
+
 </div>
 
-<script src="script.js"></script>
+<script src="./backend/gameLogic.js"></script>
 </body>
 </html>
