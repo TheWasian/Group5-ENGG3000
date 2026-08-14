@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whack-A-Mole</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="game-container">
+
+    <h1>Whack-A-Mole</h1>
+
+    <div class="game-info">
+        <div class="info-box">
+            <span>SCORE</span>
+            <strong id="score">0</strong>
+        </div>
+        <div class="info-box">
+            <span>LEVEL</span>
+            <strong id="level">1</strong>
+        </div>
+    </div>
+
+    <div class="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <p id="progress-text">0 / 10</p>
+
+    <div id="rewards">
+        <div id="bronze-reward" class="reward locked">
+            
+            <span>Bronze (10 pts)</span>
+        </div>
+        <div id="silver-reward" class="reward locked">
+            
+            <span>Silver (25 pts)</span>
+        </div>
+        <div id="gold-reward" class="reward locked">
+            
+            <span>Gold (50 pts)</span>
+        </div>
+    </div>
+
+    <div id="game-area">
+
+        <div class="hole" data-hole="0">
+            <div class="mound"></div>
+            <div class="dirt"></div>
+            <div class="mole"></div>
+        </div>
+
+        <div class="hole" data-hole="1">
+            <div class="mound"></div>
+            <div class="dirt"></div>
+            <div class="mole"></div>
+        </div>
+
+        <div class="hole" data-hole="2">
+            <div class="mound"></div>
+            <div class="dirt"></div>
+            <div class="mole"></div>
+        </div>
+
+        <div class="hole" data-hole="3">
+            <div class="mound"></div>
+            <div class="dirt"></div>
+            <div class="mole"></div>
+        </div>
+
+        <div class="hole" data-hole="4">
+            <div class="mound"></div>
+            <div class="dirt"></div>
+            <div class="mole"></div>
+        </div>
+
+        <div class="hole" data-hole="5">
+            <div class="mound"></div>
+            <div class="dirt"></div>
+            <div class="mole"></div>
+        </div>
+
+    </div>
+
+    <p id="status-message">Press start to begin, then click the mole when it pops up.</p>
+
+    <button id="start-button" onclick="startGame()">START GAME</button>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

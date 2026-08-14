@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Robotic_Arm_Control">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/ENGG3000-BaseStation/production/Robotic_Arm_Control.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

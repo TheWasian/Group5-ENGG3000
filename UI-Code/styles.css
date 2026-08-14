@@ -1,0 +1,233 @@
+body {
+    font-family: 'Baloo 2', cursive;
+    background: linear-gradient(#7ec8e3 0%, #a8ddf0 40%, #cdeaa0 41%, #8fc45b 100%);
+    color: #3a2a1a;
+    text-align: center;
+    min-height: 100vh;
+    margin: 0;
+    padding-bottom: 40px;
+}
+
+.game-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+h1 {
+    font-size: 46px;
+    font-weight: 800;
+    color: #ffffff;
+    -webkit-text-stroke: 2px #6b3f1d;
+    text-shadow: 3px 4px 0 #6b3f1d;
+    margin-bottom: 20px;
+}
+
+.game-info {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.info-box {
+    background: #fff8e6;
+    padding: 12px 28px;
+    border-radius: 16px;
+    border: 4px solid #6b3f1d;
+    box-shadow: 0 5px 0 #4a2c14;
+}
+
+.info-box span {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: #a05a2c;
+    letter-spacing: 1px;
+}
+
+.info-box strong {
+    display: block;
+    font-size: 32px;
+    color: #6b3f1d;
+}
+
+.progress-container {
+    width: 380px;
+    max-width: 90%;
+    height: 22px;
+    background: #fff8e6;
+    border-radius: 12px;
+    margin: 22px auto 0;
+    border: 3px solid #6b3f1d;
+    overflow: hidden;
+}
+
+#progress-bar {
+    width: 0%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        45deg,
+        #ffd23f, #ffd23f 10px,
+        #ffb703 10px, #ffb703 20px
+    );
+    transition: width 0.4s ease;
+}
+
+#progress-text {
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+#rewards {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 28px;
+}
+
+.reward {
+    padding: 14px;
+    font-size: 30px;
+    background: #fff8e6;
+    border-radius: 16px;
+    border: 3px solid #6b3f1d;
+    transition: all 0.3s ease;
+}
+
+.reward span {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b3f1d;
+    margin-top: 3px;
+}
+
+.locked {
+    opacity: 0.3;
+    filter: grayscale(1);
+}
+
+.reward.unlocked {
+    animation: rewardPop 0.5s ease;
+    background: #fff2b8;
+    box-shadow: 0 0 0 4px #ffd23f;
+}
+
+@keyframes rewardPop {
+    0%   { transform: scale(0.7) rotate(-8deg); }
+    50%  { transform: scale(1.25) rotate(6deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+#game-area {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 620px;
+    margin: 34px auto 0;
+}
+
+.hole {
+    position: relative;
+    height: 140px;
+}
+
+.mound {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 180px;
+    height: 80px;
+    background: radial-gradient(ellipse at center, #7fb84a 0%, #5f9b34 70%);
+    border-radius: 50%;
+}
+
+.dirt {
+    position: absolute;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 55px;
+    background: radial-gradient(ellipse at center, #3e2717 0%, #1f140b 75%);
+    border-radius: 50%;
+    box-shadow: inset 0 8px 14px rgba(0,0,0,0.6);
+    overflow: hidden;
+}
+
+.mole {
+    position: absolute;
+    bottom: 36px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    width: 62px;
+    height: 62px;
+    background: #a9713f;
+    border-radius: 50% 50% 45% 45%;
+    transition: transform 0.15s ease-out;
+    cursor: pointer;
+}
+
+.mole::before {
+    content: "";
+    position: absolute;
+    top: 20px;
+    left: 13px;
+    width: 7px;
+    height: 7px;
+    background: #2a1a0e;
+    border-radius: 50%;
+    box-shadow: 26px 0 0 #2a1a0e;
+}
+
+.mole::after {
+    content: "";
+    position: absolute;
+    bottom: 12px;
+    left: 20px;
+    width: 20px;
+    height: 12px;
+    background: #e7a3a3;
+    border-radius: 50%;
+}
+
+.hole.active .mole {
+    transform: translateX(-50%) translateY(0);
+}
+
+#status-message {
+    margin-top: 20px;
+    font-weight: 600;
+    color: #4a2c14;
+}
+
+#start-button {
+    margin-top: 12px;
+    padding: 14px 30px;
+    font-family: 'Baloo 2', cursive;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    background: #ff7847;
+    box-shadow: 0 6px 0 #c8532a;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+#start-button:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #c8532a;
+}
+
+.score-pulse {
+    animation: scorePulse 0.3s ease;
+}
+
+@keyframes scorePulse {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.4); color: #ff7847; }
+    100% { transform: scale(1); }
+}
