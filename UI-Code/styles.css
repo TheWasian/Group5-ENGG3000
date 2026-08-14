@@ -209,10 +209,6 @@ h1 {
     color: #e0e0e0;
 }
 
-.hidden {
-    display: none;
-}
-
 .screen {
     position: fixed;
     top: 0;
@@ -225,17 +221,6 @@ h1 {
     align-items: center;
     justify-content: center;
     z-index: 1000;
-}
-
-.screen h2 {
-    font-size: 48px;
-    color: #ffffff;
-    margin-bottom: 20px;
-}
-
-.screen p {
-    font-size: 24px;
-    color: #e0e0e0;
 }
 
 .hidden {
