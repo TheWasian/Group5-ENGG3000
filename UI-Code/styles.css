@@ -121,7 +121,7 @@ h1 {
 
 #game-area {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
     max-width: 620px;
     margin: 34px auto 0;
