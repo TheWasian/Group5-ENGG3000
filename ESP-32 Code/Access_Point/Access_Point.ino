@@ -15,14 +15,14 @@
 
 // --------------------------- GPIO ----------------------------------
 // Replace -1 with your GPIO numbers before uploading.
-constexpr int TRIG_PIN_1 = -1;
-constexpr int ECHO_PIN_1 = -1;
-constexpr int TRIG_PIN_2 = -1;
-constexpr int ECHO_PIN_2 = -1;
+constexpr int TRIG_PIN_1 = 5;
+constexpr int ECHO_PIN_1 = 5;
+constexpr int TRIG_PIN_2 = 5;
+constexpr int ECHO_PIN_2 = 5;
 
 // Optional warning outputs. Leave at -1 to disable that output.
-constexpr int BUZZER_PIN = -1;
-constexpr int WARNING_LED_PIN = -1;
+constexpr int BUZZER_PIN = 5;
+constexpr int WARNING_LED_PIN = 5;
 
 // --------------------------- Wi-Fi ---------------------------------
 const char *AP_SSID = "Wacker5";
