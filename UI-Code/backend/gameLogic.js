@@ -291,7 +291,7 @@ function updateDebugPanel(data = null) {
             return;
         }
 
-        const distance = sensor.distance_cm === null ? 'No echo' : `${sensor.distance_cm} cm`;
+        const distance = sensor.distance_cm === null ? 'No echo' : `Avg ${sensor.distance_cm} cm`;
         const hole = sensor.valid && Number(sensor.hole) >= 0
             ? `Hole ${Number(sensor.hole) + 1}`
             : 'No player';

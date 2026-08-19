@@ -13,8 +13,8 @@
 #include <math.h>
 
 // --------------------------- GPIO ----------------------------------
-constexpr int TRIG_PINS[2] = {25, 32};
-constexpr int ECHO_PINS[2] = {33, 35};
+constexpr int TRIG_PINS[2] = {32, 25};
+constexpr int ECHO_PINS[2] = {35, 33};
 
 // --------------------------- Wi-Fi ---------------------------------
 const char *AP_SSID = "Wacker5";
@@ -27,12 +27,12 @@ const IPAddress AP_SUBNET(255, 255, 255, 0);
 WebServer server(80);
 
 // ---------------------- Playing-area calibration -------------------
-// Distances are measured outwards from each sensor. Adjust these values
-// after measuring the centres of the physical holes.
-constexpr float MIN_PLAYER_DISTANCE_CM = 20.0f;
-constexpr float NEAR_MIDDLE_BOUNDARY_CM = 90.0f;
-constexpr float MIDDLE_FAR_BOUNDARY_CM = 170.0f;
-constexpr float MAX_PLAYER_DISTANCE_CM = 250.0f;
+// The permitted two-metre play area is divided into three equal zones.
+// Distances are measured outwards from each sensor.
+constexpr float MIN_PLAYER_DISTANCE_CM = 2.0f;
+constexpr float NEAR_MIDDLE_BOUNDARY_CM = 66.7f;
+constexpr float MIDDLE_FAR_BOUNDARY_CM = 133.3f;
+constexpr float MAX_PLAYER_DISTANCE_CM = 200.0f;
 
 // Prevents boundary noise from rapidly swapping adjacent holes.
 constexpr float ZONE_HYSTERESIS_CM = 7.0f;
@@ -41,9 +41,10 @@ constexpr uint8_t REQUIRED_ABSENT_SAMPLES = 3;
 constexpr uint32_t HIT_COOLDOWN_MS = 250;
 
 constexpr float MIN_SENSOR_RANGE_CM = 2.0f;
-constexpr float MAX_SENSOR_RANGE_CM = 400.0f;
-constexpr uint32_t ECHO_TIMEOUT_US = 24000;
+constexpr float MAX_SENSOR_RANGE_CM = 200.0f;
+constexpr uint32_t ECHO_TIMEOUT_US = 12000;
 constexpr uint32_t PING_INTERVAL_MS = 45;
+constexpr uint8_t AVERAGE_SAMPLE_COUNT = 3;
 
 // The existing UI is two columns by three rows. Each inner array lists
 // near, middle and far for that sensor lane. Reverse an inner array if a
@@ -55,6 +56,10 @@ constexpr uint8_t HOLE_FOR_SENSOR_ZONE[2][3] = {
 
 struct SensorState {
   float distanceCm;
+  float distanceSamples[AVERAGE_SAMPLE_COUNT];
+  float sampleTotal;
+  uint8_t sampleCount;
+  uint8_t nextSampleIndex;
   bool valid;
   int8_t stableZone;
   int8_t candidateZone;
@@ -73,8 +78,8 @@ struct HitEvent {
 };
 
 SensorState sensors[2] = {
-  {NAN, false, -1, -1, 0, 0, 0},
-  {NAN, false, -1, -1, 0, 0, 0}
+  {NAN, {0, 0, 0}, 0.0f, 0, 0, false, -1, -1, 0, 0, 0},
+  {NAN, {0, 0, 0}, 0.0f, 0, 0, false, -1, -1, 0, 0, 0}
 };
 
 HitEvent latestHit = {0, 0, 0, 0, 0, 0.0f};
@@ -100,6 +105,26 @@ float readUltrasonicCentimetres(uint8_t sensorIndex) {
     return NAN;
   }
   return distanceCm;
+}
+
+void resetDistanceAverage(SensorState &sensor) {
+  sensor.distanceCm = NAN;
+  sensor.sampleTotal = 0.0f;
+  sensor.sampleCount = 0;
+  sensor.nextSampleIndex = 0;
+}
+
+void addDistanceSample(SensorState &sensor, float distanceCm) {
+  if (sensor.sampleCount == AVERAGE_SAMPLE_COUNT) {
+    sensor.sampleTotal -= sensor.distanceSamples[sensor.nextSampleIndex];
+  } else {
+    sensor.sampleCount++;
+  }
+
+  sensor.distanceSamples[sensor.nextSampleIndex] = distanceCm;
+  sensor.sampleTotal += distanceCm;
+  sensor.nextSampleIndex = (sensor.nextSampleIndex + 1) % AVERAGE_SAMPLE_COUNT;
+  sensor.distanceCm = sensor.sampleTotal / sensor.sampleCount;
 }
 
 int8_t zoneForDistance(float distanceCm, int8_t currentZone) {
@@ -154,10 +179,8 @@ void updateSensor(uint8_t sensorIndex, float rawDistanceCm) {
     sensor.valid = false;
     if (sensor.absentSamples < 255) sensor.absentSamples++;
   } else {
-    // A modest low-pass filter removes echo jitter but stays responsive to steps.
-    sensor.distanceCm = sensor.valid
-                          ? 0.65f * rawDistanceCm + 0.35f * sensor.distanceCm
-                          : rawDistanceCm;
+    // Use the average of the three latest readings instead of a raw echo.
+    addDistanceSample(sensor, rawDistanceCm);
     sensor.valid = true;
 
     const int8_t measuredZone = zoneForDistance(sensor.distanceCm, sensor.stableZone);
@@ -187,6 +210,7 @@ void updateSensor(uint8_t sensorIndex, float rawDistanceCm) {
     sensor.stableZone = -1;
     sensor.candidateZone = -1;
     sensor.candidateSamples = 0;
+    resetDistanceAverage(sensor);
   }
 }
 
