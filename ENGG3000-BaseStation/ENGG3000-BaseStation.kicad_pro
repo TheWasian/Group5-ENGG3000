@@ -820,7 +820,7 @@
         "uuid": "a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
       }
     ],
-    "used_designators": "L1,U4",
+    "used_designators": "D5-6,#PWR22,#PWR32-33,L1,U4,J9,R21,R23",
     "variants": []
   },
   "sheets": [
