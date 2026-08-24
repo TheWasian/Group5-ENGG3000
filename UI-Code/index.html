@@ -1,132 +1,149 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Whack-A-Mole</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div
+      id="damage-indicator"
+      class="damage-indicator"
+      aria-hidden="true"
+    ></div>
 
-<aside id="sensor-debug" class="sensor-debug" aria-label="Ultrasonic sensor debug data">
-    <strong>Sensor Debug</strong>
-    <div class="debug-row">
+    <aside
+      id="sensor-debug"
+      class="sensor-debug"
+      aria-label="Ultrasonic sensor debug data"
+    >
+      <strong>Sensor Debug</strong>
+      <div class="debug-row">
         <span>Sensor 1</span>
         <code id="debug-sensor-1">Waiting...</code>
-    </div>
-    <div class="debug-row">
+      </div>
+      <div class="debug-row">
         <span>Sensor 2</span>
         <code id="debug-sensor-2">Waiting...</code>
-    </div>
-    <div class="debug-row debug-event-row">
+      </div>
+      <div class="debug-row debug-event-row">
         <span>Last event</span>
         <code id="debug-last-event">None</code>
-    </div>
-</aside>
+      </div>
+    </aside>
 
-<div class="game-container">
+    <div class="game-container">
+      <h1>Whack-A-Mole</h1>
 
-    <h1>Whack-A-Mole</h1>
-
-    <div class="game-info">
+      <div class="game-info">
         <div class="info-box">
-            <span>SCORE</span>
-            <strong id="score">0</strong>
+          <span>SCORE</span>
+          <strong id="score">0</strong>
         </div>
         <div class="info-box">
-            <span>LEVEL</span>
-            <strong id="level">1</strong>
+          <span>LEVEL</span>
+          <strong id="level">1</strong>
         </div>
         <div class="info-box">
-            <span>TIME</span>
-            <strong id="timer">60</strong>
+          <span>TIME</span>
+          <strong id="timer">60</strong>
         </div>
         <div class="info-box">
-            <span>LIVES</span>
-            <strong id="lives">3</strong>
+          <span>LIVES</span>
+          <strong id="lives">3</strong>
         </div>
-    </div>
+      </div>
 
-    <div class="progress-container">
+      <div class="progress-container">
         <div id="progress-bar"></div>
-    </div>
-    <p id="progress-text">0 / 500 (Level 2)</p>
+      </div>
+      <p id="progress-text">0 / 500 (Level 2)</p>
 
-    <div id="rewards">
+      <div id="rewards">
         <div id="bronze-reward" class="reward locked">
-            
-            <span>Bronze (10 pts)</span>
+          <span>Bronze (10 pts)</span>
         </div>
         <div id="silver-reward" class="reward locked">
-            
-            <span>Silver (25 pts)</span>
+          <span>Silver (25 pts)</span>
         </div>
         <div id="gold-reward" class="reward locked">
-            
-            <span>Gold (50 pts)</span>
+          <span>Gold (50 pts)</span>
         </div>
-    </div>
+      </div>
 
-    <div id="game-area">
-
+      <div id="game-area">
         <div class="hole" data-hole="0">
-            <div class="mound"></div>
-            <div class="dirt"></div>
-            <div class="mole"></div>
-            <span id="player-marker" class="player-marker hidden" role="img" aria-label="Player position">🧍</span>
+          <div class="mound"></div>
+          <div class="dirt"></div>
+          <div class="mole"></div>
+          <span
+            id="player-marker"
+            class="player-marker hidden"
+            role="img"
+            aria-label="Player position"
+            >🧍</span
+          >
         </div>
 
         <div class="hole" data-hole="1">
-            <div class="mound"></div>
-            <div class="dirt"></div>
-            <div class="mole"></div>
+          <div class="mound"></div>
+          <div class="dirt"></div>
+          <div class="mole"></div>
         </div>
 
         <div class="hole" data-hole="2">
-            <div class="mound"></div>
-            <div class="dirt"></div>
-            <div class="mole"></div>
+          <div class="mound"></div>
+          <div class="dirt"></div>
+          <div class="mole"></div>
         </div>
 
         <div class="hole" data-hole="3">
-            <div class="mound"></div>
-            <div class="dirt"></div>
-            <div class="mole"></div>
+          <div class="mound"></div>
+          <div class="dirt"></div>
+          <div class="mole"></div>
         </div>
 
         <div class="hole" data-hole="4">
-            <div class="mound"></div>
-            <div class="dirt"></div>
-            <div class="mole"></div>
+          <div class="mound"></div>
+          <div class="dirt"></div>
+          <div class="mole"></div>
         </div>
 
         <div class="hole" data-hole="5">
-            <div class="mound"></div>
-            <div class="dirt"></div>
-            <div class="mole"></div>
+          <div class="mound"></div>
+          <div class="dirt"></div>
+          <div class="mole"></div>
         </div>
+      </div>
 
-    </div>
+      <p id="status-message">
+        Press start, then move to the mole's physical hole.
+      </p>
+      <p id="sensor-status" class="sensor-status disconnected">
+        Sensor controller: connecting...
+      </p>
 
-    <p id="status-message">Press start, then move to the mole's physical hole.</p>
-    <p id="sensor-status" class="sensor-status disconnected">Sensor controller: connecting...</p>
+      <button id="start-button">START GAME</button>
 
-    <button id="start-button">START GAME</button>
-
-    <div id="win-screen" class="screen hidden">
+      <div id="win-screen" class="screen hidden">
         <h2>You Won!</h2>
         <p>Congratulations! You reached 2000 points!</p>
-    </div>
+        <button class="restart-button" type="button">PLAY AGAIN</button>
+      </div>
 
-    <div id="lose-screen" class="screen hidden">
+      <div id="lose-screen" class="screen hidden">
         <h2>Game Over!</h2>
         <p>Time's up! Better luck next time!</p>
+        <button class="restart-button" type="button">RESTART GAME</button>
+      </div>
     </div>
 
-</div>
-
-<script src="./backend/gameLogic.js"></script>
-</body>
+    <script src="./backend/gameLogic.js"></script>
+  </body>
 </html>
