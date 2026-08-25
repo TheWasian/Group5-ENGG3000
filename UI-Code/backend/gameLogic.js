@@ -17,7 +17,7 @@ const debugLastEvent = document.getElementById("debug-last-event");
 const progressBar = document.getElementById("progress-bar");
 const progressText = document.getElementById("progress-text");
 const livesDisplay = document.getElementById("lives");
-const damageIndicator = document.getElementById("damage-indicator");
+const damageIndicator = document.getElementById("damage-indicator"); //changed to show the damage (red screen)
 
 const POINTS_PER_MOLE = 50;
 const SPAWN_INTERVAL = 5000;
@@ -37,6 +37,7 @@ const MAX_EVENT_AGE_MS = 1000;
 
 let score = 0;
 let level = 1;
+let 
 let timeLeft = ROUND_TIME;
 let lives = STARTING_LIVES;
 let gameActive = false;
@@ -163,6 +164,15 @@ function updateScore() {
 
 function updateLevel() {
   levelDisplay.textContent = level;
+    if (level = 2){
+      SPAWN_INTERVAL = 4500;
+      MOLE_LIFETIME = 4450;
+  }
+
+    if (level = 3){
+      SPAWN_INTERVAL = 4300;
+      MOLE_LIFETIME = 4200;
+  }
 }
 
 function updateLives() {
