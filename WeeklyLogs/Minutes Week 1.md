@@ -7,7 +7,7 @@ Date: 2026-07-29
 # 🖊️Project Overview:
 
 **Unit:** Eng3000
-**Topic:** Whack a moll
+**Topic:** Whack A Mole
 
 # Attendance (Present / Absent)
 
@@ -35,7 +35,7 @@ Date: 2026-07-29
 | Sub Task ID                     | Main Task                        | Estimation (days) | Assignee    |
 | Add basic scoreboard system     | Code GUI                         | 7                 | Fouad       |
 | Add lose/win screen             | Code GUI                         | 7                 | Fouad       |
-| GUI levels + GUI rewards        | Code GUI                         | 7                 | [Girl name] |
+| GUI levels + GUI rewards        | Code GUI                         | 7                 | Shreenidhi |
 | Scoring /Scoreboard (Backend)   | Game logic (Backend)             | 7                 | Alley       |
 | Mole Generation Logic (Backend) | Game logic (Backend)             | 7                 | Alley       |
 | Create basic Access point       | Program ESP32 Access Point       | 7                 | Matthew     |
