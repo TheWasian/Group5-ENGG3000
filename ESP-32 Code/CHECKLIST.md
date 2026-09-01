@@ -39,9 +39,19 @@ the ESP32's 3.3 V GPIO. Confirm your exact board markings before wiring.
 4. Connect the PC to Wi-Fi `Wacker5` using password
    `PasswordWacker123456!`.
 5. Open `http://192.168.4.1/` for the live diagnostic dashboard.
-6. The game can fetch `http://192.168.4.1/api/position` about 10 times per
-   second. The response contains `x_m`, `y_m`, `warning`, individual ranges,
-   node status, and fit quality.
+6. Launch `GameLauncher.bat`, or open `UI-Code/index.html` after connecting.
+   The UI polls `http://192.168.4.1/api/hits` and starts scoring when the
+   access point reports movement into one of the six game cells.
+
+The access point provides two browser endpoints:
+
+- `/api/hits` uses the same event contract as `MVP.ino`, with extra position,
+  six-range, and node-health fields for the full three-ESP32 system.
+- `/api/position` provides the original raw position, warning, individual
+  ranges, node status, and fit-quality response for calibration.
+
+Both endpoints support cross-origin requests, so the UI can be opened as a
+local file while the computer is connected to the `Wacker5` access point.
 
 The access point also prints CSV records at 115200 baud:
 

@@ -9,6 +9,10 @@ const restartButtons = document.querySelectorAll(".restart-button");
 const statusMessage = document.getElementById("status-message");
 const sensorStatus = document.getElementById("sensor-status");
 const playerMarker = document.getElementById("player-marker");
+const debugSensorLabels = [
+  document.getElementById("debug-label-1"),
+  document.getElementById("debug-label-2"),
+];
 const debugSensorDisplays = [
   document.getElementById("debug-sensor-1"),
   document.getElementById("debug-sensor-2"),
@@ -261,6 +265,22 @@ function endGame(won) {
 }
 
 function getPlayerPosition(data) {
+  const accessPointHole = Number(data?.current_hole);
+  if (
+    data?.position?.valid &&
+    Number.isInteger(accessPointHole) &&
+    accessPointHole >= 0 &&
+    accessPointHole < holes.length
+  ) {
+    return {
+      sensorIndex: accessPointHole % 2,
+      holeIndex: accessPointHole,
+      distanceCm: Number(data.position.y_m) * 100,
+      xM: Number(data.position.x_m),
+      yM: Number(data.position.y_m),
+    };
+  }
+
   if (!Array.isArray(data?.sensors)) return null;
 
   const validSensorIndexes = data.sensors
@@ -308,11 +328,51 @@ function displayPlayerPosition(data) {
   );
   targetHole.appendChild(playerMarker);
   playerMarker.classList.remove("hidden");
-  playerMarker.title = `Player: hole ${position.holeIndex + 1}, sensor ${position.sensorIndex + 1}`;
+  playerMarker.title = Number.isFinite(position.xM)
+    ? `Player: hole ${position.holeIndex + 1} (${position.xM.toFixed(2)}, ${position.yM.toFixed(2)} m)`
+    : `Player: hole ${position.holeIndex + 1}, sensor ${position.sensorIndex + 1}`;
   return position;
 }
 
 function updateDebugPanel(data = null) {
+  if (data?.source === "access_point") {
+    debugSensorLabels[0].textContent = "Position";
+    debugSensorLabels[1].textContent = "Network";
+
+    const xM = Number(data.position?.x_m);
+    const yM = Number(data.position?.y_m);
+    const currentHole = Number(data.current_hole);
+    const positionValid =
+      data.position?.valid && Number.isFinite(xM) && Number.isFinite(yM);
+    debugSensorDisplays[0].textContent = positionValid
+      ? `${xM.toFixed(2)}, ${yM.toFixed(2)} m | ${currentHole >= 0 ? `Hole ${currentHole + 1}` : "stabilising"}`
+      : `No valid fix | ${Number(data.position?.sensors_used) || 0} ranges`;
+
+    const nodeOnline = Array.isArray(data.node_online)
+      ? data.node_online
+      : [false, false];
+    const validRangeCount = Array.isArray(data.ranges_m)
+      ? data.ranges_m.filter(
+          (range) => range !== null && Number.isFinite(Number(range)),
+        ).length
+      : 0;
+    debugSensorDisplays[1].textContent =
+      `N1 ${nodeOnline[0] ? "online" : "offline"} | ` +
+      `N2 ${nodeOnline[1] ? "online" : "offline"} | ` +
+      `${validRangeCount}/6 ranges`;
+
+    if (Number(data.event_id) === 0) {
+      debugLastEvent.textContent = "None";
+    } else {
+      debugLastEvent.textContent =
+        `#${data.event_id} | Hole ${Number(data.hole) + 1} | ` +
+        `${Number(data.distance_cm).toFixed(1)} cm from screen`;
+    }
+    return;
+  }
+
+  debugSensorLabels[0].textContent = "Sensor 1";
+  debugSensorLabels[1].textContent = "Sensor 2";
   debugSensorDisplays.forEach((display, index) => {
     const sensor = data?.sensors?.[index];
     if (!sensor) {
@@ -352,7 +412,19 @@ function updateSensorStatus(connected, data = null) {
 
   updateDebugPanel(data);
   const playerPosition = displayPlayerPosition(data);
-  const activeSensors = data.sensors
+
+  if (data?.source === "access_point") {
+    const position = data.position;
+    const xM = Number(position?.x_m);
+    const yM = Number(position?.y_m);
+    const warning = position?.warning ? "WARNING: too close to screen — " : "";
+    sensorStatus.textContent = position?.valid
+      ? `${warning}Access point: tracking ${playerPosition ? `hole ${playerPosition.holeIndex + 1}` : "position"} at ${xM.toFixed(2)}, ${yM.toFixed(2)} m`
+      : "Access point: connected — waiting for a valid player position";
+    return;
+  }
+
+  const activeSensors = (Array.isArray(data?.sensors) ? data.sensors : [])
     .map((sensor, index) =>
       sensor.valid ? `S${index + 1}: ${sensor.distance_cm} cm` : null,
     )
@@ -372,14 +444,26 @@ async function pollSensors() {
     });
     if (!response.ok) throw new Error(`Sensor HTTP ${response.status}`);
     const data = await response.json();
+    const eventId = Number(data.event_id);
+    if (!Number.isInteger(eventId) || eventId < 0) {
+      throw new Error("Invalid /api/hits response");
+    }
     updateSensorStatus(true, data);
 
     if (lastSensorEventId === null) {
-      lastSensorEventId = data.event_id;
-    } else if (data.event_id !== lastSensorEventId) {
-      lastSensorEventId = data.event_id;
-      if (data.event_age_ms <= MAX_EVENT_AGE_MS) {
-        whackHole(Number(data.hole), "sensor");
+      lastSensorEventId = eventId;
+    } else if (eventId !== lastSensorEventId) {
+      lastSensorEventId = eventId;
+      const eventAgeMs = Number(data.event_age_ms);
+      const eventHole = Number(data.hole);
+      if (
+        Number.isFinite(eventAgeMs) &&
+        eventAgeMs <= MAX_EVENT_AGE_MS &&
+        Number.isInteger(eventHole) &&
+        eventHole >= 0 &&
+        eventHole < holes.length
+      ) {
+        whackHole(eventHole, "sensor");
       }
     }
   } catch (error) {

@@ -51,6 +51,15 @@ constexpr float PLAY_AREA_WIDTH_M = 3.0f;
 constexpr float PLAY_AREA_DEPTH_M = 3.0f;
 constexpr float WARNING_DISTANCE_M = 0.50f;
 
+// The browser game uses a two-column by three-row grid. Hole IDs are row
+// major: 0/1 nearest the screen, 2/3 in the middle, and 4/5 furthest away.
+constexpr uint8_t GAME_COLUMNS = 2;
+constexpr uint8_t GAME_ROWS = 3;
+constexpr float HOLE_BOUNDARY_HYSTERESIS_M = 0.10f;
+constexpr uint8_t REQUIRED_STABLE_POSITIONS = 2;
+constexpr uint8_t REQUIRED_LOST_POSITIONS = 3;
+constexpr uint32_t HIT_COOLDOWN_MS = 250;
+
 struct SensorPosition {
   float x;
   float y;
@@ -144,6 +153,23 @@ struct PositionEstimate {
 
 PositionEstimate position = {1.5f, 1.5f, 0, 0, 0, false};
 bool warningActive = false;
+
+struct HitEvent {
+  uint32_t id;
+  uint32_t createdMs;
+  uint8_t hole;
+  uint8_t column;
+  uint8_t row;
+  float x;
+  float y;
+};
+
+HitEvent latestHit = {0, 0, 0, 0, 0, 0.0f, 0.0f};
+int8_t stableHole = -1;
+int8_t candidateHole = -1;
+uint8_t candidatePositionCount = 0;
+uint8_t lostPositionCount = 0;
+uint32_t lastHitMs = 0;
 
 enum PollState : uint8_t {
   START_LOCAL,
@@ -403,6 +429,105 @@ void updateWarning() {
   if (WARNING_LED_PIN >= 0) digitalWrite(WARNING_LED_PIN, shouldWarn ? HIGH : LOW);
 }
 
+int8_t holeForPosition(float x, float y, int8_t currentHole) {
+  if (x < 0.0f || x > PLAY_AREA_WIDTH_M ||
+      y < 0.0f || y > PLAY_AREA_DEPTH_M) {
+    return -1;
+  }
+
+  const float columnBoundary = PLAY_AREA_WIDTH_M / GAME_COLUMNS;
+  const float firstRowBoundary = PLAY_AREA_DEPTH_M / GAME_ROWS;
+  const float secondRowBoundary = 2.0f * PLAY_AREA_DEPTH_M / GAME_ROWS;
+
+  int8_t column;
+  int8_t row;
+  if (currentHole >= 0) {
+    column = currentHole % GAME_COLUMNS;
+    row = currentHole / GAME_COLUMNS;
+
+    // Keep the current cell while the estimate is inside its hysteresis band.
+    if (column == 0 && x <= columnBoundary + HOLE_BOUNDARY_HYSTERESIS_M) {
+      column = 0;
+    } else if (column == 1 &&
+               x >= columnBoundary - HOLE_BOUNDARY_HYSTERESIS_M) {
+      column = 1;
+    } else {
+      column = x < columnBoundary ? 0 : 1;
+    }
+
+    if (row == 0 && y <= firstRowBoundary + HOLE_BOUNDARY_HYSTERESIS_M) {
+      row = 0;
+    } else if (row == 1 &&
+               y >= firstRowBoundary - HOLE_BOUNDARY_HYSTERESIS_M &&
+               y <= secondRowBoundary + HOLE_BOUNDARY_HYSTERESIS_M) {
+      row = 1;
+    } else if (row == 2 &&
+               y >= secondRowBoundary - HOLE_BOUNDARY_HYSTERESIS_M) {
+      row = 2;
+    } else if (y < firstRowBoundary) {
+      row = 0;
+    } else if (y < secondRowBoundary) {
+      row = 1;
+    } else {
+      row = 2;
+    }
+  } else {
+    column = x < columnBoundary ? 0 : 1;
+    row = y < firstRowBoundary ? 0 : (y < secondRowBoundary ? 1 : 2);
+  }
+
+  return row * GAME_COLUMNS + column;
+}
+
+void emitGameHit(uint8_t hole, uint32_t now) {
+  latestHit.id++;
+  latestHit.createdMs = now;
+  latestHit.hole = hole;
+  latestHit.column = hole % GAME_COLUMNS;
+  latestHit.row = hole / GAME_COLUMNS;
+  latestHit.x = position.x;
+  latestHit.y = position.y;
+  lastHitMs = now;
+
+  Serial.print("HIT,");
+  Serial.print(latestHit.id);
+  Serial.print(',');
+  Serial.print(latestHit.hole);
+  Serial.print(',');
+  Serial.print(latestHit.x, 3);
+  Serial.print(',');
+  Serial.println(latestHit.y, 3);
+}
+
+void updateGamePosition() {
+  const uint32_t now = millis();
+  if (!position.valid) {
+    candidateHole = -1;
+    candidatePositionCount = 0;
+    if (lostPositionCount < 255) lostPositionCount++;
+    if (lostPositionCount >= REQUIRED_LOST_POSITIONS) stableHole = -1;
+    return;
+  }
+
+  lostPositionCount = 0;
+  const int8_t measuredHole = holeForPosition(position.x, position.y, stableHole);
+  if (measuredHole < 0) return;
+
+  if (measuredHole != candidateHole) {
+    candidateHole = measuredHole;
+    candidatePositionCount = 1;
+  } else if (candidatePositionCount < 255) {
+    candidatePositionCount++;
+  }
+
+  if (candidatePositionCount >= REQUIRED_STABLE_POSITIONS &&
+      measuredHole != stableHole &&
+      now - lastHitMs >= HIT_COOLDOWN_MS) {
+    stableHole = measuredHole;
+    emitGameHit(stableHole, now);
+  }
+}
+
 void printPositionCsv() {
   Serial.print("POS,");
   Serial.print(position.valid ? position.x : -1.0f, 3);
@@ -419,6 +544,7 @@ void printPositionCsv() {
 void finishMeasurementCycle() {
   calculatePosition();
   updateWarning();
+  updateGamePosition();
   printPositionCsv();
   nextCycleMs = millis() + CYCLE_GAP_MS;
 }
@@ -472,7 +598,8 @@ code{color:#6ee7ff}table{border-collapse:collapse}td{padding:.25rem .8rem .25rem
 <p id="warning"></p><table><tr><td>Status</td><td id="status">Waiting...</td></tr>
 <tr><td>X</td><td id="x">-</td></tr><tr><td>Y from screen</td><td id="y">-</td></tr>
 <tr><td>Fit error</td><td id="error">-</td></tr><tr><td>Sensors used</td><td id="used">-</td></tr>
-</table><p>Game endpoint: <code>/api/position</code></p></div><script>
+</table><p>Position endpoint: <code>/api/position</code></p>
+<p>Game endpoint: <code>/api/hits</code></p></div><script>
 const el=id=>document.getElementById(id);async function update(){try{
 const r=await fetch('/api/position');const p=await r.json();
 el('status').textContent=p.valid?'Tracking':'No valid position';
@@ -485,6 +612,14 @@ el('warning').textContent=p.warning?'WARNING: player is too close to screen':'';
 
 String boolJson(bool value) {
   return value ? "true" : "false";
+}
+
+void addCorsHeaders() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+  server.sendHeader("Access-Control-Allow-Private-Network", "true");
+  server.sendHeader("Cache-Control", "no-store");
 }
 
 void handlePositionJson() {
@@ -509,9 +644,80 @@ void handlePositionJson() {
   }
   json += "]}";
 
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Cache-Control", "no-store");
+  addCorsHeaders();
   server.send(200, "application/json", json);
+}
+
+void handleHitsJson() {
+  const uint32_t now = millis();
+  const bool hasCurrentHole = position.valid && stableHole >= 0;
+  const int8_t currentColumn = hasCurrentHole ? stableHole % GAME_COLUMNS : -1;
+
+  String json;
+  json.reserve(900);
+  json += "{\"protocol\":\"wam-hits-v1\"";
+  json += ",\"source\":\"access_point\"";
+  json += ",\"event_id\":" + String(latestHit.id);
+  json += ",\"event_age_ms\":" +
+          String(latestHit.id ? now - latestHit.createdMs : 0);
+  json += ",\"hole\":" + String(latestHit.id ? latestHit.hole : -1);
+  // Preserve the MVP contract: sensor 1 is the left column and sensor 2 is
+  // the right column; zone is the near/middle/far row.
+  json += ",\"sensor\":" + String(latestHit.id ? latestHit.column + 1 : 0);
+  json += ",\"zone\":" + String(latestHit.id ? latestHit.row : -1);
+  json += ",\"distance_cm\":" +
+          String(latestHit.id ? latestHit.y * 100.0f : -1.0f, 1);
+  json += ",\"current_hole\":" + String(hasCurrentHole ? stableHole : -1);
+  json += ",\"position\":{\"valid\":" + boolJson(position.valid);
+  json += ",\"x_m\":" + String(position.valid ? position.x : -1.0f, 4);
+  json += ",\"y_m\":" + String(position.valid ? position.y : -1.0f, 4);
+  json += ",\"rms_error_m\":" + String(position.rmsError, 4);
+  json += ",\"sensors_used\":" + String(position.sensorsUsed);
+  json += ",\"warning\":" + boolJson(warningActive);
+  json += ",\"age_ms\":" + String(position.valid ? now - position.updatedMs : 0);
+  json += "}";
+  json += ",\"sensors\":[";
+  for (uint8_t column = 0; column < GAME_COLUMNS; ++column) {
+    if (column) json += ',';
+    const bool laneActive = hasCurrentHole && currentColumn == column;
+    json += "{\"valid\":" + boolJson(laneActive);
+    json += ",\"distance_cm\":";
+    if (laneActive) json += String(position.y * 100.0f, 1);
+    else json += "null";
+    json += ",\"hole\":" + String(laneActive ? stableHole : -1);
+    json += '}';
+  }
+  json += "]";
+  json += ",\"node_online\":[" + boolJson(nodeOnline[0]) + "," +
+          boolJson(nodeOnline[1]) + "]";
+  json += ",\"ranges_m\":[";
+  for (uint8_t i = 0; i < 6; ++i) {
+    if (i) json += ',';
+    if (isFreshAndValid(i, now)) json += String(ranges[i].metres, 4);
+    else json += "null";
+  }
+  json += "]}";
+
+  addCorsHeaders();
+  server.send(200, "application/json", json);
+}
+
+void resetGameTracking() {
+  // Re-arm the current location so starting a game while already standing in
+  // a cell still creates one fresh event after the stability check.
+  stableHole = -1;
+  candidateHole = -1;
+  candidatePositionCount = 0;
+  lostPositionCount = 0;
+  lastHitMs = 0;
+
+  addCorsHeaders();
+  server.send(204, "text/plain", "");
+}
+
+void handleOptions() {
+  addCorsHeaders();
+  server.send(204, "text/plain", "");
 }
 
 // ------------------------------ Setup ------------------------------
@@ -550,7 +756,15 @@ void setup() {
   udp.begin(AP_UDP_PORT);
   server.on("/", HTTP_GET, []() { server.send_P(200, "text/html", DASHBOARD_HTML); });
   server.on("/api/position", HTTP_GET, handlePositionJson);
-  server.onNotFound([]() { server.send(404, "text/plain", "Not found"); });
+  server.on("/api/position", HTTP_OPTIONS, handleOptions);
+  server.on("/api/hits", HTTP_GET, handleHitsJson);
+  server.on("/api/hits", HTTP_OPTIONS, handleOptions);
+  server.on("/api/game/start", HTTP_POST, resetGameTracking);
+  server.on("/api/game/start", HTTP_OPTIONS, handleOptions);
+  server.onNotFound([]() {
+    addCorsHeaders();
+    server.send(404, "text/plain", "Not found");
+  });
   server.begin();
 
   Serial.print("Access point ready. Connect to ");
