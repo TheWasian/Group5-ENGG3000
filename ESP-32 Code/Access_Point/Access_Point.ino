@@ -2,9 +2,9 @@
   Whack-a-Mole access point
 
   Hardware Needed:
-    - This ESP32: two ultrasonic sensors
-    - Sensor node 1: two ultrasonic sensors
-    - Sensor node 2: two ultrasonic sensors
+    - This ESP32: one ultrasonic sensor
+    - Sensor node 1: one ultrasonic sensor
+    - Sensor node 2: one ultrasonic sensor
 */
 
 #include <WiFi.h>
@@ -15,14 +15,12 @@
 
 // --------------------------- GPIO ----------------------------------
 // Replace -1 with your GPIO numbers before uploading.
-constexpr int TRIG_PIN_1 = 5;
-constexpr int ECHO_PIN_1 = 5;
-constexpr int TRIG_PIN_2 = 5;
-constexpr int ECHO_PIN_2 = 5;
+constexpr int TRIG_PIN = -1;
+constexpr int ECHO_PIN = -1;
 
 // Optional warning outputs. Leave at -1 to disable that output.
-constexpr int BUZZER_PIN = 5;
-constexpr int WARNING_LED_PIN = 5;
+constexpr int BUZZER_PIN = -1;
+constexpr int WARNING_LED_PIN = -1;
 
 // --------------------------- Wi-Fi ---------------------------------
 const char *AP_SSID = "Wacker5";
@@ -45,11 +43,12 @@ WebServer server(80);
 // ---------------------- Playing-area calibration -------------------
 // Coordinate system: screen edge is y = 0; y increases into the playing
 // area; x runs left-to-right. Measure and replace these coordinates after
-// mounting the boxes. Defaults assume three 100 mm-wide stations across
-// the screen edge of a 3 m x 3 m playing area.
+// mounting the boxes. Defaults assume one station at the left, centre and
+// right of the screen edge of a 3 m x 3 m playing area.
 constexpr float PLAY_AREA_WIDTH_M = 3.0f;
 constexpr float PLAY_AREA_DEPTH_M = 3.0f;
 constexpr float WARNING_DISTANCE_M = 0.50f;
+constexpr uint8_t SENSOR_COUNT = 3;
 
 // The browser game uses a two-column by three-row grid. Hole IDs are row
 // major: 0/1 nearest the screen, 2/3 in the middle, and 4/5 furthest away.
@@ -65,21 +64,20 @@ struct SensorPosition {
   float y;
 };
 
-// Order: node 1 pair, access-point pair, node 2 pair.
-const SensorPosition SENSOR_POSITIONS[6] = {
-  {0.00f, 0.00f}, {0.10f, 0.00f},
-  {1.45f, 0.00f}, {1.55f, 0.00f},
-  {2.90f, 0.00f}, {3.00f, 0.00f}
+// Order: node 1 (left), access point (centre), node 2 (right).
+const SensorPosition SENSOR_POSITIONS[SENSOR_COUNT] = {
+  {0.00f, 0.00f},
+  {1.50f, 0.00f},
+  {3.00f, 0.00f}
 };
 
 // Per-sensor calibration: corrected = raw * scale + offset.
-const float SENSOR_SCALE[6] = {1, 1, 1, 1, 1, 1};
-const float SENSOR_OFFSET_M[6] = {0, 0, 0, 0, 0, 0};
+const float SENSOR_SCALE[SENSOR_COUNT] = {1, 1, 1};
+const float SENSOR_OFFSET_M[SENSOR_COUNT] = {0, 0, 0};
 
 constexpr float MIN_RANGE_M = 0.02f;
 constexpr float MAX_RANGE_M = 4.50f;
 constexpr uint32_t ECHO_TIMEOUT_US = 27000;
-constexpr uint32_t BETWEEN_PINGS_MS = 12;
 constexpr uint32_t NODE_REPLY_TIMEOUT_MS = 90;
 constexpr uint32_t RANGE_STALE_MS = 1200;
 constexpr uint32_t CYCLE_GAP_MS = 20;
@@ -107,6 +105,8 @@ struct __attribute__((packed)) RangePacket {
   uint8_t nodeId;
   uint8_t validMask;
   uint32_t sequence;
+  // Only distanceMm[0] is used. The second slot is reserved so the packet
+  // remains compatible with the earlier two-sensor-node protocol.
   uint16_t distanceMm[2];
   uint32_t crc;
 };
@@ -138,7 +138,7 @@ struct RangeSample {
   bool valid;
 };
 
-RangeSample ranges[6] = {};
+RangeSample ranges[SENSOR_COUNT] = {};
 bool nodeOnline[2] = {false, false};
 uint32_t nodeLastSeenMs[2] = {0, 0};
 
@@ -186,8 +186,7 @@ uint32_t expectedSequence = 0;
 
 // ------------------------- Sensor reading --------------------------
 bool mandatoryPinsAreConfigured() {
-  return TRIG_PIN_1 >= 0 && ECHO_PIN_1 >= 0 &&
-         TRIG_PIN_2 >= 0 && ECHO_PIN_2 >= 0;
+  return TRIG_PIN >= 0 && ECHO_PIN >= 0 && TRIG_PIN != ECHO_PIN;
 }
 
 float readUltrasonicMetres(int triggerPin, int echoPin) {
@@ -236,10 +235,8 @@ void storeRange(uint8_t sensorIndex, float rawMetres, uint32_t now) {
   ranges[sensorIndex].updatedMs = now;
 }
 
-void measureLocalPair() {
-  storeRange(2, readUltrasonicMetres(TRIG_PIN_1, ECHO_PIN_1), millis());
-  delay(BETWEEN_PINGS_MS);
-  storeRange(3, readUltrasonicMetres(TRIG_PIN_2, ECHO_PIN_2), millis());
+void measureLocalSensor() {
+  storeRange(1, readUltrasonicMetres(TRIG_PIN, ECHO_PIN), millis());
 }
 
 // ------------------------- UDP scheduling --------------------------
@@ -284,14 +281,12 @@ bool receiveRangePacket(uint8_t expectedNodeId) {
     return false;
   }
 
-  const uint8_t baseIndex = (expectedNodeId == 1) ? 0 : 4;
+  const uint8_t sensorIndex = (expectedNodeId == 1) ? 0 : 2;
   const uint32_t now = millis();
-  for (uint8_t i = 0; i < 2; ++i) {
-    const float value = (packet.validMask & (1U << i))
-                          ? packet.distanceMm[i] / 1000.0f
-                          : NAN;
-    storeRange(baseIndex + i, value, now);
-  }
+  const float value = (packet.validMask & 0x01U)
+                        ? packet.distanceMm[0] / 1000.0f
+                        : NAN;
+  storeRange(sensorIndex, value, now);
 
   nodeOnline[expectedNodeId - 1] = true;
   nodeLastSeenMs[expectedNodeId - 1] = now;
@@ -299,13 +294,11 @@ bool receiveRangePacket(uint8_t expectedNodeId) {
 }
 
 void markNodeTimedOut(uint8_t nodeId) {
-  const uint8_t baseIndex = (nodeId == 1) ? 0 : 4;
+  const uint8_t sensorIndex = (nodeId == 1) ? 0 : 2;
   const uint32_t now = millis();
   nodeOnline[nodeId - 1] = false;
-  ranges[baseIndex].valid = false;
-  ranges[baseIndex].updatedMs = now;
-  ranges[baseIndex + 1].valid = false;
-  ranges[baseIndex + 1].updatedMs = now;
+  ranges[sensorIndex].valid = false;
+  ranges[sensorIndex].updatedMs = now;
 }
 
 // ------------------------- Position solver -------------------------
@@ -323,7 +316,7 @@ void calculatePosition() {
   float nearestRange = 1e9f;
   float initialX = position.valid ? position.x : PLAY_AREA_WIDTH_M * 0.5f;
 
-  for (uint8_t i = 0; i < 6; ++i) {
+  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
     if (isFreshAndValid(i, now)) {
       ++validCount;
       if (ranges[i].metres < nearestRange) {
@@ -343,13 +336,13 @@ void calculatePosition() {
   float y = position.valid ? position.y :
             clampFloat(nearestRange, 0.10f, PLAY_AREA_DEPTH_M);
 
-  // Iteratively reweighted Gauss-Newton multilateration. Huber weighting
-  // limits the influence of an ultrasonic outlier or a background echo.
+  // Iteratively reweighted Gauss-Newton trilateration. Huber weighting limits
+  // the influence of an ultrasonic outlier or a background echo.
   for (uint8_t iteration = 0; iteration < 12; ++iteration) {
     float a00 = 0, a01 = 0, a11 = 0;
     float b0 = 0, b1 = 0;
 
-    for (uint8_t i = 0; i < 6; ++i) {
+    for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
       if (!isFreshAndValid(i, now)) continue;
 
       const float dx = x - SENSOR_POSITIONS[i].x;
@@ -387,7 +380,7 @@ void calculatePosition() {
   }
 
   float squaredError = 0;
-  for (uint8_t i = 0; i < 6; ++i) {
+  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
     if (!isFreshAndValid(i, now)) continue;
     const float dx = x - SENSOR_POSITIONS[i].x;
     const float dy = y - SENSOR_POSITIONS[i].y;
@@ -418,7 +411,7 @@ void updateWarning() {
   // This extra conservative check still warns if positioning temporarily
   // fails but any sensor has a direct echo inside 50 cm.
   const uint32_t now = millis();
-  for (uint8_t i = 0; i < 6; ++i) {
+  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
     if (isFreshAndValid(i, now) && ranges[i].metres <= WARNING_DISTANCE_M) {
       shouldWarn = true;
     }
@@ -554,7 +547,7 @@ void runMeasurementStateMachine() {
   switch (pollState) {
     case START_LOCAL:
       if (static_cast<int32_t>(now - nextCycleMs) < 0) return;
-      measureLocalPair();
+      measureLocalSensor();
       sendPoll(1);
       pollState = WAIT_NODE_1;
       break;
@@ -637,7 +630,7 @@ void handlePositionJson() {
   json += ",\"node_online\":[" + boolJson(nodeOnline[0]) + "," +
           boolJson(nodeOnline[1]) + "]";
   json += ",\"ranges_m\":[";
-  for (uint8_t i = 0; i < 6; ++i) {
+  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
     if (i) json += ',';
     if (isFreshAndValid(i, now)) json += String(ranges[i].metres, 4);
     else json += "null";
@@ -691,7 +684,7 @@ void handleHitsJson() {
   json += ",\"node_online\":[" + boolJson(nodeOnline[0]) + "," +
           boolJson(nodeOnline[1]) + "]";
   json += ",\"ranges_m\":[";
-  for (uint8_t i = 0; i < 6; ++i) {
+  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
     if (i) json += ',';
     if (isFreshAndValid(i, now)) json += String(ranges[i].metres, 4);
     else json += "null";
@@ -726,16 +719,13 @@ void setup() {
   delay(300);
 
   if (!mandatoryPinsAreConfigured()) {
-    Serial.println("ERROR: Set all four ultrasonic GPIO constants at the top of the sketch.");
+    Serial.println("ERROR: Set different TRIG_PIN and ECHO_PIN GPIO values at the top of the sketch.");
     while (true) delay(1000);
   }
 
-  pinMode(TRIG_PIN_1, OUTPUT);
-  pinMode(ECHO_PIN_1, INPUT);
-  pinMode(TRIG_PIN_2, OUTPUT);
-  pinMode(ECHO_PIN_2, INPUT);
-  digitalWrite(TRIG_PIN_1, LOW);
-  digitalWrite(TRIG_PIN_2, LOW);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  digitalWrite(TRIG_PIN, LOW);
 
   if (BUZZER_PIN >= 0) {
     pinMode(BUZZER_PIN, OUTPUT);

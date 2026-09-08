@@ -356,10 +356,13 @@ function updateDebugPanel(data = null) {
           (range) => range !== null && Number.isFinite(Number(range)),
         ).length
       : 0;
+    const totalRangeCount = Array.isArray(data.ranges_m)
+      ? data.ranges_m.length
+      : 0;
     debugSensorDisplays[1].textContent =
       `N1 ${nodeOnline[0] ? "online" : "offline"} | ` +
       `N2 ${nodeOnline[1] ? "online" : "offline"} | ` +
-      `${validRangeCount}/6 ranges`;
+      `${validRangeCount}/${totalRangeCount} ranges`;
 
     if (Number(data.event_id) === 0) {
       debugLastEvent.textContent = "None";

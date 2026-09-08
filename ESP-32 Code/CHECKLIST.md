@@ -1,7 +1,7 @@
-# ESP32 six-sensor player tracker
+# ESP32 three-sensor player tracker
 
-This project uses three ESP32 boxes with two RCWL-1601 ultrasonic sensors in
-each box. The centre ESP32 creates the Wi-Fi network, schedules all six sensors,
+This project uses three ESP32 boxes with one RCWL-1601 ultrasonic sensor in
+each box. The centre ESP32 creates the Wi-Fi network, schedules all three sensors,
 calculates the player's 2D position, and provides the result to the game PC.
 
 ## Sketches
@@ -15,18 +15,16 @@ Only the standard ESP32 Arduino core libraries are used (`WiFi`, `WiFiUDP`, and
 
 ## Before uploading
 
-At the top of each sketch, replace the four `-1` ultrasonic pin placeholders:
+At the top of each sketch, replace the two `-1` ultrasonic pin placeholders:
 
 ```cpp
-constexpr int TRIG_PIN_1 = -1;
-constexpr int ECHO_PIN_1 = -1;
-constexpr int TRIG_PIN_2 = -1;
-constexpr int ECHO_PIN_2 = -1;
+constexpr int TRIG_PIN = -1;
+constexpr int ECHO_PIN = -1;
 ```
 
 On the access point, also set `BUZZER_PIN` and `WARNING_LED_PIN`, or leave either
 at `-1` if that output is not fitted yet. The ultrasonic pins are mandatory;
-each ESP32 deliberately stops at startup until all four are set.
+each ESP32 deliberately stops at startup until both are set to different GPIOs.
 
 Power each RCWL-1601 from 3.3 V and common ground so its Echo signal is safe for
 the ESP32's 3.3 V GPIO. Confirm your exact board markings before wiring.
@@ -46,7 +44,7 @@ the ESP32's 3.3 V GPIO. Confirm your exact board markings before wiring.
 The access point provides two browser endpoints:
 
 - `/api/hits` uses the same event contract as `MVP.ino`, with extra position,
-  six-range, and node-health fields for the full three-ESP32 system.
+  three-range, and node-health fields for the full three-ESP32 system.
 - `/api/position` provides the original raw position, warning, individual
   ranges, node status, and fit-quality response for calibration.
 
@@ -66,19 +64,16 @@ The solver assumes the screen edge is `y = 0`, positive `y` points into the
 `SENSOR_POSITIONS` in the access-point sketch with the measured centre of each
 transducer. Its order is:
 
-1. node 1 sensor 1
-2. node 1 sensor 2
-3. access-point sensor 1
-4. access-point sensor 2
-5. node 2 sensor 1
-6. node 2 sensor 2
+1. node 1 sensor (left, default `x = 0.0 m`)
+2. access-point sensor (centre, default `x = 1.5 m`)
+3. node 2 sensor (right, default `x = 3.0 m`)
 
 Record measured-versus-known distances for each sensor, then adjust
-`SENSOR_SCALE` and `SENSOR_OFFSET_M`. Positioning needs at least three valid
-ranges. The reported `rms_error_m` is useful for deciding whether a calibration
+`SENSOR_SCALE` and `SENSOR_OFFSET_M`. Positioning needs all three ranges to be
+valid. The reported `rms_error_m` is useful for deciding whether a calibration
 or sensor aim needs improvement.
 
-For good geometry, aim the six sensors so their useful cones overlap through
+For good geometry, aim the three sensors so their useful cones overlap through
 the playing area. A perfectly straight row can estimate position, but a small
 known difference in sensor depth or angle generally improves robustness. Mount
 and test the boxes outside the marked 3 m x 3 m playing area.

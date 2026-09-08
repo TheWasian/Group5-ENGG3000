@@ -8,11 +8,9 @@
 #include <math.h>
 #include <stddef.h>
 
-/* Replace with actual values later*/
-constexpr int TRIG_PIN_1 = -1;
-constexpr int ECHO_PIN_1 = -1;
-constexpr int TRIG_PIN_2 = -1;
-constexpr int ECHO_PIN_2 = -1;
+// Replace with the GPIO values used by this node's single sensor.
+constexpr int TRIG_PIN = -1;
+constexpr int ECHO_PIN = -1;
 
 constexpr uint8_t NODE_ID = 1;
 const char *AP_SSID = "Wacker5";
@@ -32,7 +30,6 @@ constexpr uint8_t PACKET_RANGES = 2;
 constexpr float MIN_RANGE_M = 0.02f;
 constexpr float MAX_RANGE_M = 4.50f;
 constexpr uint32_t ECHO_TIMEOUT_US = 27000;
-constexpr uint32_t BETWEEN_PINGS_MS = 12;
 
 WiFiUDP udp;
 
@@ -53,6 +50,7 @@ struct __attribute__((packed)) RangePacket {
   uint8_t nodeId;
   uint8_t validMask;
   uint32_t sequence;
+  // Only distanceMm[0] is used. Slot 1 remains reserved for compatibility.
   uint16_t distanceMm[2];
   uint32_t crc;
 };
@@ -72,8 +70,7 @@ uint32_t crc32(const uint8_t *data, size_t length) {
 }
 
 bool pinsAreConfigured() {
-  return TRIG_PIN_1 >= 0 && ECHO_PIN_1 >= 0 &&
-         TRIG_PIN_2 >= 0 && ECHO_PIN_2 >= 0;
+  return TRIG_PIN >= 0 && ECHO_PIN >= 0 && TRIG_PIN != ECHO_PIN;
 }
 
 float readUltrasonicMetres(int triggerPin, int echoPin) {
@@ -111,12 +108,7 @@ void connectToAccessPoint() {
 }
 
 void sendRanges(uint32_t sequence) {
-  const float measured[2] = {
-    readUltrasonicMetres(TRIG_PIN_1, ECHO_PIN_1),
-    NAN
-  };
-  delay(BETWEEN_PINGS_MS);
-  const float second = readUltrasonicMetres(TRIG_PIN_2, ECHO_PIN_2);
+  const float measured = readUltrasonicMetres(TRIG_PIN, ECHO_PIN);
 
   RangePacket response = {};
   response.magic = PACKET_MAGIC;
@@ -125,12 +117,10 @@ void sendRanges(uint32_t sequence) {
   response.nodeId = NODE_ID;
   response.sequence = sequence;
 
-  const float values[2] = {measured[0], second};
-  for (uint8_t i = 0; i < 2; ++i) {
-    if (!isnan(values[i])) {
-      response.validMask |= (1U << i);
-      response.distanceMm[i] = static_cast<uint16_t>(lroundf(values[i] * 1000.0f));
-    }
+  if (!isnan(measured)) {
+    response.validMask = 0x01U;
+    response.distanceMm[0] =
+      static_cast<uint16_t>(lroundf(measured * 1000.0f));
   }
 
   response.crc = crc32(reinterpret_cast<const uint8_t *>(&response),
@@ -165,16 +155,13 @@ void setup() {
   Serial.begin(115200);
   delay(300);
   if (!pinsAreConfigured()) {
-    Serial.println("ERROR: Set all four ultrasonic GPIO constants at the top of the sketch.");
+    Serial.println("ERROR: Set different TRIG_PIN and ECHO_PIN GPIO values at the top of the sketch.");
     while (true) delay(1000);
   }
 
-  pinMode(TRIG_PIN_1, OUTPUT);
-  pinMode(ECHO_PIN_1, INPUT);
-  pinMode(TRIG_PIN_2, OUTPUT);
-  pinMode(ECHO_PIN_2, INPUT);
-  digitalWrite(TRIG_PIN_1, LOW);
-  digitalWrite(TRIG_PIN_2, LOW);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  digitalWrite(TRIG_PIN, LOW);
   connectToAccessPoint();
 }
 
