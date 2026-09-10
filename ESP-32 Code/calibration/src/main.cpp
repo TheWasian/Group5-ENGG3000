@@ -1,36 +1,50 @@
 #include <Arduino.h>
 
-constexpr uint8_t TRIG_PIN = 5;
-constexpr uint8_t ECHO_PIN = 18;
+constexpr uint8_t TRIG_PIN = 26;
+constexpr uint8_t ECHO_PIN = 27;
 constexpr unsigned long ECHO_TIMEOUT_US = 30000;
+uint8_t burstNumber = 0;
 
 float readDistanceCm();
 
-void setup() {
+void setup()
+{
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
   digitalWrite(TRIG_PIN, LOW);
 
   Serial.begin(115200);
   delay(500);
-  Serial.println("Ultrasonic sensor ready");
 }
 
-void loop() {
-  const float distanceCm = readDistanceCm();
+void loop()
+{
 
-  if (distanceCm < 0.0f) {
-    Serial.println("Distance: out of range");
-  } else {
-    Serial.print("Distance: ");
-    Serial.print(distanceCm, 1);
-    Serial.println(" cm");
+  if (Serial.available() > 0)
+  {
+
+    // Read the incoming integer
+    burstNumber = Serial.parseInt();
+    if (burstNumber < 1 || burstNumber > 100)
+      burstNumber = 1; // Default to 1 if out of range
+
+        String output = "";
+
+        output += readDistanceCm();
+
+    for (int i = 1; i < burstNumber; ++i)
+    {
+      output += ",";
+      output += readDistanceCm();
+      delay(10); // Small delay between readings to avoid overwhelming the sensor
+    }
+
+    Serial.println(output);
   }
-
-  delay(500);
 }
 
-float readDistanceCm() {
+float readDistanceCm()
+{
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG_PIN, HIGH);
@@ -38,7 +52,8 @@ float readDistanceCm() {
   digitalWrite(TRIG_PIN, LOW);
 
   const unsigned long duration = pulseIn(ECHO_PIN, HIGH, ECHO_TIMEOUT_US);
-  if (duration == 0) {
+  if (duration == 0)
+  {
     return -1.0f;
   }
 
