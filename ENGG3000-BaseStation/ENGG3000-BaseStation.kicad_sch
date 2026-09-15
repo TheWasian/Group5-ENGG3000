@@ -5,191 +5,6 @@
 	(uuid "a1b2b64c-827f-4017-b44c-f9b9ae2e21fd")
 	(paper "A4")
 	(lib_symbols
-		(symbol "Conn_01x02_Socket_1"
-			(pin_names
-				(offset 1.016)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(in_pos_files yes)
-			(duplicate_pin_numbers_are_jumpers no)
-			(property "Reference" "J8"
-				(at 0.6351 -3.81 90)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify right)
-				)
-			)
-			(property "Value" "CHRG LED"
-				(at -1.9049 -3.81 90)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify right)
-				)
-			)
-			(property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Description" "Generic connector, single row, 01x02, script generated"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_locked" ""
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "connector"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_fp_filters" "Connector*:*_1x??_*"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(symbol "Conn_01x02_Socket_1_1_1"
-				(polyline
-					(pts
-						(xy -1.27 0) (xy -0.508 0)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -2.54) (xy -0.508 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -0.508)
-					(mid -0.5058 0)
-					(end 0 0.508)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -3.048)
-					(mid -0.5058 -2.54)
-					(end 0 -2.032)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(pin passive line
-					(at -5.08 0 0)
-					(length 3.81)
-					(name "GND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 -2.54 0)
-					(length 3.81)
-					(name "VCC"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "Conn_01x04_Socket_1"
 			(pin_names
 				(offset 1.016)
@@ -4522,6 +4337,195 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Jumper:SolderJumper_2_Bridged"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "JP"
+				(at 0 2.032 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "SolderJumper_2_Bridged"
+				(at 0 -2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 -6.35 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Solder Jumper, 2-pole, closed/bridged"
+				(at 0 -5.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "solder jumper SPST"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "SolderJumper*Bridged*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "SolderJumper_2_Bridged_0_1"
+				(rectangle
+					(start -0.508 0.508)
+					(end 0.508 -0.508)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.254 1.016) (xy -0.254 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start -0.254 -1.016)
+					(mid -1.2656 0)
+					(end -0.254 1.016)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(arc
+					(start 0.254 1.016)
+					(mid 1.2656 0)
+					(end 0.254 -1.016)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.254 1.016) (xy 0.254 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "SolderJumper_2_Bridged_1_1"
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "A"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 0 180)
+					(length 3.81)
+					(name "B"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Regulator_Switching:TPS63001"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -6050,12 +6054,6 @@
 		(uuid "0089806b-6587-47b4-8674-84a37aa5b516")
 	)
 	(junction
-		(at 213.36 129.54)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "05e8e225-e5cc-4c60-b64f-9e086051229d")
-	)
-	(junction
 		(at 232.41 90.17)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -6068,22 +6066,28 @@
 		(uuid "1397d34a-be50-4058-a037-78b334d10a30")
 	)
 	(junction
+		(at 232.41 134.62)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "13e307b2-7290-4fae-9fc7-1da25cc15cfe")
+	)
+	(junction
 		(at 24.13 36.83)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "1bf10492-b02e-4ef6-b31c-9340b87392d0")
 	)
 	(junction
-		(at 77.47 184.15)
+		(at 101.6 177.8)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "25571337-0514-4948-a5cc-b5a4a6fb5148")
+		(uuid "1c499f92-1597-41ea-89d3-93fa9f272071")
 	)
 	(junction
-		(at 233.68 134.62)
+		(at 99.06 187.96)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "2bf583a5-8ae5-4448-974f-b713aa4c4f26")
+		(uuid "2d3a50f2-85fe-4f74-aba8-e7638f08d96b")
 	)
 	(junction
 		(at 247.65 67.31)
@@ -6092,10 +6096,28 @@
 		(uuid "2ddf350b-eb26-4502-80eb-13fed1d9ef2b")
 	)
 	(junction
+		(at 107.95 177.8)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "2eddf161-88dd-4e1b-9a9a-9e0f9f42c8e3")
+	)
+	(junction
+		(at 77.47 184.15)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "351823e8-377c-426d-b7ee-c9e8274209b0")
+	)
+	(junction
 		(at 77.47 175.26)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "40a2e650-b801-46b3-806c-b34fa166d9ea")
+	)
+	(junction
+		(at 220.98 129.54)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "41677a77-90bb-4f49-ad04-a66c7cac98e1")
 	)
 	(junction
 		(at 83.82 184.15)
@@ -6122,16 +6144,16 @@
 		(uuid "4fb83f81-5a65-4a38-81fc-b6b57a31106e")
 	)
 	(junction
-		(at 86.36 175.26)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "5341fd23-d732-4308-a26c-2facb006e9e0")
-	)
-	(junction
 		(at 241.3 156.21)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "62b2f124-6ea0-4da7-b456-0eb7b5ac7777")
+	)
+	(junction
+		(at 86.36 175.26)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "63131134-5d85-494a-81b4-ac7b5576b6fe")
 	)
 	(junction
 		(at 280.67 129.54)
@@ -6152,22 +6174,16 @@
 		(uuid "8375259e-f418-450e-9e00-97c2644efa14")
 	)
 	(junction
-		(at 106.68 170.18)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "8b8e0c50-6074-47b5-b642-02d5fd37a5e7")
-	)
-	(junction
-		(at 147.32 175.26)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "8c5b5f52-3105-4ac7-8215-d82d16d21fab")
-	)
-	(junction
 		(at 34.29 36.83)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "9a27ac3e-e58a-4e4a-8d06-b218fa9ab3f7")
+	)
+	(junction
+		(at 149.86 166.37)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "9a3bdd49-7591-4291-bba8-f494a7a8ce20")
 	)
 	(junction
 		(at 266.7 138.43)
@@ -6182,16 +6198,28 @@
 		(uuid "a8e2aef3-0068-40e5-82ec-218733583c9e")
 	)
 	(junction
+		(at 143.51 176.53)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ac2592a9-d407-41a3-a695-a83acecb1d7a")
+	)
+	(junction
+		(at 143.51 185.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "accd3ca6-f186-4e4f-86a1-41e5db2cd962")
+	)
+	(junction
 		(at 152.4 74.93)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "af694c71-52a3-4eb5-9fde-4b3468d9dd61")
 	)
 	(junction
-		(at 232.41 134.62)
+		(at 110.49 187.96)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "b2ae4182-c020-4eab-aa23-52e2f4552aa3")
+		(uuid "b010a911-f8ae-4879-bd54-3138bf5e6d9a")
 	)
 	(junction
 		(at 22.86 172.72)
@@ -6212,28 +6240,16 @@
 		(uuid "bbebcee7-66cd-4ad1-b3fd-fa0d21d6dee5")
 	)
 	(junction
-		(at 213.36 137.16)
+		(at 213.36 129.54)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c4705bff-d28c-44b7-b50b-8b1bd7219ec7")
+	)
+	(junction
+		(at 220.98 137.16)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "c53c4527-d638-4261-879d-39c71ed857df")
-	)
-	(junction
-		(at 147.32 165.1)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "cc85b5f3-47de-464a-9b1f-0b235976c397")
-	)
-	(junction
-		(at 154.94 184.15)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "d56478b5-4df3-4858-a56b-8698307dab04")
-	)
-	(junction
-		(at 86.36 170.18)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "f6202176-b2e4-4568-b2aa-66269db82774")
 	)
 	(junction
 		(at 269.24 129.54)
@@ -6315,23 +6331,23 @@
 	)
 	(wire
 		(pts
-			(xy 147.32 165.1) (xy 154.94 165.1)
+			(xy 232.41 134.62) (xy 232.41 137.16)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "0b29da03-3512-4831-86bf-0336f66a707a")
+		(uuid "09af2f44-4de4-436f-b20b-ce6dfb31c5d9")
 	)
 	(wire
 		(pts
-			(xy 232.41 134.62) (xy 233.68 134.62)
+			(xy 97.79 187.96) (xy 99.06 187.96)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "0d771a6a-6fc0-4fe9-abda-49aa75696797")
+		(uuid "0d5fc98b-5d14-486b-8cd9-60863df65b25")
 	)
 	(wire
 		(pts
@@ -6345,7 +6361,7 @@
 	)
 	(wire
 		(pts
-			(xy 111.76 175.26) (xy 111.76 176.53)
+			(xy 119.38 175.26) (xy 119.38 187.96)
 		)
 		(stroke
 			(width 0)
@@ -6385,6 +6401,26 @@
 	)
 	(wire
 		(pts
+			(xy 107.95 177.8) (xy 111.76 177.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "14aa04a5-65fa-448f-930d-a6acbe46ce4a")
+	)
+	(wire
+		(pts
+			(xy 149.86 166.37) (xy 160.02 166.37)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "160dc618-e21b-4621-84d9-32aee3468af7")
+	)
+	(wire
+		(pts
 			(xy 266.7 139.7) (xy 266.7 138.43)
 		)
 		(stroke
@@ -6392,6 +6428,16 @@
 			(type default)
 		)
 		(uuid "16617076-c9e2-4b14-888d-683b35f41678")
+	)
+	(wire
+		(pts
+			(xy 139.7 176.53) (xy 143.51 176.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "187521cb-8e55-4b34-ba8a-be33794bec2c")
 	)
 	(wire
 		(pts
@@ -6425,13 +6471,13 @@
 	)
 	(wire
 		(pts
-			(xy 234.95 134.62) (xy 233.68 134.62)
+			(xy 110.49 187.96) (xy 111.76 187.96)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "21102a72-0f27-458f-a437-6ec4b33f1ddb")
+		(uuid "2109ff4c-9cb5-49fc-aea8-bd0e840afa23")
 	)
 	(wire
 		(pts
@@ -6452,16 +6498,6 @@
 			(type default)
 		)
 		(uuid "24430da7-b4cd-406a-88f3-617c146c1411")
-	)
-	(wire
-		(pts
-			(xy 86.36 170.18) (xy 91.44 170.18)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "25e612c1-85ff-4730-b2ca-8d748a1f5f4f")
 	)
 	(wire
 		(pts
@@ -6492,16 +6528,6 @@
 			(type default)
 		)
 		(uuid "271e6e0e-8b14-4866-a43d-3de031fb4bc6")
-	)
-	(wire
-		(pts
-			(xy 147.32 173.99) (xy 147.32 175.26)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2779af29-9870-49b2-9ff5-259671ba97b3")
 	)
 	(wire
 		(pts
@@ -6545,7 +6571,7 @@
 	)
 	(wire
 		(pts
-			(xy 102.87 175.26) (xy 102.87 176.53)
+			(xy 110.49 175.26) (xy 110.49 187.96)
 		)
 		(stroke
 			(width 0)
@@ -6555,13 +6581,23 @@
 	)
 	(wire
 		(pts
-			(xy 86.36 161.29) (xy 86.36 170.18)
+			(xy 133.35 166.37) (xy 138.43 166.37)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "3e01c701-4c8d-4e57-a68b-b8364d3d037e")
+		(uuid "3a3a6f9d-bd06-4bcd-89b9-21472a46f23a")
+	)
+	(wire
+		(pts
+			(xy 223.52 134.62) (xy 232.41 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3bb97ecc-4d99-4377-bcb6-8301ca9f9c81")
 	)
 	(wire
 		(pts
@@ -6635,6 +6671,16 @@
 	)
 	(wire
 		(pts
+			(xy 148.59 166.37) (xy 149.86 166.37)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4cc81907-9bee-435d-bdb5-590fa8d8ba09")
+	)
+	(wire
+		(pts
 			(xy 181.61 27.94) (xy 181.61 36.83)
 		)
 		(stroke
@@ -6642,16 +6688,6 @@
 			(type default)
 		)
 		(uuid "4cd3508b-d4b2-430c-8335-7b9a85787086")
-	)
-	(wire
-		(pts
-			(xy 147.32 163.83) (xy 147.32 165.1)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4d192e03-cb2b-4e67-8cff-d7b6390d6fc6")
 	)
 	(wire
 		(pts
@@ -6685,13 +6721,23 @@
 	)
 	(wire
 		(pts
-			(xy 111.76 175.26) (xy 102.87 175.26)
+			(xy 119.38 175.26) (xy 110.49 175.26)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "514db133-ddbc-46d6-ad2d-9ad568a09a89")
+	)
+	(wire
+		(pts
+			(xy 99.06 175.26) (xy 86.36 175.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "52c4427e-5d14-4c9f-bbe2-4c657d25d70c")
 	)
 	(wire
 		(pts
@@ -6705,7 +6751,17 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 184.15) (xy 170.18 184.15)
+			(xy 132.08 176.53) (xy 132.08 179.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "541ea827-1e6f-4e2c-8ab1-115bc53e4f8b")
+	)
+	(wire
+		(pts
+			(xy 162.56 166.37) (xy 167.64 166.37)
 		)
 		(stroke
 			(width 0)
@@ -6722,16 +6778,6 @@
 			(type default)
 		)
 		(uuid "55986f47-d4c3-4450-a5f5-201d228dba45")
-	)
-	(wire
-		(pts
-			(xy 154.94 184.15) (xy 162.56 184.15)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "55ebf1ff-c820-4aad-8350-bb8c5205cd1d")
 	)
 	(wire
 		(pts
@@ -6752,16 +6798,6 @@
 			(type default)
 		)
 		(uuid "58e385f7-a7da-4204-a42b-291aa0cbc902")
-	)
-	(wire
-		(pts
-			(xy 147.32 165.1) (xy 147.32 166.37)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5a6e1f96-9ebf-406b-aae2-122196509601")
 	)
 	(wire
 		(pts
@@ -6795,7 +6831,17 @@
 	)
 	(wire
 		(pts
-			(xy 100.33 176.53) (xy 100.33 175.26)
+			(xy 101.6 177.8) (xy 101.6 187.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "60a79b48-9dac-427c-bb15-d6b8028fa72e")
+	)
+	(wire
+		(pts
+			(xy 107.95 187.96) (xy 107.95 177.8)
 		)
 		(stroke
 			(width 0)
@@ -6825,23 +6871,13 @@
 	)
 	(wire
 		(pts
-			(xy 114.3 176.53) (xy 114.3 177.8)
+			(xy 121.92 187.96) (xy 121.92 176.53)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "6634dd38-536a-4f3d-abf0-629b05fdbdaa")
-	)
-	(wire
-		(pts
-			(xy 213.36 129.54) (xy 233.68 129.54)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "66c8c35a-86e8-499f-b32f-26985c8542c3")
 	)
 	(wire
 		(pts
@@ -6875,6 +6911,16 @@
 	)
 	(wire
 		(pts
+			(xy 101.6 175.26) (xy 101.6 177.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6e72a072-72e8-432e-8d57-c68f97d07b2c")
+	)
+	(wire
+		(pts
 			(xy 175.26 36.83) (xy 181.61 36.83)
 		)
 		(stroke
@@ -6895,16 +6941,6 @@
 	)
 	(wire
 		(pts
-			(xy 133.35 175.26) (xy 135.89 175.26)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7311732a-8a0e-4e96-b26f-4e8e1de70c10")
-	)
-	(wire
-		(pts
 			(xy 251.46 129.54) (xy 254 129.54)
 		)
 		(stroke
@@ -6915,7 +6951,7 @@
 	)
 	(wire
 		(pts
-			(xy 58.42 170.18) (xy 86.36 170.18)
+			(xy 58.42 170.18) (xy 91.44 170.18)
 		)
 		(stroke
 			(width 0)
@@ -6945,6 +6981,16 @@
 	)
 	(wire
 		(pts
+			(xy 213.36 129.54) (xy 220.98 129.54)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7cea7bf8-ef40-4381-897f-8e43b5579b08")
+	)
+	(wire
+		(pts
 			(xy 22.86 175.26) (xy 33.02 175.26)
 		)
 		(stroke
@@ -6965,16 +7011,6 @@
 	)
 	(wire
 		(pts
-			(xy 147.32 175.26) (xy 147.32 176.53)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "846ae498-b34d-430f-94a7-5d7b3475f356")
-	)
-	(wire
-		(pts
 			(xy 29.21 170.18) (xy 33.02 170.18)
 		)
 		(stroke
@@ -6982,6 +7018,16 @@
 			(type default)
 		)
 		(uuid "84f3f2d1-af25-4d25-b724-058dedea33df")
+	)
+	(wire
+		(pts
+			(xy 143.51 184.15) (xy 143.51 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "85ed6a3a-5a50-44fe-9832-f31e1dd838a2")
 	)
 	(wire
 		(pts
@@ -7005,6 +7051,16 @@
 	)
 	(wire
 		(pts
+			(xy 97.79 177.8) (xy 101.6 177.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8a3bd676-c8de-43d9-a2ba-e7d515b77c72")
+	)
+	(wire
+		(pts
 			(xy 233.68 137.16) (xy 232.41 137.16)
 		)
 		(stroke
@@ -7015,13 +7071,13 @@
 	)
 	(wire
 		(pts
-			(xy 133.35 175.26) (xy 133.35 176.53)
+			(xy 149.86 184.15) (xy 149.86 185.42)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "8d2e3f56-0b4e-48f2-83a9-5ae7f33bb666")
+		(uuid "90303be6-863a-48be-be0e-15a0c0b8861a")
 	)
 	(wire
 		(pts
@@ -7035,16 +7091,6 @@
 	)
 	(wire
 		(pts
-			(xy 143.51 175.26) (xy 147.32 175.26)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "915e8834-d189-4821-879f-f182a778e6d7")
-	)
-	(wire
-		(pts
 			(xy 130.81 46.99) (xy 149.86 46.99)
 		)
 		(stroke
@@ -7052,6 +7098,16 @@
 			(type default)
 		)
 		(uuid "9338cf54-84ad-4074-9a80-4880e81be72e")
+	)
+	(wire
+		(pts
+			(xy 220.98 129.54) (xy 233.68 129.54)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "936a0f53-d287-4ebf-be30-eba1c424d771")
 	)
 	(wire
 		(pts
@@ -7122,6 +7178,16 @@
 			(type default)
 		)
 		(uuid "9eb35bc8-0f85-4196-85d8-3bb8d6cedaa9")
+	)
+	(wire
+		(pts
+			(xy 149.86 166.37) (xy 149.86 176.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9fd301f4-3e73-4cf3-a638-19908ec92587")
 	)
 	(wire
 		(pts
@@ -7215,6 +7281,16 @@
 	)
 	(wire
 		(pts
+			(xy 99.06 175.26) (xy 99.06 187.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b3a85fe1-a9ce-4eb7-bea5-1e0ab77b1869")
+	)
+	(wire
+		(pts
 			(xy 148.59 44.45) (xy 162.56 44.45)
 		)
 		(stroke
@@ -7225,23 +7301,13 @@
 	)
 	(wire
 		(pts
-			(xy 133.35 184.15) (xy 134.62 184.15)
+			(xy 101.6 175.26) (xy 107.95 175.26)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "b7df9b64-8de5-466c-817e-bec0978f2c03")
-	)
-	(wire
-		(pts
-			(xy 88.9 162.56) (xy 99.06 162.56)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c542510b-1f3b-43e4-97e7-6ccbcb190177")
+		(uuid "b4957da0-4e0d-44ba-af3f-29d55476e1e2")
 	)
 	(wire
 		(pts
@@ -7275,13 +7341,13 @@
 	)
 	(wire
 		(pts
-			(xy 152.4 184.15) (xy 154.94 184.15)
+			(xy 143.51 173.99) (xy 143.51 176.53)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "cac0b76c-a062-45db-b1e4-e13a6f5bf33a")
+		(uuid "ca09e360-ebc6-4194-9ced-d40fc66f9f15")
 	)
 	(wire
 		(pts
@@ -7295,26 +7361,6 @@
 	)
 	(wire
 		(pts
-			(xy 215.9 134.62) (xy 232.41 134.62)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "cadf8d97-c95d-424a-aa29-a5909b1b47fe")
-	)
-	(wire
-		(pts
-			(xy 232.41 132.08) (xy 232.41 134.62)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "cb4b243c-9e71-48aa-894c-e21326e43d2c")
-	)
-	(wire
-		(pts
 			(xy 176.53 100.33) (xy 176.53 101.6)
 		)
 		(stroke
@@ -7322,6 +7368,16 @@
 			(type default)
 		)
 		(uuid "cb524ce9-071a-41f3-9fb0-07b9e37f13d1")
+	)
+	(wire
+		(pts
+			(xy 149.86 185.42) (xy 143.51 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cfa993a7-fac6-4ca9-b661-f91cc23c4a2d")
 	)
 	(wire
 		(pts
@@ -7345,6 +7401,16 @@
 	)
 	(wire
 		(pts
+			(xy 213.36 129.54) (xy 213.36 137.16)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d51d47c3-68bf-40d7-ae0f-4c87d460f648")
+	)
+	(wire
+		(pts
 			(xy 33.02 48.26) (xy 34.29 48.26)
 		)
 		(stroke
@@ -7355,7 +7421,7 @@
 	)
 	(wire
 		(pts
-			(xy 232.41 137.16) (xy 232.41 134.62)
+			(xy 232.41 132.08) (xy 232.41 134.62)
 		)
 		(stroke
 			(width 0)
@@ -7375,13 +7441,13 @@
 	)
 	(wire
 		(pts
-			(xy 106.68 162.56) (xy 106.68 170.18)
+			(xy 232.41 134.62) (xy 233.68 134.62)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "d68b6a33-de12-4135-973c-2a6bd2961843")
+		(uuid "d6556918-8657-4d3c-b8ea-8e89bdb7c78e")
 	)
 	(wire
 		(pts
@@ -7392,16 +7458,6 @@
 			(type default)
 		)
 		(uuid "d7f04237-6e32-4c0f-aa63-e047eedf2731")
-	)
-	(wire
-		(pts
-			(xy 154.94 165.1) (xy 154.94 173.99)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d837226c-9acd-46fd-85de-a85b3f6f49f6")
 	)
 	(wire
 		(pts
@@ -7425,7 +7481,7 @@
 	)
 	(wire
 		(pts
-			(xy 215.9 137.16) (xy 215.9 134.62)
+			(xy 223.52 137.16) (xy 223.52 134.62)
 		)
 		(stroke
 			(width 0)
@@ -7445,13 +7501,13 @@
 	)
 	(wire
 		(pts
-			(xy 88.9 161.29) (xy 88.9 162.56)
+			(xy 107.95 177.8) (xy 107.95 175.26)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "dfb296a7-c911-45ec-b165-858d1af72a43")
+		(uuid "de8504f8-97ac-4657-89bd-daa6b6e3f07a")
 	)
 	(wire
 		(pts
@@ -7515,7 +7571,7 @@
 	)
 	(wire
 		(pts
-			(xy 215.9 137.16) (xy 213.36 137.16)
+			(xy 223.52 137.16) (xy 220.98 137.16)
 		)
 		(stroke
 			(width 0)
@@ -7532,6 +7588,16 @@
 			(type default)
 		)
 		(uuid "f2ef26a0-7270-43d6-b83c-e3b0da6ba0f3")
+	)
+	(wire
+		(pts
+			(xy 143.51 185.42) (xy 143.51 186.69)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f3a131d2-3ca2-4a91-803c-5efca6c3a655")
 	)
 	(wire
 		(pts
@@ -7572,26 +7638,6 @@
 			(type default)
 		)
 		(uuid "f74fd326-8cbb-4245-a7b0-81b896deaa4c")
-	)
-	(wire
-		(pts
-			(xy 154.94 181.61) (xy 154.94 184.15)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "fa5a0b5f-0269-4c84-a488-8694777656fd")
-	)
-	(wire
-		(pts
-			(xy 86.36 175.26) (xy 100.33 175.26)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "fd251631-78bc-423a-8478-b9b95207c5fe")
 	)
 	(wire
 		(pts
@@ -7645,7 +7691,7 @@
 	)
 	(global_label "VIN"
 		(shape input)
-		(at 170.18 184.15 0)
+		(at 167.64 166.37 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -7655,7 +7701,7 @@
 		)
 		(uuid "010daca5-0760-41fe-a46c-dafccf2268a1")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 176.1891 184.15 0)
+			(at 173.6491 166.37 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8197,7 +8243,7 @@
 	)
 	(global_label "BAT"
 		(shape input)
-		(at 133.35 184.15 180)
+		(at 133.35 166.37 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -8207,7 +8253,7 @@
 		)
 		(uuid "ba9c9800-c305-46a6-9902-db3ade36ec2a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 127.0386 184.15 0)
+			(at 127.0386 166.37 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8447,7 +8493,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "04a39021-ca8d-4844-b688-3869db0330f2")
-		(property "Reference" "#PWR010"
+		(property "Reference" "#PWR044"
 			(at 68.58 198.12 0)
 			(hide yes)
 			(show_name no)
@@ -8507,7 +8553,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR010")
+					(reference "#PWR044")
 					(unit 1)
 				)
 			)
@@ -8524,7 +8570,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "05eddd2e-a3f6-40cb-8042-ee2151a65ef4")
-		(property "Reference" "R4"
+		(property "Reference" "R14"
 			(at 63.5 153.416 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8718,7 +8764,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R4")
+					(reference "R14")
 					(unit 1)
 				)
 			)
@@ -8736,7 +8782,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0677cd85-6074-4eb9-b67c-27a8a160acb9")
-		(property "Reference" "#PWR032"
+		(property "Reference" "#PWR023"
 			(at 218.44 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -8797,7 +8843,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR032")
+					(reference "#PWR023")
 					(unit 1)
 				)
 			)
@@ -8907,7 +8953,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "0db198db-66bd-48ea-8186-0aed25b2b10f")
-		(property "Reference" "R21"
+		(property "Reference" "R11"
 			(at 228.6 104.648 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9101,7 +9147,88 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R21")
+					(reference "R11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x02_Socket")
+		(at 101.6 193.04 270)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "0f36a204-a12a-4939-ab85-26ff54f4d3c1")
+		(property "Reference" "J8"
+			(at 98.298 194.564 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Cell 3"
+			(at 97.536 197.104 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
+			(at 101.6 193.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 101.6 193.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated"
+			(at 101.6 193.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1a588956-a4fd-4496-8899-293da8a97187")
+		)
+		(pin "2"
+			(uuid "3fa30181-9d07-40fa-8b63-8a76adf6f5d0")
+		)
+		(instances
+			(project "ENGG3000-BaseStation"
+				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
+					(reference "J8")
 					(unit 1)
 				)
 			)
@@ -9120,7 +9247,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "13bef139-9729-4a55-b6d6-1400316df0e0")
-		(property "Reference" "J9"
+		(property "Reference" "J4"
 			(at 227.33 17.78 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9320,7 +9447,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J9")
+					(reference "J4")
 					(unit 1)
 				)
 			)
@@ -9338,7 +9465,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1790747e-cf2c-4138-b797-31a9c1537dcc")
-		(property "Reference" "#PWR05"
+		(property "Reference" "#PWR042"
 			(at 29.21 198.12 0)
 			(hide yes)
 			(show_name no)
@@ -9398,218 +9525,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR05")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 102.87 162.56 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "17e3534b-ff0b-411b-b670-63941fd36734")
-		(property "Reference" "R8"
-			(at 102.87 158.496 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "5.1k"
-			(at 102.87 160.274 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 102.87 164.338 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 102.87 162.56 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 102.87 162.56 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC part" "C25905"
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Availability" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MAXIMUM_PACKAGE_HEIGHT" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PARTREV" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "STANDARD" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "SnapEDA_Link" ""
-			(at 102.87 162.56 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "08588ae2-c4f5-4a55-8155-6ac17cfcdec6")
-		)
-		(pin "1"
-			(uuid "9d27d9a0-56c6-4501-a256-94cedc770308")
-		)
-		(instances
-			(project "ENGG3000-BaseStation"
-				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R8")
+					(reference "#PWR042")
 					(unit 1)
 				)
 			)
@@ -9627,7 +9543,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "19387c27-df3c-42c6-b178-c1ccc663284b")
-		(property "Reference" "R13"
+		(property "Reference" "R8"
 			(at 147.32 78.7399 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9823,7 +9739,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R13")
+					(reference "R8")
 					(unit 1)
 				)
 			)
@@ -9840,7 +9756,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "19aa150f-5e4f-4b03-a70a-db85e7e07296")
-		(property "Reference" "#PWR042"
+		(property "Reference" "#PWR08"
 			(at 215.9 24.13 0)
 			(hide yes)
 			(show_name no)
@@ -9900,7 +9816,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR042")
+					(reference "#PWR08")
 					(unit 1)
 				)
 			)
@@ -9917,7 +9833,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "1c13f60e-6067-4871-b6b6-fab3a11a03b1")
-		(property "Reference" "#PWR043"
+		(property "Reference" "#PWR09"
 			(at 223.52 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -9977,7 +9893,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR043")
+					(reference "#PWR09")
 					(unit 1)
 				)
 			)
@@ -9985,7 +9901,7 @@
 	)
 	(symbol
 		(lib_id "Diode:SS14")
-		(at 154.94 177.8 90)
+		(at 149.86 180.34 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -9995,30 +9911,30 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1fb3092a-dbf7-4d2e-8639-b978841c6ec1")
-		(property "Reference" "D3"
-			(at 157.48 176.8474 90)
+		(property "Reference" "D5"
+			(at 152.4 178.7524 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 			)
 		)
 		(property "Value" "SS14"
-			(at 157.48 179.3874 90)
+			(at 152.4 181.2924 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 			)
 		)
 		(property "Footprint" "Diode_SMD:D_SMA"
-			(at 159.385 177.8 0)
+			(at 145.415 180.34 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10029,7 +9945,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.vishay.com/docs/88746/ss12.pdf"
-			(at 154.94 177.8 0)
+			(at 149.86 180.34 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10040,7 +9956,18 @@
 			)
 		)
 		(property "Description" "40V 1A Schottky Diode, SMA"
-			(at 154.94 177.8 0)
+			(at 149.86 180.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC part" "C2480"
+			(at 149.86 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10059,7 +9986,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "D3")
+					(reference "D5")
 					(unit 1)
 				)
 			)
@@ -10077,7 +10004,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "22e0778c-18a4-4a64-8b10-0bd81968877c")
-		(property "Reference" "#PWR022"
+		(property "Reference" "#PWR016"
 			(at 168.91 58.42 0)
 			(hide yes)
 			(show_name no)
@@ -10138,7 +10065,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR022")
+					(reference "#PWR016")
 					(unit 1)
 				)
 			)
@@ -10155,7 +10082,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "22f4702e-effd-4b4c-aaa4-5c22188dc34f")
-		(property "Reference" "R6"
+		(property "Reference" "R20"
 			(at 81.534 180.34 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10175,7 +10102,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
 			(at 75.692 180.34 90)
 			(hide yes)
 			(show_name no)
@@ -10208,7 +10135,7 @@
 				)
 			)
 		)
-		(property "LCSC part" "C25744"
+		(property "LCSC part" "C17414"
 			(at 77.47 180.34 90)
 			(hide yes)
 			(show_name no)
@@ -10349,7 +10276,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R6")
+					(reference "R20")
 					(unit 1)
 				)
 			)
@@ -10367,7 +10294,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "23c501da-fd57-47ea-b3fb-a9fdc883aa4a")
-		(property "Reference" "#PWR06"
+		(property "Reference" "#PWR01"
 			(at 34.29 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -10427,7 +10354,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR06")
+					(reference "#PWR01")
 					(unit 1)
 				)
 			)
@@ -10445,7 +10372,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "26b8383f-d930-4a7d-99f9-4de2110b0f36")
-		(property "Reference" "#PWR03"
+		(property "Reference" "#PWR037"
 			(at 26.67 175.26 0)
 			(hide yes)
 			(show_name no)
@@ -10506,7 +10433,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR03")
+					(reference "#PWR037")
 					(unit 1)
 				)
 			)
@@ -10524,7 +10451,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "29635052-e5d5-4369-a2a5-73790e966a1d")
-		(property "Reference" "#PWR02"
+		(property "Reference" "#PWR036"
 			(at 16.51 172.72 0)
 			(hide yes)
 			(show_name no)
@@ -10585,7 +10512,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR02")
+					(reference "#PWR036")
 					(unit 1)
 				)
 			)
@@ -10603,7 +10530,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2c0942c8-24e1-454c-b3a0-0de2c5b35adf")
-		(property "Reference" "#PWR029"
+		(property "Reference" "#PWR024"
 			(at 195.58 101.6 0)
 			(hide yes)
 			(show_name no)
@@ -10664,7 +10591,301 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR029")
+					(reference "#PWR024")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Jumper:SolderJumper_2_Bridged")
+		(at 111.76 182.88 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "2cb398f5-1e8a-42a2-926e-a78fc6eedc31")
+		(property "Reference" "JP2"
+			(at 114.3 181.6099 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "SolderJumper"
+			(at 116.332 177.292 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Jumper:SolderJumper-2_P1.3mm_Bridged2Bar_RoundedPad1.0x1.5mm"
+			(at 111.76 182.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 118.11 182.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Solder Jumper, 2-pole, closed/bridged"
+			(at 116.84 182.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "5b26a8b8-b386-480f-980b-65670fb01457")
+		)
+		(pin "1"
+			(uuid "889df27b-caf0-45c0-96c1-fb7afadf25f5")
+		)
+		(instances
+			(project "ENGG3000-BaseStation"
+				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
+					(reference "JP2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 213.36 140.97 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "2f5eaf7f-d58c-4696-a60b-d306d16dfb27")
+		(property "Reference" "C5"
+			(at 207.264 140.716 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10uF"
+			(at 207.264 143.256 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 214.3252 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC part" "C15850"
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MAXIMUM_PACKAGE_HEIGHT" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PARTREV" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "STANDARD" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 213.36 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "01c494f6-3fda-4abf-b7ed-9a28f65677a3")
+		)
+		(pin "1"
+			(uuid "5f53bff4-7519-4050-abcf-3424769d943a")
+		)
+		(instances
+			(project "ENGG3000-BaseStation"
+				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
+					(reference "C5")
 					(unit 1)
 				)
 			)
@@ -10681,7 +10902,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "2f86ef76-e87c-4152-8d67-0306cba9abb7")
-		(property "Reference" "R19"
+		(property "Reference" "R2"
 			(at 251.714 29.21 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10875,7 +11096,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R19")
+					(reference "R2")
 					(unit 1)
 				)
 			)
@@ -10893,7 +11114,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "30d0373e-81a4-496b-9f72-1a2f8f70a78c")
-		(property "Reference" "D1"
+		(property "Reference" "D4"
 			(at 93.6625 163.83 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11098,7 +11319,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "D1")
+					(reference "D4")
 					(unit 1)
 				)
 			)
@@ -11115,7 +11336,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "344c79c6-f72c-42fc-86ee-7b5d22b30d5c")
-		(property "Reference" "#PWR024"
+		(property "Reference" "#PWR011"
 			(at 176.53 38.1 0)
 			(hide yes)
 			(show_name no)
@@ -11175,7 +11396,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR024")
+					(reference "#PWR011")
 					(unit 1)
 				)
 			)
@@ -11183,7 +11404,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 147.32 163.83 0)
+		(at 143.51 186.69 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -11191,10 +11412,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "34b837c8-0c40-4ff6-9c7b-501bc6d34ca2")
-		(property "Reference" "#PWR021"
-			(at 147.32 167.64 0)
+		(property "Reference" "#PWR040"
+			(at 143.51 182.88 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11205,17 +11425,18 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 147.32 158.75 0)
+			(at 144.78 187.96 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
 		(property "Footprint" ""
-			(at 147.32 163.83 0)
+			(at 143.51 186.69 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11226,7 +11447,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 147.32 163.83 0)
+			(at 143.51 186.69 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11237,7 +11458,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 147.32 163.83 0)
+			(at 143.51 186.69 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11253,7 +11474,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR021")
+					(reference "#PWR040")
 					(unit 1)
 				)
 			)
@@ -11261,7 +11482,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 139.7 175.26 90)
+		(at 135.89 176.53 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -11271,8 +11492,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "354f9131-fd37-44c3-a511-410c38ed457f")
-		(property "Reference" "R11"
-			(at 139.7 168.91 90)
+		(property "Reference" "R18"
+			(at 135.89 170.18 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -11282,7 +11503,7 @@
 			)
 		)
 		(property "Value" "10k"
-			(at 139.7 171.45 90)
+			(at 135.89 172.72 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -11292,7 +11513,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 139.7 177.038 90)
+			(at 135.89 178.308 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11303,7 +11524,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11314,7 +11535,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11325,7 +11546,7 @@
 			)
 		)
 		(property "LCSC part" "C25744"
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11336,7 +11557,7 @@
 			)
 		)
 		(property "Availability" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11347,7 +11568,7 @@
 			)
 		)
 		(property "Check_prices" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11358,7 +11579,7 @@
 			)
 		)
 		(property "Description_1" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11369,7 +11590,7 @@
 			)
 		)
 		(property "MAXIMUM_PACKAGE_HEIGHT" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11380,7 +11601,7 @@
 			)
 		)
 		(property "MF" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11391,7 +11612,7 @@
 			)
 		)
 		(property "MP" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11402,7 +11623,7 @@
 			)
 		)
 		(property "PARTREV" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11413,7 +11634,7 @@
 			)
 		)
 		(property "Package" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11424,7 +11645,7 @@
 			)
 		)
 		(property "Price" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11435,7 +11656,7 @@
 			)
 		)
 		(property "STANDARD" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11446,7 +11667,7 @@
 			)
 		)
 		(property "SnapEDA_Link" ""
-			(at 139.7 175.26 0)
+			(at 135.89 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -11465,7 +11686,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R11")
+					(reference "R18")
 					(unit 1)
 				)
 			)
@@ -11483,7 +11704,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "390ca2b1-7b0f-4f0b-a65e-e51365a4de7e")
-		(property "Reference" "#PWR09"
+		(property "Reference" "#PWR032"
 			(at 63.5 157.48 0)
 			(hide yes)
 			(show_name no)
@@ -11544,7 +11765,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR09")
+					(reference "#PWR032")
 					(unit 1)
 				)
 			)
@@ -11562,7 +11783,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3a907e92-cc8b-41da-baf2-baa5aebc2550")
-		(property "Reference" "#PWR011"
+		(property "Reference" "#PWR045"
 			(at 77.47 198.12 0)
 			(hide yes)
 			(show_name no)
@@ -11622,7 +11843,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR011")
+					(reference "#PWR045")
 					(unit 1)
 				)
 			)
@@ -11639,7 +11860,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "4004bbe5-313a-4a54-a922-3a8ed018f5dd")
-		(property "Reference" "#PWR020"
+		(property "Reference" "#PWR019"
 			(at 144.78 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -11699,7 +11920,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR020")
+					(reference "#PWR019")
 					(unit 1)
 				)
 			)
@@ -11716,7 +11937,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "4388e9d3-3dcb-40e7-9cc6-ce010bf02c09")
-		(property "Reference" "#PWR044"
+		(property "Reference" "#PWR010"
 			(at 231.14 24.13 0)
 			(hide yes)
 			(show_name no)
@@ -11776,7 +11997,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR044")
+					(reference "#PWR010")
 					(unit 1)
 				)
 			)
@@ -11793,7 +12014,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "439c35c8-38aa-4721-8787-25c4b2f26fa9")
-		(property "Reference" "#PWR023"
+		(property "Reference" "#PWR020"
 			(at 152.4 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -11853,7 +12074,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR023")
+					(reference "#PWR020")
 					(unit 1)
 				)
 			)
@@ -11871,7 +12092,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "47da75d0-424c-4942-bb07-3906290f2906")
-		(property "Reference" "R10"
+		(property "Reference" "R7"
 			(at 154.94 63.4999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12067,7 +12288,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R10")
+					(reference "R7")
 					(unit 1)
 				)
 			)
@@ -12287,219 +12508,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 68.58 184.15 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "5157ba72-5019-4121-8d1c-1b905ccd2484")
-		(property "Reference" "C4"
-			(at 71.12 182.88 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "10uF"
-			(at 71.628 185.42 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 69.5452 187.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Unpolarized capacitor"
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC part" " C15525"
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Availability" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MAXIMUM_PACKAGE_HEIGHT" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PARTREV" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "STANDARD" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "SnapEDA_Link" ""
-			(at 68.58 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "36016eb8-3f97-4b04-9e26-f0b119b5b7b7")
-		)
-		(pin "1"
-			(uuid "1d76b22e-7cbf-4e05-8f8d-1dda70574b6d")
-		)
-		(instances
-			(project "ENGG3000-BaseStation"
-				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C4")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Connector:USB_C_Receptacle_USB2.0_16P")
 		(at 247.65 90.17 180)
 		(unit 1)
@@ -12510,7 +12518,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "53275bad-b5b4-4bd2-a869-3a0afa53463f")
-		(property "Reference" "J7"
+		(property "Reference" "J5"
 			(at 259.08 88.8999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12751,7 +12759,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J7")
+					(reference "J5")
 					(unit 1)
 				)
 			)
@@ -12769,7 +12777,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "53b89ec5-2c27-4a4a-8d79-c044593dd9e2")
-		(property "Reference" "D5"
+		(property "Reference" "D2"
 			(at 261.62 37.1474 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12976,7 +12984,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "D5")
+					(reference "D2")
 					(unit 1)
 				)
 			)
@@ -12993,7 +13001,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "55da6337-7142-4fcd-8b08-1c31fc1303cd")
-		(property "Reference" "C2"
+		(property "Reference" "C1"
 			(at 29.21 40.64 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13187,7 +13195,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C2")
+					(reference "C1")
 					(unit 1)
 				)
 			)
@@ -13205,7 +13213,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5792d954-778c-4114-a15b-9df7b583d00e")
-		(property "Reference" "#PWR034"
+		(property "Reference" "#PWR03"
 			(at 247.65 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -13265,218 +13273,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR034")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 77.47 187.96 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "590fe055-20d2-4a1f-b8f4-bb99721a1398")
-		(property "Reference" "R7"
-			(at 81.534 187.96 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "10k"
-			(at 79.756 187.96 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 75.692 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 77.47 187.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 77.47 187.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC part" "C25744"
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Availability" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Check_prices" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description_1" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MAXIMUM_PACKAGE_HEIGHT" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MP" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "PARTREV" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Package" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Price" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "STANDARD" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "SnapEDA_Link" ""
-			(at 77.47 187.96 90)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "25ec5277-c110-45d6-8344-7ef650358a00")
-		)
-		(pin "1"
-			(uuid "37ddcae4-01d6-485a-b1d1-a367289178ef")
-		)
-		(instances
-			(project "ENGG3000-BaseStation"
-				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R7")
+					(reference "#PWR03")
 					(unit 1)
 				)
 			)
@@ -13494,7 +13291,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5a035c68-f305-4ad7-9401-9dec7e113a7e")
-		(property "Reference" "#PWR016"
+		(property "Reference" "#PWR05"
 			(at 129.54 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -13554,7 +13351,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR016")
+					(reference "#PWR05")
 					(unit 1)
 				)
 			)
@@ -13562,7 +13359,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 213.36 144.78 0)
+		(at 220.98 144.78 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -13572,8 +13369,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5bbc112f-cbd2-4a01-8f1f-c2caac1d138f")
-		(property "Reference" "#PWR027"
-			(at 213.36 151.13 0)
+		(property "Reference" "#PWR031"
+			(at 220.98 151.13 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13584,7 +13381,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 213.36 149.86 0)
+			(at 220.98 149.86 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -13594,7 +13391,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 213.36 144.78 0)
+			(at 220.98 144.78 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13605,7 +13402,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 213.36 144.78 0)
+			(at 220.98 144.78 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13616,7 +13413,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 213.36 144.78 0)
+			(at 220.98 144.78 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13632,7 +13429,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR027")
+					(reference "#PWR031")
 					(unit 1)
 				)
 			)
@@ -13649,7 +13446,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "62cf972a-c600-4493-992e-a509a85333c1")
-		(property "Reference" "R9"
+		(property "Reference" "R17"
 			(at 102.87 166.116 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13843,7 +13640,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R9")
+					(reference "R17")
 					(unit 1)
 				)
 			)
@@ -13861,7 +13658,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6494c69a-558c-4d7c-b352-3cdb418beef9")
-		(property "Reference" "U3"
+		(property "Reference" "U2"
 			(at 243.84 121.92 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -13950,7 +13747,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "U3")
+					(reference "U2")
 					(unit 1)
 				)
 			)
@@ -13968,7 +13765,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6693fa33-39e8-4ecc-9f28-cec44a441f87")
-		(property "Reference" "#PWR028"
+		(property "Reference" "#PWR022"
 			(at 171.45 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -14028,15 +13825,15 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR028")
+					(reference "#PWR022")
 					(unit 1)
 				)
 			)
 		)
 	)
 	(symbol
-		(lib_id "Connector:Conn_01x02_Socket")
-		(at 165.1 189.23 270)
+		(lib_id "Device:C")
+		(at 68.58 184.15 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -14044,9 +13841,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(uuid "6a80e922-803d-4634-8c31-a47b461d66be")
-		(property "Reference" "J4"
-			(at 166.37 187.3249 90)
+		(uuid "67fc3ca6-c4e6-4893-b274-4da813e2c4e7")
+		(property "Reference" "C9"
+			(at 71.12 182.88 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -14056,8 +13853,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "Power Switch"
-			(at 158.242 190.5 90)
+		(property "Value" "10uF"
+			(at 71.12 185.42 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -14067,8 +13864,8 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
-			(at 165.1 189.23 0)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+			(at 69.5452 187.96 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14079,7 +13876,220 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 165.1 189.23 0)
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC part" "C15850"
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MAXIMUM_PACKAGE_HEIGHT" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PARTREV" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "STANDARD" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 68.58 184.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "0c48d346-42ea-47b3-824d-4799d982e1cd")
+		)
+		(pin "1"
+			(uuid "0b04ae34-3203-46ae-97d3-ee546b870dde")
+		)
+		(instances
+			(project "ENGG3000-BaseStation"
+				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
+					(reference "C9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x02_Socket")
+		(at 162.56 171.45 270)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6a80e922-803d-4634-8c31-a47b461d66be")
+		(property "Reference" "J7"
+			(at 163.83 169.5449 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Power Switch"
+			(at 155.702 172.72 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
+			(at 162.56 171.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 162.56 171.45 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14090,7 +14100,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 165.1 189.23 0)
+			(at 162.56 171.45 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14109,7 +14119,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J4")
+					(reference "J7")
 					(unit 1)
 				)
 			)
@@ -14127,7 +14137,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "763f2ef3-03d6-455b-b237-9c86d18d63e3")
-		(property "Reference" "J6"
+		(property "Reference" "J2"
 			(at 196.85 17.78 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14198,7 +14208,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J6")
+					(reference "J2")
 					(unit 1)
 				)
 			)
@@ -14407,7 +14417,7 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_01x02_Socket")
-		(at 102.87 181.61 270)
+		(at 110.49 193.04 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -14415,10 +14425,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "7e9a2cd3-8176-405a-b9a7-dec273670c4c")
-		(property "Reference" "J2"
-			(at 104.14 179.7049 90)
+		(property "Reference" "J9"
+			(at 107.188 194.564 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -14429,7 +14438,7 @@
 			)
 		)
 		(property "Value" "Cell 2"
-			(at 104.14 182.2449 90)
+			(at 105.664 197.104 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -14440,7 +14449,7 @@
 			)
 		)
 		(property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
-			(at 102.87 181.61 0)
+			(at 110.49 193.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14451,7 +14460,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 102.87 181.61 0)
+			(at 110.49 193.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14462,7 +14471,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 102.87 181.61 0)
+			(at 110.49 193.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14481,7 +14490,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J2")
+					(reference "J9")
 					(unit 1)
 				)
 			)
@@ -14498,7 +14507,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "818a26a3-fd6e-43b0-ae46-06a8d4c9ffe1")
-		(property "Reference" "#PWR026"
+		(property "Reference" "#PWR014"
 			(at 191.77 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -14558,7 +14567,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR026")
+					(reference "#PWR014")
 					(unit 1)
 				)
 			)
@@ -14576,7 +14585,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8a05af8c-e5cf-45c0-a5c9-7600d2ce17c7")
-		(property "Reference" "D6"
+		(property "Reference" "D3"
 			(at 271.78 37.1474 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14783,7 +14792,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "D6")
+					(reference "D3")
 					(unit 1)
 				)
 			)
@@ -14800,7 +14809,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "8abbce5e-a576-4971-a83c-7dcabea43d3a")
-		(property "Reference" "R1"
+		(property "Reference" "R19"
 			(at 33.274 180.34 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -14994,7 +15003,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R1")
+					(reference "R19")
 					(unit 1)
 				)
 			)
@@ -15011,7 +15020,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "8af422db-d176-41d7-a8ac-bbdd7f41cce7")
-		(property "Reference" "R23"
+		(property "Reference" "R4"
 			(at 272.034 29.21 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15205,7 +15214,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R23")
+					(reference "R4")
 					(unit 1)
 				)
 			)
@@ -15222,7 +15231,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "8b0a37fd-d3cc-432d-9919-6ac54b8cf1e2")
-		(property "Reference" "C3"
+		(property "Reference" "C8"
 			(at 60.96 182.88 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15244,7 +15253,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
 			(at 59.3852 187.96 0)
 			(hide yes)
 			(show_name no)
@@ -15277,7 +15286,7 @@
 				)
 			)
 		)
-		(property "LCSC part" " C15525"
+		(property "LCSC part" "C15850"
 			(at 58.42 184.15 0)
 			(hide yes)
 			(show_name no)
@@ -15418,7 +15427,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C3")
+					(reference "C8")
 					(unit 1)
 				)
 			)
@@ -15436,7 +15445,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8b6d408f-7bbc-4a45-8171-725a360d7ce6")
-		(property "Reference" "#PWR035"
+		(property "Reference" "#PWR04"
 			(at 257.81 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -15496,7 +15505,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR035")
+					(reference "#PWR04")
 					(unit 1)
 				)
 			)
@@ -15513,7 +15522,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "8e561358-0f2f-4e64-b213-3f3748170952")
-		(property "Reference" "R5"
+		(property "Reference" "R15"
 			(at 71.12 153.416 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15707,7 +15716,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R5")
+					(reference "R15")
 					(unit 1)
 				)
 			)
@@ -15726,7 +15735,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8fd73571-63ec-4994-82ff-53b9666242c2")
-		(property "Reference" "J8"
+		(property "Reference" "J3"
 			(at 212.09 17.78 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15926,7 +15935,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J8")
+					(reference "J3")
 					(unit 1)
 				)
 			)
@@ -15934,7 +15943,7 @@
 	)
 	(symbol
 		(lib_id "Transistor_FET:AO3401A")
-		(at 147.32 181.61 270)
+		(at 143.51 168.91 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -15944,8 +15953,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9157f4af-14b0-4be8-aa05-7df21366766e")
-		(property "Reference" "Q1"
-			(at 147.32 187.96 90)
+		(property "Reference" "Q2"
+			(at 143.51 160.02 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -15955,7 +15964,7 @@
 			)
 		)
 		(property "Value" "AO3401A"
-			(at 147.32 190.5 90)
+			(at 143.51 162.56 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -15965,7 +15974,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 145.415 186.69 0)
+			(at 145.415 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15978,7 +15987,7 @@
 			)
 		)
 		(property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3401A.pdf"
-			(at 143.51 186.69 0)
+			(at 147.32 163.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15990,7 +15999,7 @@
 			)
 		)
 		(property "Description" "-4.0A Id, -30V Vds, P-Channel MOSFET, SOT-23"
-			(at 147.32 181.61 0)
+			(at 143.51 168.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16001,7 +16010,7 @@
 			)
 		)
 		(property "LCSC part" "C15127"
-			(at 147.32 181.61 90)
+			(at 143.51 168.91 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16023,7 +16032,218 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "Q1")
+					(reference "Q2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 77.47 187.96 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "94baaf50-06ef-41ef-80c0-4ae9a81b9e30")
+		(property "Reference" "R23"
+			(at 81.534 187.96 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "10k"
+			(at 79.756 187.96 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
+			(at 75.692 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 77.47 187.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 77.47 187.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "LCSC part" "C17414"
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Availability" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Check_prices" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description_1" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MAXIMUM_PACKAGE_HEIGHT" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MF" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "MP" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "PARTREV" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Package" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Price" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "STANDARD" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "SnapEDA_Link" ""
+			(at 77.47 187.96 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "76a3b77e-7d8d-4006-a7e3-bc347cc40f3f")
+		)
+		(pin "1"
+			(uuid "e7212914-5b16-4e5c-a0b4-969d9e1fd88b")
+		)
+		(instances
+			(project "ENGG3000-BaseStation"
+				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
+					(reference "R23")
 					(unit 1)
 				)
 			)
@@ -16041,7 +16261,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9b8d7047-fc5e-4577-ae11-30c94b59f6f9")
-		(property "Reference" "#PWR033"
+		(property "Reference" "#PWR025"
 			(at 228.6 106.68 0)
 			(hide yes)
 			(show_name no)
@@ -16102,7 +16322,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR033")
+					(reference "#PWR025")
 					(unit 1)
 				)
 			)
@@ -16120,7 +16340,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9ef26175-8a82-4f9f-aa64-3408bc6e3c99")
-		(property "Reference" "#PWR08"
+		(property "Reference" "#PWR043"
 			(at 58.42 198.12 0)
 			(hide yes)
 			(show_name no)
@@ -16180,7 +16400,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR08")
+					(reference "#PWR043")
 					(unit 1)
 				)
 			)
@@ -16197,7 +16417,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "a0024d23-dd5a-4440-85d5-79a4b09c857e")
-		(property "Reference" "R2"
+		(property "Reference" "R22"
 			(at 33.274 187.96 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16391,87 +16611,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Diode:SS14")
-		(at 138.43 184.15 180)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "a2b70d12-971a-479c-b685-066babdc8931")
-		(property "Reference" "D2"
-			(at 138.7475 177.8 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "SS14"
-			(at 138.7475 180.34 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Diode_SMD:D_SMA"
-			(at 138.43 179.705 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://www.vishay.com/docs/88746/ss12.pdf"
-			(at 138.43 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "40V 1A Schottky Diode, SMA"
-			(at 138.43 184.15 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "7824cbae-e1c5-43e1-8acf-75b14fdf8eca")
-		)
-		(pin "2"
-			(uuid "2663e178-b670-413a-9ef3-0816b6fdb7ba")
-		)
-		(instances
-			(project "ENGG3000-BaseStation"
-				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "D2")
+					(reference "R22")
 					(unit 1)
 				)
 			)
@@ -16489,7 +16629,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a5497838-93c8-4013-8135-0e5ea433f290")
-		(property "Reference" "#PWR037"
+		(property "Reference" "#PWR029"
 			(at 266.7 146.05 0)
 			(hide yes)
 			(show_name no)
@@ -16549,7 +16689,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR037")
+					(reference "#PWR029")
 					(unit 1)
 				)
 			)
@@ -16567,7 +16707,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a5dc1ef9-84d5-4db9-97ff-a84165ab8024")
-		(property "Reference" "#PWR038"
+		(property "Reference" "#PWR017"
 			(at 247.65 59.69 0)
 			(hide yes)
 			(show_name no)
@@ -16627,7 +16767,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR038")
+					(reference "#PWR017")
 					(unit 1)
 				)
 			)
@@ -16644,7 +16784,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "a665938b-a47a-4fbb-9416-8371b5d6b73a")
-		(property "Reference" "#PWR025"
+		(property "Reference" "#PWR013"
 			(at 184.15 33.02 0)
 			(hide yes)
 			(show_name no)
@@ -16704,7 +16844,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR025")
+					(reference "#PWR013")
 					(unit 1)
 				)
 			)
@@ -16721,7 +16861,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "a6bf1df6-3475-462b-a583-32b49c783f01")
-		(property "Reference" "R20"
+		(property "Reference" "R10"
 			(at 228.6 93.726 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16915,7 +17055,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R20")
+					(reference "R10")
 					(unit 1)
 				)
 			)
@@ -16923,7 +17063,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 213.36 133.35 180)
+		(at 220.98 133.35 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -16932,8 +17072,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "a8d91ede-32df-4a7f-8fd6-f43caf89e0fd")
-		(property "Reference" "R17"
-			(at 209.296 133.35 90)
+		(property "Reference" "R13"
+			(at 216.916 133.35 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -16943,7 +17083,7 @@
 			)
 		)
 		(property "Value" "100R"
-			(at 211.074 133.35 90)
+			(at 218.694 133.35 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -16953,7 +17093,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 215.138 133.35 90)
+			(at 222.758 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16964,7 +17104,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 213.36 133.35 0)
+			(at 220.98 133.35 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16975,7 +17115,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 213.36 133.35 0)
+			(at 220.98 133.35 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16986,7 +17126,7 @@
 			)
 		)
 		(property "LCSC part" "C25076"
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16997,7 +17137,7 @@
 			)
 		)
 		(property "Availability" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17008,7 +17148,7 @@
 			)
 		)
 		(property "Check_prices" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17019,7 +17159,7 @@
 			)
 		)
 		(property "Description_1" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17030,7 +17170,7 @@
 			)
 		)
 		(property "MAXIMUM_PACKAGE_HEIGHT" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17041,7 +17181,7 @@
 			)
 		)
 		(property "MF" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17052,7 +17192,7 @@
 			)
 		)
 		(property "MP" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17063,7 +17203,7 @@
 			)
 		)
 		(property "PARTREV" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17074,7 +17214,7 @@
 			)
 		)
 		(property "Package" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17085,7 +17225,7 @@
 			)
 		)
 		(property "Price" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17096,7 +17236,7 @@
 			)
 		)
 		(property "STANDARD" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17107,7 +17247,7 @@
 			)
 		)
 		(property "SnapEDA_Link" ""
-			(at 213.36 133.35 90)
+			(at 220.98 133.35 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17126,7 +17266,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R17")
+					(reference "R13")
 					(unit 1)
 				)
 			)
@@ -17144,7 +17284,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a8dc4d19-55e0-40a0-aeb1-41de49464cc9")
-		(property "Reference" "#PWR040"
+		(property "Reference" "#PWR028"
 			(at 280.67 144.78 0)
 			(hide yes)
 			(show_name no)
@@ -17204,7 +17344,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR040")
+					(reference "#PWR028")
 					(unit 1)
 				)
 			)
@@ -17222,7 +17362,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "aac923a9-3743-48d5-8997-ac9b2febdc00")
-		(property "Reference" "R15"
+		(property "Reference" "R9"
 			(at 154.94 78.7399 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17418,7 +17558,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R15")
+					(reference "R9")
 					(unit 1)
 				)
 			)
@@ -17436,7 +17576,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ac12416c-1bd3-46c3-a95e-c575645773e5")
-		(property "Reference" "#PWR013"
+		(property "Reference" "#PWR026"
 			(at 85.09 119.38 0)
 			(hide yes)
 			(show_name no)
@@ -17496,7 +17636,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR013")
+					(reference "#PWR026")
 					(unit 1)
 				)
 			)
@@ -17513,7 +17653,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "adbecbca-1ca3-498c-b2fd-f49a8dfa89c7")
-		(property "Reference" "#PWR019"
+		(property "Reference" "#PWR018"
 			(at 152.4 64.77 0)
 			(hide yes)
 			(show_name no)
@@ -17573,7 +17713,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR019")
+					(reference "#PWR018")
 					(unit 1)
 				)
 			)
@@ -17590,7 +17730,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "ae44b6a1-bb09-43c4-a229-2ef5d5024615")
-		(property "Reference" "R22"
+		(property "Reference" "R3"
 			(at 261.874 29.21 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17784,7 +17924,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R22")
+					(reference "R3")
 					(unit 1)
 				)
 			)
@@ -17801,7 +17941,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "b0cca0fa-77a2-4eab-adee-1a8337069c9f")
-		(property "Reference" "R18"
+		(property "Reference" "R12"
 			(at 180.086 113.03 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17995,7 +18135,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R18")
+					(reference "R12")
 					(unit 1)
 				)
 			)
@@ -18012,7 +18152,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "b19696ca-9302-4f80-9555-6b3305720b20")
-		(property "Reference" "C7"
+		(property "Reference" "C3"
 			(at 276.606 135.636 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18208,7 +18348,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C7")
+					(reference "C3")
 					(unit 1)
 				)
 			)
@@ -18216,7 +18356,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 213.36 140.97 0)
+		(at 220.98 140.97 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -18225,8 +18365,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "b368f876-cf25-45e2-88ba-d698ee1ded7e")
-		(property "Reference" "C5"
-			(at 215.9 139.7 0)
+		(property "Reference" "C6"
+			(at 223.52 139.7 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -18237,7 +18377,7 @@
 			)
 		)
 		(property "Value" "100nF"
-			(at 216.408 142.24 0)
+			(at 224.536 146.558 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -18248,7 +18388,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 214.3252 144.78 0)
+			(at 221.9452 144.78 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18259,7 +18399,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18270,7 +18410,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18281,7 +18421,7 @@
 			)
 		)
 		(property "LCSC part" "C1525"
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18292,7 +18432,7 @@
 			)
 		)
 		(property "Availability" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18303,7 +18443,7 @@
 			)
 		)
 		(property "Check_prices" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18314,7 +18454,7 @@
 			)
 		)
 		(property "Description_1" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18325,7 +18465,7 @@
 			)
 		)
 		(property "MAXIMUM_PACKAGE_HEIGHT" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18336,7 +18476,7 @@
 			)
 		)
 		(property "MF" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18347,7 +18487,7 @@
 			)
 		)
 		(property "MP" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18358,7 +18498,7 @@
 			)
 		)
 		(property "PARTREV" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18369,7 +18509,7 @@
 			)
 		)
 		(property "Package" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18380,7 +18520,7 @@
 			)
 		)
 		(property "Price" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18391,7 +18531,7 @@
 			)
 		)
 		(property "STANDARD" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18402,7 +18542,7 @@
 			)
 		)
 		(property "SnapEDA_Link" ""
-			(at 213.36 140.97 0)
+			(at 220.98 140.97 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18421,7 +18561,88 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C5")
+					(reference "C6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Jumper:SolderJumper_2_Bridged")
+		(at 97.79 182.88 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "b4bb921e-fb6b-45b6-8415-4fcf4768e7b1")
+		(property "Reference" "JP1"
+			(at 93.472 181.356 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "SolderJumper"
+			(at 95.504 177.0381 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Jumper:SolderJumper-2_P1.3mm_Bridged2Bar_RoundedPad1.0x1.5mm"
+			(at 97.79 182.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 104.14 182.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Solder Jumper, 2-pole, closed/bridged"
+			(at 102.87 182.88 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "dd23bcf4-2eb9-42bc-b4ec-50f9b0f7a02b")
+		)
+		(pin "1"
+			(uuid "0b426e00-b516-4cbe-958e-c64c5808f338")
+		)
+		(instances
+			(project "ENGG3000-BaseStation"
+				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
+					(reference "JP1")
 					(unit 1)
 				)
 			)
@@ -18439,7 +18660,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "bc4cf61c-785d-48af-a720-d8604e01b6ef")
-		(property "Reference" "#PWR012"
+		(property "Reference" "#PWR02"
 			(at 85.09 29.21 0)
 			(hide yes)
 			(show_name no)
@@ -18499,7 +18720,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR012")
+					(reference "#PWR02")
 					(unit 1)
 				)
 			)
@@ -18516,7 +18737,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "bfec587c-c8d7-4d18-83c3-45c27b6b6f2c")
-		(property "Reference" "#PWR018"
+		(property "Reference" "#PWR06"
 			(at 137.16 22.86 0)
 			(hide yes)
 			(show_name no)
@@ -18576,7 +18797,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR018")
+					(reference "#PWR06")
 					(unit 1)
 				)
 			)
@@ -18594,7 +18815,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "bfff57f9-9d1d-426c-bf11-5421bc8d2f84")
-		(property "Reference" "U2"
+		(property "Reference" "U1"
 			(at 87.2333 29.21 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18907,7 +19128,85 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "U2")
+					(reference "U1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 213.36 144.78 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "c09f2bcb-eb3b-4116-970e-8fd7a0fe42b4")
+		(property "Reference" "#PWR030"
+			(at 213.36 151.13 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 213.36 149.86 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 213.36 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 213.36 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 213.36 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "2d808eaf-cce0-422d-813a-c0dd015778c7")
+		)
+		(instances
+			(project "ENGG3000-BaseStation"
+				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
+					(reference "#PWR030")
 					(unit 1)
 				)
 			)
@@ -18925,7 +19224,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c2bbf67c-aa65-49ec-99ad-ad08516def7f")
-		(property "Reference" "#PWR07"
+		(property "Reference" "#PWR034"
 			(at 64.77 165.1 0)
 			(hide yes)
 			(show_name no)
@@ -18986,7 +19285,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR07")
+					(reference "#PWR034")
 					(unit 1)
 				)
 			)
@@ -19003,7 +19302,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "c3665ebf-1a0c-44bb-aabf-19dbf6fcb166")
-		(property "Reference" "#PWR041"
+		(property "Reference" "#PWR07"
 			(at 208.28 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -19063,7 +19362,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR041")
+					(reference "#PWR07")
 					(unit 1)
 				)
 			)
@@ -19081,7 +19380,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c4599702-23c6-4e65-89bd-21e8d65174b5")
-		(property "Reference" "#PWR01"
+		(property "Reference" "#PWR012"
 			(at 15.24 36.83 0)
 			(hide yes)
 			(show_name no)
@@ -19142,7 +19441,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR01")
+					(reference "#PWR012")
 					(unit 1)
 				)
 			)
@@ -19160,7 +19459,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ca717e38-c7df-4eee-baa7-e0dec6ac71a4")
-		(property "Reference" "R16"
+		(property "Reference" "R6"
 			(at 153.67 40.64 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -19354,7 +19653,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R16")
+					(reference "R6")
 					(unit 1)
 				)
 			)
@@ -19372,7 +19671,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cc1d2018-a7fd-419f-9dba-552c2ff33620")
-		(property "Reference" "#PWR04"
+		(property "Reference" "#PWR041"
 			(at 22.86 198.12 0)
 			(hide yes)
 			(show_name no)
@@ -19432,7 +19731,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR04")
+					(reference "#PWR041")
 					(unit 1)
 				)
 			)
@@ -19450,7 +19749,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cf007fa7-d22d-463e-b58d-fb001555ed80")
-		(property "Reference" "D4"
+		(property "Reference" "D1"
 			(at 251.46 37.1474 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -19657,7 +19956,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "D4")
+					(reference "D1")
 					(unit 1)
 				)
 			)
@@ -19675,7 +19974,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d2d9b17f-d5fb-4751-b779-4f31addba64a")
-		(property "Reference" "#PWR036"
+		(property "Reference" "#PWR015"
 			(at 257.81 50.8 0)
 			(hide yes)
 			(show_name no)
@@ -19735,7 +20034,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR036")
+					(reference "#PWR015")
 					(unit 1)
 				)
 			)
@@ -19752,7 +20051,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "d37863f5-1baa-466b-89cd-d2f9a4a43bd0")
-		(property "Reference" "C1"
+		(property "Reference" "C7"
 			(at 18.288 186.436 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -19946,7 +20245,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C1")
+					(reference "C7")
 					(unit 1)
 				)
 			)
@@ -19963,7 +20262,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "d58dce42-2665-48f3-a577-9c923a9c69af")
-		(property "Reference" "R3"
+		(property "Reference" "R1"
 			(at 38.354 29.21 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20157,7 +20456,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R3")
+					(reference "R1")
 					(unit 1)
 				)
 			)
@@ -20175,7 +20474,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "dad561a8-550e-4320-b0da-77569b65b591")
-		(property "Reference" "#PWR014"
+		(property "Reference" "#PWR035"
 			(at 102.87 170.18 0)
 			(hide yes)
 			(show_name no)
@@ -20236,7 +20535,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR014")
+					(reference "#PWR035")
 					(unit 1)
 				)
 			)
@@ -20253,7 +20552,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "dce9a71c-d8a5-4054-bbd4-61edb19b08a0")
-		(property "Reference" "C8"
+		(property "Reference" "C4"
 			(at 275.844 139.192 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20447,7 +20746,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C8")
+					(reference "C4")
 					(unit 1)
 				)
 			)
@@ -20465,7 +20764,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ddbeda04-9efb-447d-8dd9-0173d909aac6")
-		(property "Reference" "J5"
+		(property "Reference" "J1"
 			(at 180.34 17.78 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20665,7 +20964,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J5")
+					(reference "J1")
 					(unit 1)
 				)
 			)
@@ -20682,7 +20981,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "de11394a-50d6-4c08-a28e-5d7a91dfd3e2")
-		(property "Reference" "C6"
+		(property "Reference" "C2"
 			(at 261.62 135.636 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20878,7 +21177,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "C6")
+					(reference "C2")
 					(unit 1)
 				)
 			)
@@ -20886,7 +21185,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 114.3 177.8 180)
+		(at 121.92 176.53 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -20896,8 +21195,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "de7e8912-b109-4e43-ad29-38bf387bfccb")
-		(property "Reference" "#PWR015"
-			(at 114.3 171.45 0)
+		(property "Reference" "#PWR038"
+			(at 121.92 170.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20908,7 +21207,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 114.3 172.72 0)
+			(at 121.92 171.45 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -20918,7 +21217,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 114.3 177.8 0)
+			(at 121.92 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20929,7 +21228,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 114.3 177.8 0)
+			(at 121.92 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20940,7 +21239,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 114.3 177.8 0)
+			(at 121.92 176.53 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20956,7 +21255,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR015")
+					(reference "#PWR038")
 					(unit 1)
 				)
 			)
@@ -20974,7 +21273,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "df053906-62a8-4834-980b-8ec6534ab264")
-		(property "Reference" "Q2"
+		(property "Reference" "Q1"
 			(at 184.15 95.25 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21196,7 +21495,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "Q2")
+					(reference "Q1")
 					(unit 1)
 				)
 			)
@@ -21432,7 +21731,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e6b456db-c6bc-468d-a239-95e15a874dca")
-		(property "Reference" "U1"
+		(property "Reference" "U3"
 			(at 45.72 157.48 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21548,7 +21847,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "U1")
+					(reference "U3")
 					(unit 1)
 				)
 			)
@@ -21556,7 +21855,7 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_01x02_Socket")
-		(at 114.3 181.61 270)
+		(at 121.92 193.04 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -21564,10 +21863,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "e6e9e679-1d6d-4e70-915d-199133dd9630")
-		(property "Reference" "J3"
-			(at 115.57 179.7049 90)
+		(property "Reference" "J10"
+			(at 118.11 194.564 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -21577,8 +21875,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "Cell 1"
-			(at 115.57 182.2449 90)
+		(property "Value" "Cell/Pack 1"
+			(at 112.522 197.104 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -21589,7 +21887,7 @@
 			)
 		)
 		(property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
-			(at 114.3 181.61 0)
+			(at 121.92 193.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21600,7 +21898,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 114.3 181.61 0)
+			(at 121.92 193.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21611,7 +21909,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 114.3 181.61 0)
+			(at 121.92 193.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21630,7 +21928,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J3")
+					(reference "J10")
 					(unit 1)
 				)
 			)
@@ -21638,7 +21936,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 147.32 170.18 180)
+		(at 143.51 180.34 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -21647,8 +21945,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "e99e50fa-26bd-46b5-b634-e7c823f44ca7")
-		(property "Reference" "R14"
-			(at 143.256 170.18 90)
+		(property "Reference" "R21"
+			(at 139.446 180.34 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -21658,7 +21956,7 @@
 			)
 		)
 		(property "Value" "1k"
-			(at 145.034 170.18 90)
+			(at 141.224 180.34 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -21668,7 +21966,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 149.098 170.18 90)
+			(at 145.288 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21679,7 +21977,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 147.32 170.18 0)
+			(at 143.51 180.34 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21690,7 +21988,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 147.32 170.18 0)
+			(at 143.51 180.34 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21701,7 +21999,7 @@
 			)
 		)
 		(property "LCSC part" "C11702"
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21712,7 +22010,7 @@
 			)
 		)
 		(property "Availability" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21723,7 +22021,7 @@
 			)
 		)
 		(property "Check_prices" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21734,7 +22032,7 @@
 			)
 		)
 		(property "Description_1" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21745,7 +22043,7 @@
 			)
 		)
 		(property "MAXIMUM_PACKAGE_HEIGHT" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21756,7 +22054,7 @@
 			)
 		)
 		(property "MF" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21767,7 +22065,7 @@
 			)
 		)
 		(property "MP" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21778,7 +22076,7 @@
 			)
 		)
 		(property "PARTREV" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21789,7 +22087,7 @@
 			)
 		)
 		(property "Package" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21800,7 +22098,7 @@
 			)
 		)
 		(property "Price" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21811,7 +22109,7 @@
 			)
 		)
 		(property "STANDARD" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21822,7 +22120,7 @@
 			)
 		)
 		(property "SnapEDA_Link" ""
-			(at 147.32 170.18 90)
+			(at 143.51 180.34 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21841,7 +22139,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R14")
+					(reference "R21")
 					(unit 1)
 				)
 			)
@@ -21858,7 +22156,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "ece4f56e-a553-44ec-8dbd-f6661b275d9b")
-		(property "Reference" "#PWR039"
+		(property "Reference" "#PWR027"
 			(at 280.67 133.35 0)
 			(hide yes)
 			(show_name no)
@@ -21918,7 +22216,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR039")
+					(reference "#PWR027")
 					(unit 1)
 				)
 			)
@@ -21926,7 +22224,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 133.35 176.53 0)
+		(at 132.08 179.07 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -21936,8 +22234,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ee86a703-e67e-417e-b44c-6ccdf033e6d8")
-		(property "Reference" "#PWR017"
-			(at 133.35 182.88 0)
+		(property "Reference" "#PWR039"
+			(at 132.08 185.42 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21948,7 +22246,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 133.35 181.61 0)
+			(at 132.08 184.15 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -21958,7 +22256,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 133.35 176.53 0)
+			(at 132.08 179.07 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21969,7 +22267,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 133.35 176.53 0)
+			(at 132.08 179.07 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21980,7 +22278,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 133.35 176.53 0)
+			(at 132.08 179.07 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21996,7 +22294,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR017")
+					(reference "#PWR039")
 					(unit 1)
 				)
 			)
@@ -22014,7 +22312,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ef834acd-6ff6-4919-909d-26ea7548990b")
-		(property "Reference" "R12"
+		(property "Reference" "R5"
 			(at 144.78 38.1 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -22208,90 +22506,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "R12")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_name "Conn_01x02_Socket_1")
-		(lib_id "Connector:Conn_01x02_Socket")
-		(at 86.36 156.21 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "efb064b7-aaac-40ea-8bac-05de3551135c")
-		(property "Reference" "J1"
-			(at 90.17 155.5749 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "CHRG LED"
-			(at 90.17 158.1149 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
-			(at 86.36 156.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 86.36 156.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 86.36 156.21 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "a7f8be13-978c-441a-b0fc-7289f39f6c84")
-		)
-		(pin "2"
-			(uuid "6290676b-9dd3-4bdc-a4ee-aafdb80ab3e1")
-		)
-		(instances
-			(project "ENGG3000-BaseStation"
-				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "J1")
+					(reference "R5")
 					(unit 1)
 				)
 			)
@@ -22510,7 +22725,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f49e4745-823e-440e-9dd7-afbbd9a88516")
-		(property "Reference" "#PWR031"
+		(property "Reference" "#PWR021"
 			(at 218.44 97.79 0)
 			(hide yes)
 			(show_name no)
@@ -22571,7 +22786,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR031")
+					(reference "#PWR021")
 					(unit 1)
 				)
 			)
@@ -22589,7 +22804,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f9b4dfcf-b98c-4528-94fe-fab86346dbe5")
-		(property "Reference" "#PWR030"
+		(property "Reference" "#PWR033"
 			(at 241.3 163.83 0)
 			(hide yes)
 			(show_name no)
@@ -22649,7 +22864,7 @@
 		(instances
 			(project "ENGG3000-BaseStation"
 				(path "/a1b2b64c-827f-4017-b44c-f9b9ae2e21fd"
-					(reference "#PWR030")
+					(reference "#PWR033")
 					(unit 1)
 				)
 			)
