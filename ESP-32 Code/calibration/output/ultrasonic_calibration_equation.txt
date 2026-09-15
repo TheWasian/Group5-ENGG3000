@@ -1,0 +1,5 @@
+Ultrasonic distance correction
+real_distance_cm = coefficient * exp(exponent * measured_distance_cm)
+coefficient = 10
+exponent = 0
+r_squared = 1.000000

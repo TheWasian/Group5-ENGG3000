@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import configparser
 import csv
+import math
 import statistics
 from pathlib import Path
 from time import sleep
@@ -38,6 +39,7 @@ def parse_measurements(line: str) -> list[float]:
 def request_measurements(connection: object, sample_count: int) -> list[float]:
     """Request and read one burst of measurements from the ESP32."""
     connection.reset_input_buffer()
+    connection.write(b"CALIBRATE\n")
     connection.write(f"{sample_count}\n".encode("ascii"))
 
     while True:
@@ -126,7 +128,68 @@ def save_csv(results: dict[float, list[float]], output_path: Path) -> None:
                 writer.writerow([real_distance, sample_number, measurement])
 
 
-def plot_results(results: dict[float, list[float]], output_path: Path | None = None) -> None:
+def fit_exponential_calibration(
+    results: dict[float, list[float]],
+) -> tuple[float, float, float]:
+    """Fit real distance = coefficient * exp(exponent * measured distance)."""
+    points = [
+        (measurement, real_distance)
+        for real_distance, measurements in results.items()
+        for measurement in measurements
+        if measurement > 0 and real_distance > 0
+    ]
+    if len(points) < 2:
+        raise ValueError("At least two positive calibration samples are required")
+
+    measured_distances = [point[0] for point in points]
+    log_real_distances = [math.log(point[1]) for point in points]
+    measured_mean = statistics.mean(measured_distances)
+    log_real_mean = statistics.mean(log_real_distances)
+    denominator = sum(
+        (measured - measured_mean) ** 2 for measured in measured_distances
+    )
+    if denominator == 0:
+        raise ValueError("Calibration samples must contain different measured distances")
+
+    exponent = sum(
+        (measured - measured_mean) * (log_real - log_real_mean)
+        for measured, log_real in zip(measured_distances, log_real_distances)
+    ) / denominator
+    coefficient = math.exp(log_real_mean - exponent * measured_mean)
+
+    real_mean = statistics.mean(point[1] for point in points)
+    total_sum_squares = sum((real - real_mean) ** 2 for _, real in points)
+    residual_sum_squares = sum(
+        (real - coefficient * math.exp(exponent * measured)) ** 2
+        for measured, real in points
+    )
+    r_squared = (
+        1 - residual_sum_squares / total_sum_squares
+        if total_sum_squares
+        else 1.0
+    )
+    return coefficient, exponent, r_squared
+
+
+def save_calibration_equation(
+    coefficient: float, exponent: float, r_squared: float, output_path: Path
+) -> None:
+    """Save the fitted correction equation for use in production code."""
+    with output_path.open("w", encoding="utf-8") as output_file:
+        output_file.write("Ultrasonic distance correction\n")
+        output_file.write(
+            "real_distance_cm = coefficient * exp(exponent * measured_distance_cm)\n"
+        )
+        output_file.write(f"coefficient = {coefficient:.12g}\n")
+        output_file.write(f"exponent = {exponent:.12g}\n")
+        output_file.write(f"r_squared = {r_squared:.6f}\n")
+
+
+def plot_results(
+    results: dict[float, list[float]],
+    output_path: Path | None = None,
+    calibration_output_path: Path | None = None,
+) -> None:
     """Plot every received sample and the mean measured distance per real distance."""
     try:
         import matplotlib.pyplot as plt
@@ -138,6 +201,7 @@ def plot_results(results: dict[float, list[float]], output_path: Path | None = N
     real_distances: list[float] = []
     means: list[float] = []
     errors: list[float] = []
+    coefficient, exponent, r_squared = fit_exponential_calibration(results)
 
     figure, axes = plt.subplots(figsize=(9, 6))
     for real_distance, measurements in sorted(results.items()):
@@ -157,7 +221,7 @@ def plot_results(results: dict[float, list[float]], output_path: Path | None = N
         means.append(mean)
         errors.append(spread / 2)
 
-    if real_distances:
+    if means:
         axes.errorbar(
             real_distances,
             means,
@@ -178,13 +242,21 @@ def plot_results(results: dict[float, list[float]], output_path: Path | None = N
     if output_path is not None:
         figure.savefig(output_path, dpi=150)
         print(f"Saved graph to {output_path}")
+    print(
+        "Correction equation: "
+        f"real_distance_cm = {coefficient:.12g} * "
+        f"exp({exponent:.12g} * measured_distance_cm)"
+    )
+    if calibration_output_path is not None:
+        save_calibration_equation(coefficient, exponent, r_squared, calibration_output_path)
+        print(f"Saved correction equation to {calibration_output_path}")
     plt.show()
 
 
 def plot_standard_deviation(
     results: dict[float, list[float]], output_path: Path | None = None
 ) -> None:
-    """Plot the sample standard deviation of measurements at each real distance."""
+    """Plot the average absolute measurement deviation at each real distance."""
     try:
         import matplotlib.pyplot as plt
     except ImportError as error:
@@ -193,7 +265,7 @@ def plot_standard_deviation(
         ) from error
 
     real_distances: list[float] = []
-    standard_deviations: list[float] = []
+    average_deviations: list[float] = []
 
     for real_distance, measurements in sorted(results.items()):
         valid_measurements = [measurement for measurement in measurements if measurement >= 0]
@@ -201,15 +273,18 @@ def plot_standard_deviation(
             continue
 
         real_distances.append(real_distance)
-        standard_deviations.append(
-            statistics.stdev(valid_measurements) if len(valid_measurements) > 1 else 0.0
+        average_deviations.append(
+            statistics.mean(
+                abs(measurement - real_distance)
+                for measurement in valid_measurements
+            )
         )
 
     figure, axes = plt.subplots(figsize=(9, 6))
-    axes.plot(real_distances, standard_deviations, "bo-")
-    axes.set_title("Ultrasonic Sensor Standard Deviation")
+    axes.plot(real_distances, average_deviations, "bo-")
+    axes.set_title("Ultrasonic Sensor Average Measurement Deviation")
     axes.set_xlabel("Real distance (cm)")
-    axes.set_ylabel("Standard deviation (cm)")
+    axes.set_ylabel("Average absolute deviation (cm)")
     axes.grid(True, alpha=0.3)
     figure.tight_layout()
 
@@ -244,6 +319,15 @@ def main() -> None:
             "(default: output/ultrasonic_standard_deviation.png)"
         ),
     )
+    parser.add_argument(
+        "--calibration-output",
+        type=Path,
+        default=OUTPUT_DIR / "ultrasonic_calibration_equation.txt",
+        help=(
+            "Path for the production correction equation "
+            "(default: output/ultrasonic_calibration_equation.txt)"
+        ),
+    )
     args = parser.parse_args()
 
     try:
@@ -275,9 +359,10 @@ def main() -> None:
     args.csv.parent.mkdir(parents=True, exist_ok=True)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.standard_deviation_output.parent.mkdir(parents=True, exist_ok=True)
+    args.calibration_output.parent.mkdir(parents=True, exist_ok=True)
     save_csv(results, args.csv)
     print(f"Saved raw readings to {args.csv}")
-    plot_results(results, args.output)
+    plot_results(results, args.output, args.calibration_output)
     plot_standard_deviation(results, args.standard_deviation_output)
 
 
