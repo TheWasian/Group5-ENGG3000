@@ -38,6 +38,8 @@ const SENSOR_API_BASE =
   window.location.hostname === "192.168.4.1" ? "" : "http://192.168.4.1";
 const SENSOR_POLL_INTERVAL = 75;
 const MAX_EVENT_AGE_MS = 1000;
+const MAX_POSITION_AGE_MS = 500;
+const SENSOR_REQUEST_TIMEOUT_MS = 1200;
 
 let score = 0;
 let level = 1;
@@ -51,11 +53,14 @@ let activeHole = null;
 let lastSensorEventId = null;
 let sensorPollTimer = null;
 let sensorRequestInProgress = false;
+let lastSensorBootId = null;
+let lastPlayerFrame = null;
 
 startBtn.addEventListener("click", startGame);
 restartButtons.forEach((button) => button.addEventListener("click", startGame));
 
 function startGame() {
+  lastPlayerFrame = null;
   score = 0;
   level = 1;
   timeLeft = ROUND_TIME;
@@ -264,10 +269,19 @@ function endGame(won) {
   else loseScreen.classList.remove("hidden");
 }
 
+function usableAccessPointPosition(data) {
+  const p = data?.position;
+  return p?.valid === true && !p.warning && p.in_play_area !== false && p.in_game_area !== false &&
+    typeof p.x_m === "number" && Number.isFinite(p.x_m) &&
+    typeof p.y_m === "number" && Number.isFinite(p.y_m) &&
+    typeof p.age_ms === "number" && p.age_ms >= 0 && p.age_ms <= MAX_POSITION_AGE_MS;
+}
+
 function getPlayerPosition(data) {
   const accessPointHole = Number(data?.current_hole);
   if (
-    data?.position?.valid &&
+    usableAccessPointPosition(data) &&
+    data.current_hole !== null &&
     Number.isInteger(accessPointHole) &&
     accessPointHole >= 0 &&
     accessPointHole < holes.length
@@ -280,6 +294,10 @@ function getPlayerPosition(data) {
       yM: Number(data.position.y_m),
     };
   }
+
+  // The AP's sensors array is a compatibility lane view, not a fallback
+  // source of physical positioning when its actual fix is invalid.
+  if (data?.source === "access_point") return null;
 
   if (!Array.isArray(data?.sensors)) return null;
 
@@ -342,8 +360,9 @@ function updateDebugPanel(data = null) {
     const xM = Number(data.position?.x_m);
     const yM = Number(data.position?.y_m);
     const currentHole = Number(data.current_hole);
-    const positionValid =
-      data.position?.valid && Number.isFinite(xM) && Number.isFinite(yM);
+    const positionValid = data.position?.valid &&
+      data.position.x_m !== null && data.position.y_m !== null &&
+      Number.isFinite(xM) && Number.isFinite(yM);
     debugSensorDisplays[0].textContent = positionValid
       ? `${xM.toFixed(2)}, ${yM.toFixed(2)} m | ${currentHole >= 0 ? `Hole ${currentHole + 1}` : "stabilising"}`
       : `No valid fix | ${Number(data.position?.sensors_used) || 0} ranges`;
@@ -363,6 +382,11 @@ function updateDebugPanel(data = null) {
       `N1 ${nodeOnline[0] ? "online" : "offline"} | ` +
       `N2 ${nodeOnline[1] ? "online" : "offline"} | ` +
       `${validRangeCount}/${totalRangeCount} ranges`;
+    const physicalRanges = (data.ranges_m || []).map((r, i) =>
+      `${["N1", "AP", "N2"][i]} ${typeof r === "number" && Number.isFinite(r) ? r.toFixed(2) + " m" : "no echo"}`);
+    debugSensorDisplays[1].textContent += ` | ${physicalRanges.join(" / ")}`;
+    debugSensorDisplays[0].textContent += ` | ${data.position?.reason || "positioning"}`;
+    if (data.position?.held) debugSensorDisplays[0].textContent += " | Held: no scoring";
 
     if (Number(data.event_id) === 0) {
       debugLastEvent.textContent = "None";
@@ -418,12 +442,23 @@ function updateSensorStatus(connected, data = null) {
 
   if (data?.source === "access_point") {
     const position = data.position;
+    const g = data.game_area;
+    if (g && [g.x_min_m, g.x_max_m, g.start_y_m, g.end_y_m].every(Number.isFinite)) {
+      holes.forEach(hole => {
+        const index = Number(hole.dataset.hole);
+        const x = g.x_min_m + (index % 2 + 0.5) * (g.x_max_m - g.x_min_m) / 2;
+        const y = g.start_y_m + (Math.floor(index / 2) + 0.5) * (g.end_y_m - g.start_y_m) / 3;
+        hole.title = `Stand at x=${Math.round(x * 100)} cm from the area's left edge, ${Math.round(y * 100)} cm from the screen`;
+      });
+    }
     const xM = Number(position?.x_m);
     const yM = Number(position?.y_m);
     const warning = position?.warning ? "WARNING: too close to screen — " : "";
-    sensorStatus.textContent = position?.valid
+    sensorStatus.textContent = position?.valid && position.x_m !== null && position.y_m !== null
       ? `${warning}Access point: tracking ${playerPosition ? `hole ${playerPosition.holeIndex + 1}` : "position"} at ${xM.toFixed(2)}, ${yM.toFixed(2)} m`
-      : "Access point: connected — waiting for a valid player position";
+      : `${warning}Access point: connected — ${position?.reason || "waiting for a valid player position"}`;
+    if (position?.held) sensorStatus.textContent += " | Position held; waiting for confirmation before scoring";
+    else if (position?.valid && position.in_game_area === false) sensorStatus.textContent += " | Move into the target zones shown at 192.168.4.1";
     return;
   }
 
@@ -440,18 +475,39 @@ function updateSensorStatus(connected, data = null) {
 async function pollSensors() {
   if (sensorRequestInProgress) return;
   sensorRequestInProgress = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SENSOR_REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${SENSOR_API_BASE}/api/hits`, {
       cache: "no-store",
+      signal: controller.signal,
     });
     if (!response.ok) throw new Error(`Sensor HTTP ${response.status}`);
     const data = await response.json();
-    const eventId = Number(data.event_id);
-    if (!Number.isInteger(eventId) || eventId < 0) {
+    const eventId = data.event_id;
+    if (!Number.isSafeInteger(eventId) || eventId < 0) {
       throw new Error("Invalid /api/hits response");
     }
     updateSensorStatus(true, data);
+
+    // A stationary player can hit a newly appearing mole. Only use a new,
+    // fresh AP measurement frame; repeated HTTP responses cannot rescore it.
+    if (data.source === "access_point") {
+      const bootChanged = data.boot_id !== undefined && lastSensorBootId !== data.boot_id;
+      if (bootChanged) { lastPlayerFrame = null; lastSensorEventId = null; }
+      lastSensorBootId = data.boot_id ?? null;
+      const frameKey = `${data.boot_id}:${data.frame_id}`;
+      if (Number.isInteger(data.frame_id) && frameKey !== lastPlayerFrame) {
+        lastPlayerFrame = frameKey;
+        const player = getPlayerPosition(data);
+        if (player && data.position?.held !== true && activeHole && Number(activeHole.dataset.hole) === player.holeIndex)
+          whackHole(player.holeIndex, "sensor");
+      }
+      // Updated AP firmware scores occupancy above. Keep event logic below
+      // for MVP and older AP firmware that has no frame counter.
+      if (Number.isInteger(data.frame_id)) { lastSensorEventId = eventId; return; }
+    }
 
     if (lastSensorEventId === null) {
       lastSensorEventId = eventId;
@@ -461,17 +517,24 @@ async function pollSensors() {
       const eventHole = Number(data.hole);
       if (
         Number.isFinite(eventAgeMs) &&
+        data.event_age_ms !== null &&
+        data.hole !== null &&
+        eventAgeMs >= 0 &&
         eventAgeMs <= MAX_EVENT_AGE_MS &&
         Number.isInteger(eventHole) &&
         eventHole >= 0 &&
-        eventHole < holes.length
+        eventHole < holes.length &&
+        (data.source !== "access_point" || (usableAccessPointPosition(data) && data.position?.held !== true))
       ) {
         whackHole(eventHole, "sensor");
       }
     }
   } catch (error) {
     updateSensorStatus(false);
+    lastSensorEventId = null;
+    lastPlayerFrame = null;
   } finally {
+    clearTimeout(timeout);
     sensorRequestInProgress = false;
   }
 }

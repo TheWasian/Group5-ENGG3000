@@ -35,3 +35,7 @@ fp-info-cache
 # Local git-based history (KiCad 9.0+)
 .history/
 
+# Local firmware builds and verification scratch files
+.pio/
+tmp/
+
