@@ -67,6 +67,8 @@ body {
 }
 
 .debug-row code {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #d9f7ff;
   font-family: Consolas, monospace;
   font-size: 11px;

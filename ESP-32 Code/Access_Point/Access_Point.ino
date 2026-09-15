@@ -1,612 +1,266 @@
 /*
-  Whack-a-Mole access point
-
-  Hardware Needed:
-    - This ESP32: one ultrasonic sensor
-    - Sensor node 1: one ultrasonic sensor
-    - Sensor node 2: one ultrasonic sensor
+  Centre ESP32: one ultrasonic sensor, two wireless sensor nodes.
+  See ../CHECKLIST.md for geometry, upload steps and API details.
 */
-
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <WebServer.h>
-#include <math.h>
-#include <stddef.h>
+#include <esp_system.h>
+#include "Positioning.h"
+#include "RangeProtocol.h"
+#include "Tracking.h"
+#include "Dashboard.h"
 
-// --------------------------- GPIO ----------------------------------
-// Replace -1 with your GPIO numbers before uploading.
-constexpr int TRIG_PIN = -1;
-constexpr int ECHO_PIN = -1;
+// --------------------- EDIT YOUR SETUP HERE -------------------------
+// Preserve the GPIOs already configured for the centre board.
+constexpr int TRIG_PIN = 27;
+constexpr int ECHO_PIN = 26;
+constexpr int BUZZER_PIN = 4;       // Active buzzer; -1 disables output.
+constexpr int WARNING_LED_PIN = 5; // -1 disables output.
 
-// Optional warning outputs. Leave at -1 to disable that output.
-constexpr int BUZZER_PIN = -1;
-constexpr int WARNING_LED_PIN = -1;
+constexpr float PLAY_AREA_WIDTH_M = 1.50f;
+constexpr float PLAY_AREA_DEPTH_M = 1.40f;
+constexpr float DEAD_ZONE_M = 0.60f; // y=0 is the screen; play ends at y=2 m.
+constexpr float SENSOR_GAP_LEFT_M = 0.35f;
+constexpr float SENSOR_GAP_RIGHT_M = 0.35f;
+constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
+constexpr float AP_X_M = PLAY_AREA_WIDTH_M / 2;
+// Six hit zones inside the overlapping beams. x is from the left edge;
+// y is from the screen. Change these independently of sensor spacing.
+constexpr float GAME_AREA_X_MIN_M = AP_X_M - 0.30f;
+constexpr float GAME_AREA_X_MAX_M = AP_X_M + 0.30f;
+constexpr float GAME_AREA_START_Y_M = 1.00f;
+constexpr float GAME_AREA_END_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M;
+// Aim both side sensors at this point. Physically rotate them to match.
+constexpr float AIM_X_M = AP_X_M;
+constexpr float AIM_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M / 2;
+// Estimated beam half-width, NOT an angle measured by the sensor.
+constexpr float CONE_HALF_ANGLE_DEG = 15.0f;
+constexpr float MIN_RANGE_M = 0.02f;
+constexpr float MAX_RANGE_M = 4.50f; // Slant range, not playing-area depth.
+constexpr float SENSOR_SCALE[3] = {1, 1, 1};
+constexpr float SENSOR_OFFSET_M[3] = {0, 0, 0};
+constexpr float MAX_FIT_RMS_M = 0.10f;
+constexpr float MAX_FIT_RESIDUAL_M = 0.18f;
+constexpr float HUBER_LIMIT_M = 0.06f;
+constexpr float ASSUMED_RANGE_NOISE_M = 0.025f;
+constexpr float MAX_POSITION_UNCERTAINTY_M = 0.20f;
+constexpr float RANGE_SPIKE_LIMIT_M = 0.16f;
+constexpr float RANGE_CONFIRM_TOLERANCE_M = 0.10f;
+constexpr float POSITION_JUMP_LIMIT_M = 0.14f;
+constexpr float POSITION_CONFIRM_RADIUS_M = 0.08f;
+constexpr float POSITION_STATIONARY_TAU_S = 0.35f;
+constexpr float POSITION_MOVING_TAU_S = 0.12f;
+constexpr uint32_t POSITION_HOLD_MS = 350; // Display only; held fixes cannot score.
+constexpr uint32_t RANGE_STALE_MS = 500;
+constexpr uint32_t MAX_FRAME_SPAN_MS = 300;
+constexpr float HOLE_HYSTERESIS_M = 0.05f;
+constexpr uint8_t STABLE_FRAMES = 2;
+constexpr uint32_t HIT_COOLDOWN_MS = 250;
 
-// --------------------------- Wi-Fi ---------------------------------
 const char *AP_SSID = "Wacker5";
 const char *AP_PASSWORD = "PasswordWacker123456!";
-
-const IPAddress AP_IP(192, 168, 4, 1);
-const IPAddress AP_GATEWAY(192, 168, 4, 1);
-const IPAddress AP_SUBNET(255, 255, 255, 0);
-const IPAddress NODE_IPS[2] = {
-  IPAddress(192, 168, 4, 101),
-  IPAddress(192, 168, 4, 102)
+const IPAddress AP_IP(192, 168, 4, 1), SUBNET(255, 255, 255, 0);
+const IPAddress NODE_IPS[2] = {IPAddress(192, 168, 4, 101), IPAddress(192, 168, 4, 102)};
+const wam::Area PLAY_AREA = {PLAY_AREA_WIDTH_M, DEAD_ZONE_M, PLAY_AREA_DEPTH_M};
+const wam::Area GAME_AREA = {GAME_AREA_X_MAX_M - GAME_AREA_X_MIN_M,
+  GAME_AREA_START_Y_M, GAME_AREA_END_Y_M - GAME_AREA_START_Y_M};
+static_assert(GAME_AREA_X_MIN_M >= 0 && GAME_AREA_X_MAX_M <= PLAY_AREA_WIDTH_M &&
+  GAME_AREA_X_MAX_M > GAME_AREA_X_MIN_M && GAME_AREA_START_Y_M >= DEAD_ZONE_M &&
+  GAME_AREA_END_Y_M > GAME_AREA_START_Y_M && GAME_AREA_END_Y_M <= DEAD_ZONE_M + PLAY_AREA_DEPTH_M,
+  "Game zones must fit inside the physical playing area.");
+float aimBearing(float x) {
+  return atan2f(AIM_X_M - x, AIM_Y_M - SENSOR_DISTANCE_FROM_SCREEN_M) * 180 / wam::PI_F;
+}
+// Order throughout the API: Node 1 (player's left), AP (centre), Node 2.
+const wam::Sensor SENSORS[3] = {
+  {AP_X_M - SENSOR_GAP_LEFT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
+   aimBearing(AP_X_M - SENSOR_GAP_LEFT_M), CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
+  {AP_X_M, SENSOR_DISTANCE_FROM_SCREEN_M, 0, CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
+  {AP_X_M + SENSOR_GAP_RIGHT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
+   aimBearing(AP_X_M + SENSOR_GAP_RIGHT_M), CONE_HALF_ANGLE_DEG, MAX_RANGE_M}
 };
-
-constexpr uint16_t AP_UDP_PORT = 4210;
-constexpr uint16_t NODE_UDP_PORT = 4211;
 
 WiFiUDP udp;
 WebServer server(80);
-
-// ---------------------- Playing-area calibration -------------------
-// Coordinate system: screen edge is y = 0; y increases into the playing
-// area; x runs left-to-right. Measure and replace these coordinates after
-// mounting the boxes. Defaults assume one station at the left, centre and
-// right of the screen edge of a 3 m x 3 m playing area.
-constexpr float PLAY_AREA_WIDTH_M = 3.0f;
-constexpr float PLAY_AREA_DEPTH_M = 3.0f;
-constexpr float WARNING_DISTANCE_M = 0.50f;
-constexpr uint8_t SENSOR_COUNT = 3;
-
-// The browser game uses a two-column by three-row grid. Hole IDs are row
-// major: 0/1 nearest the screen, 2/3 in the middle, and 4/5 furthest away.
-constexpr uint8_t GAME_COLUMNS = 2;
-constexpr uint8_t GAME_ROWS = 3;
-constexpr float HOLE_BOUNDARY_HYSTERESIS_M = 0.10f;
-constexpr uint8_t REQUIRED_STABLE_POSITIONS = 2;
-constexpr uint8_t REQUIRED_LOST_POSITIONS = 3;
-constexpr uint32_t HIT_COOLDOWN_MS = 250;
-
-struct SensorPosition {
-  float x;
-  float y;
-};
-
-// Order: node 1 (left), access point (centre), node 2 (right).
-const SensorPosition SENSOR_POSITIONS[SENSOR_COUNT] = {
-  {0.00f, 0.00f},
-  {1.50f, 0.00f},
-  {3.00f, 0.00f}
-};
-
-// Per-sensor calibration: corrected = raw * scale + offset.
-const float SENSOR_SCALE[SENSOR_COUNT] = {1, 1, 1};
-const float SENSOR_OFFSET_M[SENSOR_COUNT] = {0, 0, 0};
-
-constexpr float MIN_RANGE_M = 0.02f;
-constexpr float MAX_RANGE_M = 4.50f;
-constexpr uint32_t ECHO_TIMEOUT_US = 27000;
-constexpr uint32_t NODE_REPLY_TIMEOUT_MS = 90;
-constexpr uint32_t RANGE_STALE_MS = 1200;
-constexpr uint32_t CYCLE_GAP_MS = 20;
-
-// -------------------------- Wire protocol --------------------------
-constexpr uint32_t PACKET_MAGIC = 0x57414D35UL;  // "WAM5"
-constexpr uint8_t PROTOCOL_VERSION = 1;
-constexpr uint8_t PACKET_POLL = 1;
-constexpr uint8_t PACKET_RANGES = 2;
-
-struct __attribute__((packed)) PollPacket {
-  uint32_t magic;
-  uint8_t version;
-  uint8_t type;
-  uint8_t nodeId;
-  uint8_t reserved;
-  uint32_t sequence;
-  uint32_t crc;
-};
-
-struct __attribute__((packed)) RangePacket {
-  uint32_t magic;
-  uint8_t version;
-  uint8_t type;
-  uint8_t nodeId;
-  uint8_t validMask;
-  uint32_t sequence;
-  // Only distanceMm[0] is used. The second slot is reserved so the packet
-  // remains compatible with the earlier two-sensor-node protocol.
-  uint16_t distanceMm[2];
-  uint32_t crc;
-};
-
-static_assert(sizeof(PollPacket) == 16, "Unexpected PollPacket padding");
-static_assert(sizeof(RangePacket) == 20, "Unexpected RangePacket padding");
-
-uint32_t crc32(const uint8_t *data, size_t length) {
-  uint32_t crc = 0xFFFFFFFFUL;
-  for (size_t i = 0; i < length; ++i) {
-    crc ^= data[i];
-    for (uint8_t bit = 0; bit < 8; ++bit) {
-      crc = (crc >> 1) ^ (0xEDB88320UL & (0UL - (crc & 1UL)));
-    }
-  }
-  return ~crc;
-}
-
-template <typename T>
-bool packetCrcIsValid(const T &packet) {
-  return packet.crc == crc32(reinterpret_cast<const uint8_t *>(&packet),
-                            offsetof(T, crc));
-}
-
-// ------------------------- Ranging state ---------------------------
-struct RangeSample {
-  float metres;
-  uint32_t updatedMs;
-  bool valid;
-};
-
-RangeSample ranges[SENSOR_COUNT] = {};
-bool nodeOnline[2] = {false, false};
-uint32_t nodeLastSeenMs[2] = {0, 0};
-
-struct PositionEstimate {
-  float x;
-  float y;
-  float rmsError;
-  uint32_t updatedMs;
-  uint8_t sensorsUsed;
-  bool valid;
-};
-
-PositionEstimate position = {1.5f, 1.5f, 0, 0, 0, false};
+struct RangeSample { float raw = NAN, metres = NAN; uint32_t time = 0; bool seen = false; };
+RangeSample pending[3], ranges[3];
+wam::RangeGate rangeGates[3];
+wam::PositionTracker tracker;
+wam::TrackingOptions trackingOptions;
+bool nodeOnline[2] = {};
+uint32_t nodeLastSeen[2] = {};
+wam::Fix position, rawPosition;
+uint32_t positionTime = 0, frameTime = 0, frameId = 0, bootId = 0;
 bool warningActive = false;
+int8_t stableHole = -1, candidateHole = -1;
+uint8_t candidateCount = 0;
+struct HitEvent { uint32_t id = 0, time = 0; int8_t hole = -1; float y = 0; };
+HitEvent hit;
 
-struct HitEvent {
-  uint32_t id;
-  uint32_t createdMs;
-  uint8_t hole;
-  uint8_t column;
-  uint8_t row;
-  float x;
-  float y;
-};
+enum Phase { LOCAL, QUIET, WAIT_READY, WAIT_RANGE };
+Phase phase = LOCAL;
+uint8_t activeNode = 0, nextNode = 1;
+uint32_t sequence = 0, deadline = 0;
 
-HitEvent latestHit = {0, 0, 0, 0, 0, 0.0f, 0.0f};
-int8_t stableHole = -1;
-int8_t candidateHole = -1;
-uint8_t candidatePositionCount = 0;
-uint8_t lostPositionCount = 0;
-uint32_t lastHitMs = 0;
-
-enum PollState : uint8_t {
-  START_LOCAL,
-  WAIT_NODE_1,
-  WAIT_NODE_2,
-  FINISH_CYCLE
-};
-
-PollState pollState = START_LOCAL;
-uint32_t nextCycleMs = 0;
-uint32_t replyDeadlineMs = 0;
-uint32_t sequenceNumber = 0;
-uint32_t expectedSequence = 0;
-
-// ------------------------- Sensor reading --------------------------
-bool mandatoryPinsAreConfigured() {
-  return TRIG_PIN >= 0 && ECHO_PIN >= 0 && TRIG_PIN != ECHO_PIN;
+bool rangeFresh(int i, uint32_t now) {
+  return ranges[i].seen && isfinite(ranges[i].metres) && now - ranges[i].time <= RANGE_STALE_MS;
 }
-
-float readUltrasonicMetres(int triggerPin, int echoPin) {
-  digitalWrite(triggerPin, LOW);
-  delayMicroseconds(3);
-  digitalWrite(triggerPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(triggerPin, LOW);
-
-  const uint32_t durationUs = pulseIn(echoPin, HIGH, ECHO_TIMEOUT_US);
-  if (durationUs == 0) {
-    return NAN;
-  }
-
-  // Distance = round-trip time * speed of sound / 2.
-  const float distanceM = durationUs * 0.000343f * 0.5f;
-  if (distanceM < MIN_RANGE_M || distanceM > MAX_RANGE_M) {
-    return NAN;
-  }
-  return distanceM;
-}
-
-void storeRange(uint8_t sensorIndex, float rawMetres, uint32_t now) {
-  if (isnan(rawMetres)) {
-    ranges[sensorIndex].valid = false;
-    ranges[sensorIndex].updatedMs = now;
-    return;
-  }
-
-  const float calibrated = rawMetres * SENSOR_SCALE[sensorIndex] +
-                           SENSOR_OFFSET_M[sensorIndex];
-  if (calibrated < MIN_RANGE_M || calibrated > MAX_RANGE_M) {
-    ranges[sensorIndex].valid = false;
-    ranges[sensorIndex].updatedMs = now;
-    return;
-  }
-
-  // A light low-pass filter reduces cursor jitter without adding much lag.
-  if (ranges[sensorIndex].valid) {
-    ranges[sensorIndex].metres = 0.65f * calibrated +
-                                 0.35f * ranges[sensorIndex].metres;
-  } else {
-    ranges[sensorIndex].metres = calibrated;
-  }
-  ranges[sensorIndex].valid = true;
-  ranges[sensorIndex].updatedMs = now;
-}
-
-void measureLocalSensor() {
-  storeRange(1, readUltrasonicMetres(TRIG_PIN, ECHO_PIN), millis());
-}
-
-// ------------------------- UDP scheduling --------------------------
-void sendPoll(uint8_t nodeId) {
-  PollPacket packet = {};
-  packet.magic = PACKET_MAGIC;
-  packet.version = PROTOCOL_VERSION;
-  packet.type = PACKET_POLL;
-  packet.nodeId = nodeId;
-  packet.sequence = ++sequenceNumber;
-  packet.crc = crc32(reinterpret_cast<const uint8_t *>(&packet),
-                     offsetof(PollPacket, crc));
-
-  expectedSequence = packet.sequence;
-  udp.beginPacket(NODE_IPS[nodeId - 1], NODE_UDP_PORT);
-  udp.write(reinterpret_cast<const uint8_t *>(&packet), sizeof(packet));
-  udp.endPacket();
-  replyDeadlineMs = millis() + NODE_REPLY_TIMEOUT_MS;
-}
-
-bool receiveRangePacket(uint8_t expectedNodeId) {
-  const int packetSize = udp.parsePacket();
-  if (packetSize <= 0) {
-    return false;
-  }
-
-  RangePacket packet = {};
-  if (packetSize != static_cast<int>(sizeof(packet))) {
-    while (udp.available()) udp.read();
-    return false;
-  }
-
-  const int bytesRead = udp.read(reinterpret_cast<uint8_t *>(&packet),
-                                 sizeof(packet));
-  if (bytesRead != static_cast<int>(sizeof(packet)) ||
-      packet.magic != PACKET_MAGIC ||
-      packet.version != PROTOCOL_VERSION ||
-      packet.type != PACKET_RANGES ||
-      packet.nodeId != expectedNodeId ||
-      packet.sequence != expectedSequence ||
-      !packetCrcIsValid(packet)) {
-    return false;
-  }
-
-  const uint8_t sensorIndex = (expectedNodeId == 1) ? 0 : 2;
-  const uint32_t now = millis();
-  const float value = (packet.validMask & 0x01U)
-                        ? packet.distanceMm[0] / 1000.0f
-                        : NAN;
-  storeRange(sensorIndex, value, now);
-
-  nodeOnline[expectedNodeId - 1] = true;
-  nodeLastSeenMs[expectedNodeId - 1] = now;
+bool positionFresh(uint32_t now) {
+  if (!position.valid || now - positionTime > RANGE_STALE_MS) return false;
+  if (position.held) return now - positionTime <= POSITION_HOLD_MS;
+  for (int i = 0; i < 3; ++i)
+    if (isfinite(ranges[i].metres) && !rangeFresh(i, now)) return false;
   return true;
 }
 
-void markNodeTimedOut(uint8_t nodeId) {
-  const uint8_t sensorIndex = (nodeId == 1) ? 0 : 2;
+float readUltrasonicMetres() {
+  digitalWrite(TRIG_PIN, LOW); delayMicroseconds(3);
+  digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN, LOW);
+  const uint32_t duration = pulseIn(ECHO_PIN, HIGH, wam::ECHO_TIMEOUT_US);
+  const float r = duration * 0.000343f * 0.5f;
+  return duration && r >= MIN_RANGE_M && r <= MAX_RANGE_M ? r : NAN;
+}
+void storePending(int i, float raw) {
+  float r = raw * SENSOR_SCALE[i] + SENSOR_OFFSET_M[i];
+  pending[i].raw = isfinite(r) && r >= MIN_RANGE_M && r <= MAX_RANGE_M ? r : NAN;
+  pending[i].time = millis(); pending[i].seen = true;
+}
+int8_t holeForPosition(float x, float y, int8_t current) {
+  return wam::holeForPosition(x - GAME_AREA_X_MIN_M, y, current, GAME_AREA, HOLE_HYSTERESIS_M);
+}
+bool inGameArea(float x, float y) {
+  return wam::inPlayArea(x - GAME_AREA_X_MIN_M, y, GAME_AREA);
+}
+void updateGamePosition(uint32_t now) {
+  if (positionFresh(now) && position.held && !warningActive) {
+    candidateHole = -1; candidateCount = 0; return;
+  }
+  int8_t measured = positionFresh(now) && !warningActive
+    && rawPosition.valid && inGameArea(rawPosition.x, rawPosition.y)
+    ? holeForPosition(position.x, position.y, stableHole) : -1;
+  // Smoothing must not keep scoring a previous hole after the current
+  // measurement has already crossed into another one.
+  if (measured >= 0 && holeForPosition(rawPosition.x, rawPosition.y, stableHole) != measured) measured = -1;
+  if (measured < 0) {
+    stableHole = candidateHole = -1; candidateCount = 0; return;
+  }
+  if (candidateHole != measured) { candidateHole = measured; candidateCount = 1; }
+  else if (candidateCount < 255) ++candidateCount;
+  // Hide the old cell while moving to a different cell; never score it using
+  // a newly acquired coordinate from the other side of the board.
+  if (stableHole != measured) stableHole = -1;
+  if (candidateCount >= STABLE_FRAMES && stableHole != measured &&
+      (hit.id == 0 || now - hit.time >= HIT_COOLDOWN_MS)) {
+    stableHole = measured;
+    ++hit.id; hit.time = now; hit.hole = measured; hit.y = position.y;
+  }
+}
+void updateWarning(uint32_t now) {
+  bool warn = (positionFresh(now) && position.y <= DEAD_ZONE_M) ||
+    (rawPosition.valid && now - frameTime <= RANGE_STALE_MS && rawPosition.y <= DEAD_ZONE_M);
+  // Only declare a direct-range warning when even the farthest possible y
+  // of this echo lies inside the dead zone. Use raw data to avoid filter lag.
+  for (int i = 0; i < 3; ++i) {
+    if (ranges[i].seen && isfinite(ranges[i].raw) && now - ranges[i].time <= RANGE_STALE_MS &&
+        SENSORS[i].y + ranges[i].raw <= DEAD_ZONE_M) warn = true;
+  }
+  warningActive = warn;
+  if (BUZZER_PIN >= 0) digitalWrite(BUZZER_PIN, warn ? HIGH : LOW);
+  if (WARNING_LED_PIN >= 0) digitalWrite(WARNING_LED_PIN, warn ? HIGH : LOW);
+}
+void finishFrame() {
   const uint32_t now = millis();
-  nodeOnline[nodeId - 1] = false;
-  ranges[sensorIndex].valid = false;
-  ranges[sensorIndex].updatedMs = now;
-}
-
-// ------------------------- Position solver -------------------------
-float clampFloat(float value, float minimum, float maximum) {
-  return fmaxf(minimum, fminf(maximum, value));
-}
-
-bool isFreshAndValid(uint8_t i, uint32_t now) {
-  return ranges[i].valid && (now - ranges[i].updatedMs <= RANGE_STALE_MS);
-}
-
-void calculatePosition() {
-  const uint32_t now = millis();
-  uint8_t validCount = 0;
-  float nearestRange = 1e9f;
-  float initialX = position.valid ? position.x : PLAY_AREA_WIDTH_M * 0.5f;
-
-  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
-    if (isFreshAndValid(i, now)) {
-      ++validCount;
-      if (ranges[i].metres < nearestRange) {
-        nearestRange = ranges[i].metres;
-        initialX = SENSOR_POSITIONS[i].x;
-      }
+  float input[3];
+  uint32_t minAge = UINT32_MAX, maxAge = 0;
+  bool rejected = false;
+  for (int i = 0; i < 3; ++i) {
+    ranges[i] = pending[i];
+    const float raw = ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS ? ranges[i].raw : NAN;
+    ranges[i].metres = rangeGates[i].update(raw, now, RANGE_SPIKE_LIMIT_M,
+      RANGE_CONFIRM_TOLERANCE_M, RANGE_STALE_MS);
+    rejected |= rangeGates[i].rejected;
+    if (isfinite(ranges[i].metres)) {
+      const uint32_t age = now - ranges[i].time;
+      if (age < minAge) minAge = age;
+      if (age > maxAge) maxAge = age;
     }
+    input[i] = rangeFresh(i, now) ? ranges[i].metres : NAN;
   }
-
-  if (validCount < 3) {
-    position.valid = false;
-    position.sensorsUsed = validCount;
-    return;
+  rawPosition = wam::solve(SENSORS, input, PLAY_AREA, MAX_FIT_RMS_M, MAX_FIT_RESIDUAL_M,
+    HUBER_LIMIT_M, ASSUMED_RANGE_NOISE_M, MAX_POSITION_UNCERTAINTY_M);
+  // A rejected third reading is not permission to trust the remaining pair.
+  if (rejected) { rawPosition.valid = false; rawPosition.reason = "range_spike"; }
+  if (rawPosition.count >= 2 && maxAge - minAge > MAX_FRAME_SPAN_MS) {
+    rawPosition.valid = false; rawPosition.reason = "frame_too_slow";
   }
+  position = tracker.update(rawPosition, now, trackingOptions);
+  positionTime = tracker.acceptedMs; frameTime = now; ++frameId;
+  updateWarning(now); updateGamePosition(now);
+  Serial.printf("POS,%.3f,%.3f,%d,%.3f,%u,%s\n", position.valid ? position.x : -1,
+    position.valid ? position.y : -1, warningActive, position.rms, position.count, position.reason);
+}
 
-  float x = position.valid ? position.x : initialX;
-  float y = position.valid ? position.y :
-            clampFloat(nearestRange, 0.10f, PLAY_AREA_DEPTH_M);
-
-  // Iteratively reweighted Gauss-Newton trilateration. Huber weighting limits
-  // the influence of an ultrasonic outlier or a background echo.
-  for (uint8_t iteration = 0; iteration < 12; ++iteration) {
-    float a00 = 0, a01 = 0, a11 = 0;
-    float b0 = 0, b1 = 0;
-
-    for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
-      if (!isFreshAndValid(i, now)) continue;
-
-      const float dx = x - SENSOR_POSITIONS[i].x;
-      const float dy = y - SENSOR_POSITIONS[i].y;
-      const float predicted = fmaxf(0.001f, sqrtf(dx * dx + dy * dy));
-      const float residual = predicted - ranges[i].metres;
-      const float absResidual = fabsf(residual);
-      const float huberLimit = 0.20f;
-      const float weight = absResidual <= huberLimit
-                             ? 1.0f
-                             : huberLimit / absResidual;
-      const float jx = dx / predicted;
-      const float jy = dy / predicted;
-
-      a00 += weight * jx * jx;
-      a01 += weight * jx * jy;
-      a11 += weight * jy * jy;
-      b0 += weight * jx * residual;
-      b1 += weight * jy * residual;
+void sendControl(uint8_t type) {
+  wam::ControlPacket p = {};
+  p.magic = wam::PACKET_MAGIC; p.version = wam::PROTOCOL_VERSION; p.type = type;
+  p.nodeId = activeNode; p.session = bootId; p.sequence = sequence; p.crc = wam::packetCrc(p);
+  udp.beginPacket(NODE_IPS[activeNode - 1], wam::NODE_UDP_PORT);
+  udp.write(reinterpret_cast<const uint8_t *>(&p), sizeof(p)); udp.endPacket();
+}
+void beginQuiet(uint8_t followingNode) {
+  nextNode = followingNode; deadline = millis() + wam::QUIET_MS; phase = QUIET;
+}
+bool receiveReply() {
+  const int size = udp.parsePacket();
+  if (size <= 0) return false;
+  const bool sourceOK = udp.remoteIP() == NODE_IPS[activeNode - 1] && udp.remotePort() == wam::NODE_UDP_PORT;
+  if (phase == WAIT_READY && size == sizeof(wam::ControlPacket) && sourceOK) {
+    wam::ControlPacket p = {};
+    const int n = udp.read(reinterpret_cast<uint8_t *>(&p), sizeof(p));
+    if (n == sizeof(p) && p.magic == wam::PACKET_MAGIC && p.version == wam::PROTOCOL_VERSION &&
+        p.type == wam::READY && p.nodeId == activeNode && p.session == bootId &&
+        p.sequence == sequence && p.reserved == 0 && p.crc == wam::packetCrc(p)) {
+      sendControl(wam::FIRE); deadline = millis() + wam::REPLY_TIMEOUT_MS; phase = WAIT_RANGE;
     }
-
-    const float determinant = a00 * a11 - a01 * a01;
-    if (fabsf(determinant) < 1e-7f) {
-      position.valid = false;
-      position.sensorsUsed = validCount;
-      return;
+  } else if (phase == WAIT_RANGE && size == sizeof(wam::RangePacket) && sourceOK) {
+    wam::RangePacket p = {};
+    const int n = udp.read(reinterpret_cast<uint8_t *>(&p), sizeof(p));
+    if (n == sizeof(p) && p.magic == wam::PACKET_MAGIC && p.version == wam::PROTOCOL_VERSION &&
+        p.type == wam::RANGES && p.nodeId == activeNode && p.session == bootId &&
+        p.sequence == sequence && p.validMask <= 1 && p.reserved == 0 && p.crc == wam::packetCrc(p)) {
+      storePending(activeNode == 1 ? 0 : 2, p.validMask ? p.distanceMm / 1000.0f : NAN);
+      nodeOnline[activeNode - 1] = true; nodeLastSeen[activeNode - 1] = millis();
+      return true;
     }
-
-    const float stepX = (a11 * b0 - a01 * b1) / determinant;
-    const float stepY = (-a01 * b0 + a00 * b1) / determinant;
-    x = clampFloat(x - stepX, 0.0f, PLAY_AREA_WIDTH_M);
-    y = clampFloat(y - stepY, 0.0f, PLAY_AREA_DEPTH_M);
-
-    if (stepX * stepX + stepY * stepY < 0.000001f) break;
-  }
-
-  float squaredError = 0;
-  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
-    if (!isFreshAndValid(i, now)) continue;
-    const float dx = x - SENSOR_POSITIONS[i].x;
-    const float dy = y - SENSOR_POSITIONS[i].y;
-    const float residual = sqrtf(dx * dx + dy * dy) - ranges[i].metres;
-    squaredError += residual * residual;
-  }
-
-  const float rms = sqrtf(squaredError / validCount);
-  // Reject a clearly inconsistent set instead of moving the cursor wildly.
-  if (rms > 0.75f) {
-    position.valid = false;
-    position.rmsError = rms;
-    position.sensorsUsed = validCount;
-    return;
-  }
-
-  position.x = x;
-  position.y = y;
-  position.rmsError = rms;
-  position.updatedMs = now;
-  position.sensorsUsed = validCount;
-  position.valid = true;
+  } else { while (udp.available()) udp.read(); }
+  return false;
 }
-
-void updateWarning() {
-  bool shouldWarn = position.valid && position.y <= WARNING_DISTANCE_M;
-
-  // This extra conservative check still warns if positioning temporarily
-  // fails but any sensor has a direct echo inside 50 cm.
-  const uint32_t now = millis();
-  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
-    if (isFreshAndValid(i, now) && ranges[i].metres <= WARNING_DISTANCE_M) {
-      shouldWarn = true;
-    }
-  }
-
-  warningActive = shouldWarn;
-  if (BUZZER_PIN >= 0) digitalWrite(BUZZER_PIN, shouldWarn ? HIGH : LOW);
-  if (WARNING_LED_PIN >= 0) digitalWrite(WARNING_LED_PIN, shouldWarn ? HIGH : LOW);
-}
-
-int8_t holeForPosition(float x, float y, int8_t currentHole) {
-  if (x < 0.0f || x > PLAY_AREA_WIDTH_M ||
-      y < 0.0f || y > PLAY_AREA_DEPTH_M) {
-    return -1;
-  }
-
-  const float columnBoundary = PLAY_AREA_WIDTH_M / GAME_COLUMNS;
-  const float firstRowBoundary = PLAY_AREA_DEPTH_M / GAME_ROWS;
-  const float secondRowBoundary = 2.0f * PLAY_AREA_DEPTH_M / GAME_ROWS;
-
-  int8_t column;
-  int8_t row;
-  if (currentHole >= 0) {
-    column = currentHole % GAME_COLUMNS;
-    row = currentHole / GAME_COLUMNS;
-
-    // Keep the current cell while the estimate is inside its hysteresis band.
-    if (column == 0 && x <= columnBoundary + HOLE_BOUNDARY_HYSTERESIS_M) {
-      column = 0;
-    } else if (column == 1 &&
-               x >= columnBoundary - HOLE_BOUNDARY_HYSTERESIS_M) {
-      column = 1;
-    } else {
-      column = x < columnBoundary ? 0 : 1;
-    }
-
-    if (row == 0 && y <= firstRowBoundary + HOLE_BOUNDARY_HYSTERESIS_M) {
-      row = 0;
-    } else if (row == 1 &&
-               y >= firstRowBoundary - HOLE_BOUNDARY_HYSTERESIS_M &&
-               y <= secondRowBoundary + HOLE_BOUNDARY_HYSTERESIS_M) {
-      row = 1;
-    } else if (row == 2 &&
-               y >= secondRowBoundary - HOLE_BOUNDARY_HYSTERESIS_M) {
-      row = 2;
-    } else if (y < firstRowBoundary) {
-      row = 0;
-    } else if (y < secondRowBoundary) {
-      row = 1;
-    } else {
-      row = 2;
-    }
-  } else {
-    column = x < columnBoundary ? 0 : 1;
-    row = y < firstRowBoundary ? 0 : (y < secondRowBoundary ? 1 : 2);
-  }
-
-  return row * GAME_COLUMNS + column;
-}
-
-void emitGameHit(uint8_t hole, uint32_t now) {
-  latestHit.id++;
-  latestHit.createdMs = now;
-  latestHit.hole = hole;
-  latestHit.column = hole % GAME_COLUMNS;
-  latestHit.row = hole / GAME_COLUMNS;
-  latestHit.x = position.x;
-  latestHit.y = position.y;
-  lastHitMs = now;
-
-  Serial.print("HIT,");
-  Serial.print(latestHit.id);
-  Serial.print(',');
-  Serial.print(latestHit.hole);
-  Serial.print(',');
-  Serial.print(latestHit.x, 3);
-  Serial.print(',');
-  Serial.println(latestHit.y, 3);
-}
-
-void updateGamePosition() {
-  const uint32_t now = millis();
-  if (!position.valid) {
-    candidateHole = -1;
-    candidatePositionCount = 0;
-    if (lostPositionCount < 255) lostPositionCount++;
-    if (lostPositionCount >= REQUIRED_LOST_POSITIONS) stableHole = -1;
-    return;
-  }
-
-  lostPositionCount = 0;
-  const int8_t measuredHole = holeForPosition(position.x, position.y, stableHole);
-  if (measuredHole < 0) return;
-
-  if (measuredHole != candidateHole) {
-    candidateHole = measuredHole;
-    candidatePositionCount = 1;
-  } else if (candidatePositionCount < 255) {
-    candidatePositionCount++;
-  }
-
-  if (candidatePositionCount >= REQUIRED_STABLE_POSITIONS &&
-      measuredHole != stableHole &&
-      now - lastHitMs >= HIT_COOLDOWN_MS) {
-    stableHole = measuredHole;
-    emitGameHit(stableHole, now);
-  }
-}
-
-void printPositionCsv() {
-  Serial.print("POS,");
-  Serial.print(position.valid ? position.x : -1.0f, 3);
-  Serial.print(',');
-  Serial.print(position.valid ? position.y : -1.0f, 3);
-  Serial.print(',');
-  Serial.print(warningActive ? 1 : 0);
-  Serial.print(',');
-  Serial.print(position.rmsError, 3);
-  Serial.print(',');
-  Serial.println(position.sensorsUsed);
-}
-
-void finishMeasurementCycle() {
-  calculatePosition();
-  updateWarning();
-  updateGamePosition();
-  printPositionCsv();
-  nextCycleMs = millis() + CYCLE_GAP_MS;
-}
-
 void runMeasurementStateMachine() {
   const uint32_t now = millis();
-  switch (pollState) {
-    case START_LOCAL:
-      if (static_cast<int32_t>(now - nextCycleMs) < 0) return;
-      measureLocalSensor();
-      sendPoll(1);
-      pollState = WAIT_NODE_1;
-      break;
-
-    case WAIT_NODE_1:
-      if (receiveRangePacket(1)) {
-        sendPoll(2);
-        pollState = WAIT_NODE_2;
-      } else if (static_cast<int32_t>(now - replyDeadlineMs) >= 0) {
-        markNodeTimedOut(1);
-        sendPoll(2);
-        pollState = WAIT_NODE_2;
-      }
-      break;
-
-    case WAIT_NODE_2:
-      if (receiveRangePacket(2)) {
-        pollState = FINISH_CYCLE;
-      } else if (static_cast<int32_t>(now - replyDeadlineMs) >= 0) {
-        markNodeTimedOut(2);
-        pollState = FINISH_CYCLE;
-      }
-      break;
-
-    case FINISH_CYCLE:
-      finishMeasurementCycle();
-      pollState = START_LOCAL;
-      break;
+  switch (phase) {
+    case LOCAL:
+      storePending(1, readUltrasonicMetres()); beginQuiet(1); break;
+    case QUIET:
+      if (!wam::deadlineReached(now, deadline)) break;
+      if (nextNode == 0) { phase = LOCAL; break; }
+      activeNode = nextNode; ++sequence; sendControl(wam::ARM);
+      deadline = millis() + wam::REPLY_TIMEOUT_MS; phase = WAIT_READY; break;
+    case WAIT_READY:
+    case WAIT_RANGE:
+      // Check timeout before consuming buffered replies; late packets cannot
+      // extend a slot or introduce old ranges into a completed frame.
+      if (wam::deadlineReached(now, deadline)) {
+        storePending(activeNode == 1 ? 0 : 2, NAN); nodeOnline[activeNode - 1] = false;
+      } else if (!receiveReply()) break;
+      if (activeNode == 2) finishFrame();
+      beginQuiet(activeNode == 1 ? 2 : 0); break;
   }
 }
 
-// -------------------------- HTTP interface -------------------------
-const char DASHBOARD_HTML[] PROGMEM = R"HTML(
-<!doctype html><html><head><meta name="viewport" content="width=device-width">
-<title>Whack-a-Mole Position</title><style>
-body{font-family:system-ui;margin:2rem;background:#111;color:#eee}
-.card{max-width:34rem;padding:1.5rem;border-radius:1rem;background:#222}
-#warning{color:#ff5454;font-size:1.4rem;font-weight:bold}
-code{color:#6ee7ff}table{border-collapse:collapse}td{padding:.25rem .8rem .25rem 0}
-</style></head><body><div class="card"><h1>Player position</h1>
-<p id="warning"></p><table><tr><td>Status</td><td id="status">Waiting...</td></tr>
-<tr><td>X</td><td id="x">-</td></tr><tr><td>Y from screen</td><td id="y">-</td></tr>
-<tr><td>Fit error</td><td id="error">-</td></tr><tr><td>Sensors used</td><td id="used">-</td></tr>
-</table><p>Position endpoint: <code>/api/position</code></p>
-<p>Game endpoint: <code>/api/hits</code></p></div><script>
-const el=id=>document.getElementById(id);async function update(){try{
-const r=await fetch('/api/position');const p=await r.json();
-el('status').textContent=p.valid?'Tracking':'No valid position';
-el('x').textContent=p.valid?p.x_m.toFixed(3)+' m':'-';
-el('y').textContent=p.valid?p.y_m.toFixed(3)+' m':'-';
-el('error').textContent=p.rms_error_m.toFixed(3)+' m';el('used').textContent=p.sensors_used;
-el('warning').textContent=p.warning?'WARNING: player is too close to screen':'';
-}catch(e){el('status').textContent='Disconnected'}}setInterval(update,100);update();</script></body></html>
-)HTML";
-
-String boolJson(bool value) {
-  return value ? "true" : "false";
-}
-
+// ------------------------ HTTP API ---------------------------------
+String jsonBool(bool value) { return value ? "true" : "false"; }
+String number(float value, int decimals = 4) { return isfinite(value) ? String(value, decimals) : "null"; }
 void addCorsHeaders() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -614,164 +268,138 @@ void addCorsHeaders() {
   server.sendHeader("Access-Control-Allow-Private-Network", "true");
   server.sendHeader("Cache-Control", "no-store");
 }
-
+String positionJson(uint32_t now) {
+  const bool valid = positionFresh(now);
+  String s = "{\"valid\":" + jsonBool(valid);
+  s += ",\"x_m\":" + number(valid ? position.x : NAN);
+  s += ",\"y_m\":" + number(valid ? position.y : NAN);
+  s += ",\"held\":" + jsonBool(valid && position.held);
+  s += ",\"raw_x_m\":" + number(rawPosition.valid && now - frameTime <= RANGE_STALE_MS ? rawPosition.x : NAN);
+  s += ",\"raw_y_m\":" + number(rawPosition.valid && now - frameTime <= RANGE_STALE_MS ? rawPosition.y : NAN);
+  s += ",\"uncertainty_m\":" + number(position.uncertainty);
+  s += ",\"rms_error_m\":" + number(position.rms);
+  s += ",\"sensors_used\":" + String(position.count);
+  s += ",\"reason\":\"" + String(position.valid && !valid ? "stale" : position.reason) + "\"";
+  s += ",\"in_play_area\":" + jsonBool(valid && wam::inPlayArea(position.x, position.y, PLAY_AREA));
+  s += ",\"in_game_area\":" + jsonBool(valid && inGameArea(position.x, position.y));
+  s += ",\"warning\":" + jsonBool(warningActive);
+  s += ",\"age_ms\":" + String(now - positionTime) + "}";
+  return s;
+}
+String rangeFields(uint32_t now) {
+  String s = ",\"node_online\":[" + jsonBool(nodeOnline[0]) + "," + jsonBool(nodeOnline[1]) + "]";
+  s += ",\"ranges_m\":[";
+  for (int i = 0; i < 3; ++i) { if (i) s += ','; s += number(rangeFresh(i, now) ? ranges[i].metres : NAN); }
+  s += "],\"sensor_status\":[";
+  for (int i = 0; i < 3; ++i) {
+    if (i) s += ',';
+    const bool online = i == 1 || nodeOnline[i == 0 ? 0 : 1];
+    const bool fresh = rangeFresh(i, now);
+    const bool rawFresh = ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS;
+    const bool agrees = fresh && positionFresh(now) && !position.held && wam::inCone(position.x, position.y, SENSORS[i]) &&
+      fabsf(wam::distance(position.x, position.y, SENSORS[i]) - ranges[i].metres) <= MAX_FIT_RESIDUAL_M;
+    s += "{\"online\":" + jsonBool(online) + ",\"echo\":" + jsonBool(rawFresh && isfinite(ranges[i].raw));
+    s += ",\"rejected\":" + jsonBool(rawFresh && rangeGates[i].rejected);
+    s += ",\"raw_m\":" + number(ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS ? ranges[i].raw : NAN);
+    s += ",\"range_m\":" + number(fresh ? ranges[i].metres : NAN);
+    s += ",\"age_ms\":" + (ranges[i].seen ? String(now - ranges[i].time) : String("null"));
+    s += ",\"player_in_cone\":" + jsonBool(agrees) + "}";
+  }
+  return s + "]";
+}
 void handlePositionJson() {
   const uint32_t now = millis();
-  String json;
-  json.reserve(500);
-  json += "{\"valid\":" + boolJson(position.valid);
-  json += ",\"x_m\":" + String(position.valid ? position.x : -1.0f, 4);
-  json += ",\"y_m\":" + String(position.valid ? position.y : -1.0f, 4);
-  json += ",\"rms_error_m\":" + String(position.rmsError, 4);
-  json += ",\"sensors_used\":" + String(position.sensorsUsed);
-  json += ",\"warning\":" + boolJson(warningActive);
-  json += ",\"position_age_ms\":" +
-          String(position.valid ? now - position.updatedMs : 0);
-  json += ",\"node_online\":[" + boolJson(nodeOnline[0]) + "," +
-          boolJson(nodeOnline[1]) + "]";
-  json += ",\"ranges_m\":[";
-  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
-    if (i) json += ',';
-    if (isFreshAndValid(i, now)) json += String(ranges[i].metres, 4);
-    else json += "null";
-  }
-  json += "]}";
-
-  addCorsHeaders();
-  server.send(200, "application/json", json);
+  String s = positionJson(now); s.remove(s.length() - 1);
+  s += ",\"protocol\":\"wam-position-v2\",\"boot_id\":" + String(bootId);
+  s += ",\"frame_id\":" + String(frameId) + rangeFields(now) + "}";
+  addCorsHeaders(); server.send(200, "application/json", s);
 }
-
+String gameAreaJson() {
+  String s = "{\"x_min_m\":" + number(GAME_AREA_X_MIN_M) + ",\"x_max_m\":" + number(GAME_AREA_X_MAX_M);
+  s += ",\"start_y_m\":" + number(GAME_AREA_START_Y_M) + ",\"end_y_m\":" + number(GAME_AREA_END_Y_M);
+  return s + "}";
+}
 void handleHitsJson() {
   const uint32_t now = millis();
-  const bool hasCurrentHole = position.valid && stableHole >= 0;
-  const int8_t currentColumn = hasCurrentHole ? stableHole % GAME_COLUMNS : -1;
-
-  String json;
-  json.reserve(900);
-  json += "{\"protocol\":\"wam-hits-v1\"";
-  json += ",\"source\":\"access_point\"";
-  json += ",\"event_id\":" + String(latestHit.id);
-  json += ",\"event_age_ms\":" +
-          String(latestHit.id ? now - latestHit.createdMs : 0);
-  json += ",\"hole\":" + String(latestHit.id ? latestHit.hole : -1);
-  // Preserve the MVP contract: sensor 1 is the left column and sensor 2 is
-  // the right column; zone is the near/middle/far row.
-  json += ",\"sensor\":" + String(latestHit.id ? latestHit.column + 1 : 0);
-  json += ",\"zone\":" + String(latestHit.id ? latestHit.row : -1);
-  json += ",\"distance_cm\":" +
-          String(latestHit.id ? latestHit.y * 100.0f : -1.0f, 1);
-  json += ",\"current_hole\":" + String(hasCurrentHole ? stableHole : -1);
-  json += ",\"position\":{\"valid\":" + boolJson(position.valid);
-  json += ",\"x_m\":" + String(position.valid ? position.x : -1.0f, 4);
-  json += ",\"y_m\":" + String(position.valid ? position.y : -1.0f, 4);
-  json += ",\"rms_error_m\":" + String(position.rmsError, 4);
-  json += ",\"sensors_used\":" + String(position.sensorsUsed);
-  json += ",\"warning\":" + boolJson(warningActive);
-  json += ",\"age_ms\":" + String(position.valid ? now - position.updatedMs : 0);
-  json += "}";
-  json += ",\"sensors\":[";
-  for (uint8_t column = 0; column < GAME_COLUMNS; ++column) {
-    if (column) json += ',';
-    const bool laneActive = hasCurrentHole && currentColumn == column;
-    json += "{\"valid\":" + boolJson(laneActive);
-    json += ",\"distance_cm\":";
-    if (laneActive) json += String(position.y * 100.0f, 1);
-    else json += "null";
-    json += ",\"hole\":" + String(laneActive ? stableHole : -1);
-    json += '}';
+  const bool current = positionFresh(now) && !warningActive && stableHole >= 0 &&
+    inGameArea(position.x, position.y);
+  String s; s.reserve(2000);
+  s = "{\"protocol\":\"wam-hits-v1\",\"source\":\"access_point\",\"api_version\":2";
+  s += ",\"boot_id\":" + String(bootId) + ",\"frame_id\":" + String(frameId);
+  s += ",\"event_id\":" + String(hit.id) + ",\"event_age_ms\":" + String(hit.id ? now - hit.time : 0);
+  s += ",\"hole\":" + String(hit.hole) + ",\"sensor\":" + String(hit.hole >= 0 ? hit.hole % 2 + 1 : 0);
+  s += ",\"zone\":" + String(hit.hole >= 0 ? hit.hole / 2 : -1);
+  s += ",\"distance_cm\":" + number(hit.id ? hit.y * 100 : NAN, 1);
+  s += ",\"current_hole\":" + String(current ? stableHole : -1);
+  s += ",\"position\":" + positionJson(now);
+  s += ",\"game_area\":" + gameAreaJson();
+  // Legacy MVP lane fields remain for older clients; these are game columns,
+  // NOT the three physical ultrasonic sensors (see sensor_status instead).
+  s += ",\"sensors\":[";
+  for (int col = 0; col < 2; ++col) {
+    if (col) s += ',';
+    bool lane = current && !position.held && stableHole % 2 == col;
+    s += "{\"valid\":" + jsonBool(lane) + ",\"hole\":" + String(lane ? stableHole : -1);
+    s += ",\"distance_cm\":" + number(lane ? position.y * 100 : NAN, 1) + "}";
   }
-  json += "]";
-  json += ",\"node_online\":[" + boolJson(nodeOnline[0]) + "," +
-          boolJson(nodeOnline[1]) + "]";
-  json += ",\"ranges_m\":[";
-  for (uint8_t i = 0; i < SENSOR_COUNT; ++i) {
-    if (i) json += ',';
-    if (isFreshAndValid(i, now)) json += String(ranges[i].metres, 4);
-    else json += "null";
-  }
-  json += "]}";
-
-  addCorsHeaders();
-  server.send(200, "application/json", json);
+  s += "]" + rangeFields(now) + "}";
+  addCorsHeaders(); server.send(200, "application/json", s);
 }
-
+void handleConfigJson() {
+  String s = "{\"width_m\":" + number(PLAY_AREA_WIDTH_M) + ",\"depth_m\":" + number(PLAY_AREA_DEPTH_M);
+  s += ",\"play_start_y_m\":" + number(DEAD_ZONE_M) + ",\"stale_ms\":" + String(RANGE_STALE_MS);
+  s += ",\"game_area\":" + gameAreaJson();
+  s += ",\"sensors\":[";
+  const char *names[3] = {"Node 1", "Access Point", "Node 2"};
+  for (int i = 0; i < 3; ++i) {
+    if (i) s += ',';
+    s += "{\"name\":\"" + String(names[i]) + "\",\"x_m\":" + number(SENSORS[i].x);
+    s += ",\"y_m\":" + number(SENSORS[i].y) + ",\"bearing_deg\":" + number(SENSORS[i].bearingDeg);
+    s += ",\"half_angle_deg\":" + number(SENSORS[i].halfAngleDeg) + ",\"max_range_m\":" + number(SENSORS[i].maxRange) + "}";
+  }
+  addCorsHeaders(); server.send(200, "application/json", s + "]}");
+}
 void resetGameTracking() {
-  // Re-arm the current location so starting a game while already standing in
-  // a cell still creates one fresh event after the stability check.
-  stableHole = -1;
-  candidateHole = -1;
-  candidatePositionCount = 0;
-  lostPositionCount = 0;
-  lastHitMs = 0;
-
-  addCorsHeaders();
-  server.send(204, "text/plain", "");
+  stableHole = candidateHole = -1; candidateCount = 0;
+  hit.hole = -1; // invalidate the previous event without rewinding its ID.
+  addCorsHeaders(); server.send(204, "text/plain", "");
 }
-
-void handleOptions() {
-  addCorsHeaders();
-  server.send(204, "text/plain", "");
-}
-
-// ------------------------------ Setup ------------------------------
+void handleOptions() { addCorsHeaders(); server.send(204, "text/plain", ""); }
 void setup() {
-  Serial.begin(115200);
-  delay(300);
-
-  if (!mandatoryPinsAreConfigured()) {
-    Serial.println("ERROR: Set different TRIG_PIN and ECHO_PIN GPIO values at the top of the sketch.");
-    while (true) delay(1000);
+  Serial.begin(115200); delay(300);
+  trackingOptions.jumpLimit = POSITION_JUMP_LIMIT_M;
+  trackingOptions.confirmationRadius = POSITION_CONFIRM_RADIUS_M;
+  trackingOptions.stationaryTau = POSITION_STATIONARY_TAU_S;
+  trackingOptions.movingTau = POSITION_MOVING_TAU_S;
+  trackingOptions.holdMs = POSITION_HOLD_MS;
+  trackingOptions.resetMs = RANGE_STALE_MS;
+  if (TRIG_PIN < 0 || ECHO_PIN < 0 || TRIG_PIN == ECHO_PIN ||
+      (BUZZER_PIN >= 0 && (BUZZER_PIN == TRIG_PIN || BUZZER_PIN == ECHO_PIN)) ||
+      (WARNING_LED_PIN >= 0 && (WARNING_LED_PIN == TRIG_PIN || WARNING_LED_PIN == ECHO_PIN || WARNING_LED_PIN == BUZZER_PIN))) {
+    Serial.println("ERROR: configure distinct sensor and warning GPIOs."); while (true) delay(1000);
   }
-
-  pinMode(TRIG_PIN, OUTPUT);
-  pinMode(ECHO_PIN, INPUT);
-  digitalWrite(TRIG_PIN, LOW);
-
-  if (BUZZER_PIN >= 0) {
-    pinMode(BUZZER_PIN, OUTPUT);
-    digitalWrite(BUZZER_PIN, LOW);
-  }
-  if (WARNING_LED_PIN >= 0) {
-    pinMode(WARNING_LED_PIN, OUTPUT);
-    digitalWrite(WARNING_LED_PIN, LOW);
-  }
-
+  pinMode(TRIG_PIN, OUTPUT); digitalWrite(TRIG_PIN, LOW); pinMode(ECHO_PIN, INPUT);
+  if (BUZZER_PIN >= 0) { pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW); }
+  if (WARNING_LED_PIN >= 0) { pinMode(WARNING_LED_PIN, OUTPUT); digitalWrite(WARNING_LED_PIN, LOW); }
+  bootId = esp_random(); if (bootId == 0) bootId = 1;
   WiFi.mode(WIFI_AP);
-  WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET);
-  if (!WiFi.softAP(AP_SSID, AP_PASSWORD)) {
-    Serial.println("ERROR: Failed to start Wi-Fi access point.");
-    while (true) delay(1000);
+  if (!WiFi.softAPConfig(AP_IP, AP_IP, SUBNET) || !WiFi.softAP(AP_SSID, AP_PASSWORD) || !udp.begin(wam::AP_UDP_PORT)) {
+    Serial.println("ERROR: failed to start AP/UDP."); while (true) delay(1000);
   }
-
-  udp.begin(AP_UDP_PORT);
-  server.on("/", HTTP_GET, []() { server.send_P(200, "text/html", DASHBOARD_HTML); });
+  server.on("/", HTTP_GET, [](){ server.send_P(200, "text/html", DASHBOARD_HTML); });
+  server.on("/cones", HTTP_GET, [](){ server.send_P(200, "text/html", DASHBOARD_HTML); });
   server.on("/api/position", HTTP_GET, handlePositionJson);
-  server.on("/api/position", HTTP_OPTIONS, handleOptions);
   server.on("/api/hits", HTTP_GET, handleHitsJson);
-  server.on("/api/hits", HTTP_OPTIONS, handleOptions);
+  server.on("/api/config", HTTP_GET, handleConfigJson);
   server.on("/api/game/start", HTTP_POST, resetGameTracking);
-  server.on("/api/game/start", HTTP_OPTIONS, handleOptions);
-  server.onNotFound([]() {
-    addCorsHeaders();
-    server.send(404, "text/plain", "Not found");
-  });
-  server.begin();
-
-  Serial.print("Access point ready. Connect to ");
-  Serial.println(AP_SSID);
-  Serial.print("Dashboard: http://");
-  Serial.println(WiFi.softAPIP());
+  for (const char *path : {"/api/position", "/api/hits", "/api/config", "/api/game/start"}) server.on(path, HTTP_OPTIONS, handleOptions);
+  server.onNotFound([](){ addCorsHeaders(); server.send(404, "text/plain", "Not found"); });
+  server.begin(); Serial.println("Ready: connect to Wacker5, open http://192.168.4.1/");
 }
-
 void loop() {
-  server.handleClient();
   runMeasurementStateMachine();
-
   const uint32_t now = millis();
-  for (uint8_t i = 0; i < 2; ++i) {
-    if (nodeOnline[i] && now - nodeLastSeenMs[i] > RANGE_STALE_MS) {
-      nodeOnline[i] = false;
-    }
-  }
-  delay(1);
+  for (int i = 0; i < 2; ++i) if (nodeOnline[i] && now - nodeLastSeen[i] > RANGE_STALE_MS) nodeOnline[i] = false;
+  updateWarning(now);
+  server.handleClient(); delay(1);
 }
