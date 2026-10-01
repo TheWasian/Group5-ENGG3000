@@ -172,14 +172,23 @@ function updateScore() {
 
 function updateLevel() {
   levelDisplay.textContent = level;
+
+    if(level === 1){
+      SPAWN_INTERVAL = 5000;
+      MOLE_LIFETIME = 4950;
+      GameView.setEnvironment("grassland");
+    }
+
     if (level === 2){
       SPAWN_INTERVAL = 4000;
       MOLE_LIFETIME = 3950;
+      GameView.setEnvironment("freezing");
   }
 
     if (level === 3){
       SPAWN_INTERVAL = 3000;
       MOLE_LIFETIME = 2950;
+      GameView.setEnvironment("fire");
   }
 }
 

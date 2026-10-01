@@ -832,3 +832,584 @@ h1 {
   30% { transform: rotate(-45deg) translateY(2px) scale(1); }
   45% { transform: rotate(-45deg) translateY(2px) scale(1.15); }
 }
+
+
+body.env-freezing,
+body.env-fire,
+body.env-toxic {
+  transition: background 0.8s ease;
+}
+
+
+body.env-freezing {
+  color: #12324a;
+
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 48%,
+      rgba(255, 255, 255, 0.75) 49% 54%,
+      transparent 55%
+    ),
+    linear-gradient(
+      45deg,
+      transparent 0 55%,
+      rgba(207, 235, 250, 0.9) 56% 62%,
+      transparent 63%
+    ),
+
+    linear-gradient(
+      to bottom,
+      #4c91c7 0%,
+      #8fc9ed 30%,
+      #d9f2ff 48%,
+      #f8fdff 52%,
+      #c9e8f5 72%,
+      #8bbfd8 100%
+    );
+
+  overflow-x: hidden;
+}
+
+
+body.env-freezing::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 68%,
+      rgba(210, 240, 255, 0.95) 69% 76%,
+      rgba(150, 205, 235, 0.9) 77% 82%,
+      transparent 83%
+    ),
+
+    linear-gradient(
+      45deg,
+      transparent 0 72%,
+      rgba(232, 249, 255, 0.95) 73% 80%,
+      rgba(157, 211, 239, 0.9) 81% 86%,
+      transparent 87%
+    ),
+
+    linear-gradient(
+      160deg,
+      transparent 0 42%,
+      rgba(190, 225, 244, 0.95) 43% 52%,
+      transparent 53%
+    ),
+
+    radial-gradient(
+      ellipse at 50% 45%,
+      rgba(255, 255, 255, 0.7),
+      transparent 55%
+    );
+
+  background-size:
+    600px 500px,
+    700px 550px,
+    900px 600px,
+    100% 100%;
+
+  background-position:
+    10% 5%,
+    90% 0%,
+    center 5%,
+    center;
+
+  background-repeat: repeat-x, repeat-x, repeat-x, no-repeat;
+
+  opacity: 0.9;
+}
+
+body.env-freezing::after {
+  content: "";
+  position: fixed;
+  inset: -100px;
+  z-index: 20;
+  pointer-events: none;
+
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.95) 0 2px, transparent 3px),
+    radial-gradient(circle, rgba(255,255,255,0.85) 0 3px, transparent 4px),
+    radial-gradient(circle, rgba(255,255,255,0.75) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(220,245,255,0.9) 0 2px, transparent 3px);
+
+  background-size:
+    110px 130px,
+    180px 190px,
+    75px 90px,
+    240px 220px;
+
+  animation:
+    heavySnow 7s linear infinite;
+
+  opacity: 0.85;
+}
+
+@keyframes heavySnow {
+  0% {
+    background-position:
+      0 -100px,
+      40px -150px,
+      20px -80px,
+      80px -200px;
+  }
+
+  100% {
+    background-position:
+      100px 100vh,
+      -40px 110vh,
+      80px 105vh,
+      -100px 115vh;
+  }
+}
+
+
+body.env-freezing .mound {
+  background:
+    linear-gradient(
+      to bottom,
+      #ffffff 0%,
+      #e9f8ff 45%,
+      #c8e7f5 100%
+    );
+
+  border-color: #9bcde5;
+
+  box-shadow:
+    inset 0 -12px 18px rgba(90, 150, 190, 0.28),
+    0 6px 15px rgba(30, 90, 120, 0.3),
+    0 0 25px rgba(210, 245, 255, 0.35);
+}
+
+body.env-freezing .mound::before,
+body.env-freezing .mound::after {
+  border-bottom-color: #f7fdff;
+}
+
+body.env-freezing .dirt {
+  background: #203c4d;
+  box-shadow:
+    inset 0 8px 15px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(120, 210, 255, 0.35);
+}
+
+
+body.env-fire {
+  color: #fff3df;
+
+  background:
+    
+    radial-gradient(
+      ellipse at 50% 72%,
+      rgba(255, 225, 90, 0.95) 0%,
+      rgba(255, 100, 15, 0.7) 20%,
+      transparent 55%
+    ),
+
+  
+    linear-gradient(
+      to bottom,
+      #160407 0%,
+      #3b0908 20%,
+      #7f1708 42%,
+      #d13b0c 57%,
+      #ff7a18 67%,
+      #9b4317 68%,
+      #4d2413 100%
+    );
+
+  overflow-x: hidden;
+}
+
+
+
+
+body.env-fire::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+
+  
+    radial-gradient(
+      ellipse 80px 190px at 12% 64%,
+      rgba(255, 235, 80, 0.95) 0%,
+      rgba(255, 90, 0, 0.85) 30%,
+      rgba(150, 20, 0, 0.5) 55%,
+      transparent 70%
+    ),
+
+    radial-gradient(
+      ellipse 100px 240px at 86% 62%,
+      rgba(255, 230, 70, 0.95) 0%,
+      rgba(255, 80, 0, 0.85) 28%,
+      rgba(130, 15, 0, 0.55) 55%,
+      transparent 70%
+    ),
+
+    radial-gradient(
+      ellipse 55px 130px at 48% 66%,
+      rgba(255, 245, 120, 0.9) 0%,
+      rgba(255, 80, 0, 0.8) 35%,
+      transparent 70%
+    ),
+
+   
+    linear-gradient(
+      135deg,
+      transparent 0 60%,
+      #250706 61% 69%,
+      transparent 70%
+    ),
+
+    linear-gradient(
+      45deg,
+      transparent 0 64%,
+      #1c0504 65% 72%,
+      transparent 73%
+    ),
+
+   
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(255, 70, 0, 0.6),
+      transparent 65%
+    );
+
+  background-size:
+    450px 450px,
+    550px 500px,
+    350px 350px,
+    900px 600px,
+    800px 550px,
+    100% 100%;
+
+  background-repeat:
+    repeat-x,
+    repeat-x,
+    repeat-x,
+    repeat-x,
+    repeat-x,
+    no-repeat;
+
+  animation: infernoPulse 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes infernoPulse {
+  0% {
+    filter: brightness(0.9);
+    transform: scale(1);
+  }
+
+  100% {
+    filter: brightness(1.15);
+    transform: scale(1.015);
+  }
+}
+
+
+
+
+body.env-fire::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+
+  background-image:
+    radial-gradient(circle, #ffd84a 0 2px, transparent 3px),
+    radial-gradient(circle, #ff7b00 0 2px, transparent 3px),
+    radial-gradient(circle, #fff1a0 0 1px, transparent 2px),
+    radial-gradient(circle, #ff3d00 0 2px, transparent 3px);
+
+  background-size:
+    130px 180px,
+    190px 230px,
+    80px 120px,
+    250px 300px;
+
+  animation: emberRise 5s linear infinite;
+
+  opacity: 0.8;
+}
+
+@keyframes emberRise {
+  0% {
+    background-position:
+      0 100vh,
+      50px 110vh,
+      20px 105vh,
+      100px 120vh;
+  }
+
+  100% {
+    background-position:
+      100px -20vh,
+      -50px -30vh,
+      70px -10vh,
+      -100px -40vh;
+  }
+}
+
+
+
+
+body.env-fire .mound {
+  background:
+    linear-gradient(
+      to bottom,
+      #e4b36e 0%,
+      #c57b32 60%,
+      #884313 100%
+    );
+
+  border-color: #8c4a18;
+
+  box-shadow:
+    inset 0 -12px 18px rgba(100, 35, 0, 0.45),
+    0 7px 15px rgba(50, 10, 0, 0.5),
+    0 0 25px rgba(255, 90, 0, 0.3);
+}
+
+body.env-fire .mound::before,
+body.env-fire .mound::after {
+  border-bottom-color: #d9974e;
+}
+
+body.env-fire .dirt {
+  background: #321006;
+
+  box-shadow:
+    inset 0 8px 15px rgba(0, 0, 0, 0.85),
+    0 0 12px rgba(255, 70, 0, 0.4);
+}
+
+body.env-toxic {
+  color: #eaffc2;
+
+  background:
+
+  
+    radial-gradient(
+      ellipse at 50% 70%,
+      rgba(145, 255, 0, 0.35),
+      transparent 45%
+    ),
+
+    
+    linear-gradient(
+      to bottom,
+      #071006 0%,
+      #152512 30%,
+      #344718 52%,
+      #52631c 62%,
+      #222c0d 63%,
+      #111707 100%
+    );
+
+  overflow-x: hidden;
+}
+
+
+
+body.env-toxic::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+
+
+    radial-gradient(
+      ellipse 260px 95px at 15% 78%,
+      rgba(91, 255, 0, 0.85) 0%,
+      rgba(35, 180, 0, 0.65) 35%,
+      rgba(10, 70, 0, 0.5) 60%,
+      transparent 72%
+    ),
+
+   
+    radial-gradient(
+      ellipse 320px 110px at 83% 82%,
+      rgba(130, 255, 0, 0.8) 0%,
+      rgba(40, 180, 0, 0.6) 35%,
+      rgba(15, 70, 0, 0.5) 62%,
+      transparent 74%
+    ),
+
+
+    radial-gradient(
+      ellipse 150px 55px at 51% 70%,
+      rgba(190, 255, 0, 0.75),
+      rgba(45, 150, 0, 0.5) 45%,
+      transparent 72%
+    ),
+
+   
+    linear-gradient(
+      165deg,
+      transparent 0 53%,
+      rgba(15, 25, 8, 0.9) 54% 62%,
+      transparent 63%
+    ),
+
+    linear-gradient(
+      195deg,
+      transparent 0 57%,
+      rgba(20, 30, 9, 0.9) 58% 67%,
+      transparent 68%
+    ),
+
+  
+    radial-gradient(
+      ellipse at 50% 50%,
+      rgba(160, 255, 0, 0.18),
+      transparent 60%
+    );
+
+  background-size:
+    900px 500px,
+    1000px 550px,
+    500px 350px,
+    800px 500px,
+    900px 500px,
+    100% 100%;
+
+  background-repeat:
+    repeat-x,
+    repeat-x,
+    repeat-x,
+    repeat-x,
+    repeat-x,
+    no-repeat;
+
+  animation: toxicPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes toxicPulse {
+  0% {
+    filter: brightness(0.8);
+  }
+
+  100% {
+    filter: brightness(1.1);
+  }
+}
+
+
+
+
+body.env-toxic::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+
+  background-image:
+    radial-gradient(circle, rgba(180,255,0,0.8) 0 4px, transparent 5px),
+    radial-gradient(circle, rgba(110,255,0,0.7) 0 3px, transparent 4px),
+    radial-gradient(circle, rgba(220,255,100,0.8) 0 2px, transparent 3px),
+    radial-gradient(circle, rgba(60,255,20,0.6) 0 5px, transparent 6px);
+
+  background-size:
+    170px 190px,
+    260px 250px,
+    110px 150px,
+    330px 300px;
+
+  animation: toxicBubbles 6s ease-in-out infinite;
+
+  opacity: 0.65;
+}
+
+@keyframes toxicBubbles {
+  0% {
+    background-position:
+      20px 90vh,
+      80px 100vh,
+      40px 85vh,
+      120px 110vh;
+  }
+
+  50% {
+    background-position:
+      60px 45vh,
+      10px 55vh,
+      100px 35vh,
+      -30px 65vh;
+  }
+
+  100% {
+    background-position:
+      100px 5vh,
+      -50px 10vh,
+      160px 0,
+      -100px 20vh;
+  }
+}
+
+
+
+
+body.env-toxic .mound {
+  background:
+    linear-gradient(
+      to bottom,
+      #64752a 0%,
+      #46551c 55%,
+      #28320e 100%
+    );
+
+  border-color: #8bd100;
+
+  box-shadow:
+    inset 0 -12px 18px rgba(0, 0, 0, 0.5),
+    0 7px 15px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(120, 255, 0, 0.3);
+}
+
+body.env-toxic .mound::before,
+body.env-toxic .mound::after {
+  border-bottom-color: #65772b;
+}
+
+body.env-toxic .dirt {
+  background: #101b08;
+
+  box-shadow:
+    inset 0 8px 15px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(100, 255, 0, 0.45);
+}
+
+
+body.env-freezing .game-container {
+  filter: drop-shadow(0 0 8px rgba(180, 235, 255, 0.25));
+}
+
+
+body.env-fire .game-container {
+  filter: drop-shadow(0 0 10px rgba(255, 90, 0, 0.25));
+}
+
+
+body.env-toxic .game-container {
+  filter: drop-shadow(0 0 10px rgba(100, 255, 0, 0.2));
+}
+
+
+  
+
+
