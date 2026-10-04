@@ -26,6 +26,12 @@ your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
 4. Run `GameLauncher.bat` for the game and reload its browser page to load the
    updated backend. The game and cone page use the same AP simultaneously.
 
+The current website (`gameLogic.js`) and the modular `main.js` backend now share
+`SensorService.js`. The current index loads it before the game script. Both
+entry points accept fresh two- or three-sensor positions, process each frame
+once, and reject held/stale/single-sensor positions for scoring. Game rules and
+the current website's visual effects remain in their existing implementations.
+
 The PlatformIO target is classic `esp32dev`; select a different board definition
 if your hardware requires it. The sketches use only ESP32 Arduino core libraries.
 The older two-sensor `MVP.ino` and its event API remain supported by the game UI.
@@ -35,22 +41,22 @@ The older two-sensor `MVP.ino` and its event API remain supported by the game UI
 Near the top of `Access_Point/Access_Point.ino`:
 
 ```cpp
-constexpr float SENSOR_GAP_LEFT_M = 0.36f;
-constexpr float SENSOR_GAP_RIGHT_M = 0.48f;
+constexpr float SENSOR_GAP_LEFT_M = 0.35f;
+constexpr float SENSOR_GAP_RIGHT_M = 0.35f;
 constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
 ```
 
-Values are metres. These preserve your updated 36 cm left gap, 48 cm right gap
+Values are metres. These preserve your updated 35 cm left gap, 35 cm right gap
 and 30 cm screen distance. Measure between sensor centres, not breadboard edges.
 Only change them in this one sketch, then recompile/upload; both game and cone
 display get their geometry from these settings.
 
 Coordinates use the player's left/right while facing the screen. `x=0` is the
 left edge of the physical 1.5 m-wide area; `y=0` is the screen and +y points
-towards the player. The sensors are at `(0.39,0.30)`, `(0.75,0.30)` and
-`(1.23,0.30)` m. The AP faces straight along +y. Side sensors aim at
-`AIM_X_M=0.75`, `AIM_Y_M=1.30`, giving about **19.8° inward on the left** and
-**25.6° inward on the right**. Physically aim them to match, or set measured
+towards the player. The sensors are at `(0.40,0.30)`, `(0.75,0.30)` and
+`(1.10,0.30)` m. The AP faces straight along +y. Side sensors aim at
+`AIM_X_M=0.75`, `AIM_Y_M=1.30`, giving about **19.3° inward on both sides**.
+Physically aim them to match, or set measured
 bearings in `SENSORS`. Positive bearing turns towards the player's right.
 
 `CONE_HALF_ANGLE_DEG=15` is an assumed beam half-angle, not a measured bearing.
@@ -110,8 +116,17 @@ For three ranges, minimise the sum of Huber losses: `e²` for `|e| <= delta`,
 otherwise `2*delta*|e| - delta²`. The solver uses nine starting points and
 adaptive Levenberg-Marquardt damping, accepting only steps that reduce loss.
 It still rejects points outside the configured cones/area, weak geometry,
-RMS residual over 10 cm, or any individual residual over 18 cm. A conflicting
-third echo cannot be silently discarded to manufacture a two-range position.
+RMS residual over 10 cm, or any individual residual over 18 cm.
+
+**Only two usable sensors are required.** All three are preferred when the fit
+is consistent. If three echoes disagree, the AP checks every two-sensor pair.
+A unique plausible pair can track even if the third sensor sees a wall or a
+different reflector. It reports `two_ranges_fallback` and explicitly identifies
+the excluded echo. Candidate positions must satisfy the contributing sensors'
+cones, area limits and uncertainty checks; the unused cone does not veto them.
+If several pairs suggest different locations, accept only a unique continuation
+near the recent position; otherwise report `ambiguous_pairs`. The system cannot
+reliably choose between equally plausible targets without more information.
 
 For two ranges, intersect the two circles and require a unique point inside
 both cones and the tracked area. This has no third-sensor consistency check.
@@ -123,12 +138,17 @@ rejected. This is a local noise model, not an observed accuracy guarantee.
 The previous three-reading average has been replaced by:
 
 1. A range gate: a change over 16 cm must repeat within 10 cm on the next
-   reading, or that frame is rejected. Invalid data clears range history.
+   reading, or that sensor's range is excluded. The other two may still locate
+   the player; a rejected third echo no longer cancels the whole frame.
+   Invalid data clears range history.
 2. Position confirmation: a move over 14 cm must be followed by another fix
    within 8 cm of that new position. An isolated jump leaves the marker still.
 3. Time-based exponential smoothing: a 0.35 s time constant near stationary
    and 0.12 s for smaller ongoing movement. Confirmed large movement updates
    directly instead of being slowly dragged through intermediate holes.
+   Two-sensor fixes use at least a 0.50 s time constant to reduce their greater
+   sideways noise. This trades some response speed for stability; confirmed
+   large movements still update directly.
 4. A display-only hold for at most 350 ms after a bad frame. Held fixes retain
    their original timestamp, appear amber, and **cannot score**. Position
    smoothing also cannot score the old cell when the latest fix maps elsewhere.
@@ -143,6 +163,9 @@ Relevant editable constants in the AP sketch:
 | `POSITION_CONFIRM_RADIUS_M` | 0.08 | Agreement between changed fixes |
 | `POSITION_STATIONARY_TAU_S` | 0.35 | Raise for more stationary smoothing/lag |
 | `POSITION_MOVING_TAU_S` | 0.12 | Smoothing during smaller movements |
+| `POSITION_TWO_SENSOR_TAU_S` | 0.50 | Minimum smoothing time constant with two sensors |
+| `PAIR_AGREEMENT_M` | 0.10 | Distance within which pair candidates agree |
+| `PAIR_PREVIOUS_RADIUS_M` | 0.25 | Maximum distance from recent track to resolve competing pairs |
 | `POSITION_HOLD_MS` | 350 | Maximum visual hold; never a fresh hit |
 | `HUBER_LIMIT_M` | 0.06 | Residual at which robust downweighting begins |
 | `ASSUMED_RANGE_NOISE_M` | 0.025 | Range noise floor for geometry checks |
@@ -150,8 +173,9 @@ Relevant editable constants in the AP sketch:
 | `SENSOR_SCALE`, `SENSOR_OFFSET_M` | 1, 0 | Per-sensor distance calibration |
 
 The dashboard shows accepted range arcs, rejected raw echoes, a hollow raw
-position and a solid filtered position. A matched echo is labelled **Position
-in cone**. Sensors cannot identify a person or locate a reflection within
+position and a solid filtered position. Contributing echoes are labelled
+**Used for position**. An unused conflicting echo is labelled **Echo excluded**
+and drawn with a faint dashed range arc. Sensors cannot identify a person or locate a reflection within
 their beam: reflections from clothing, arms, tables and walls can disagree.
 Mount sensors level and aimed at the same body region. Calibrate offsets with
 a stationary flat reflector at measured distances before testing a person.
@@ -185,6 +209,16 @@ remain, with additive `held`, `raw_x_m`, `raw_y_m`, `uncertainty_m` and
 a new measurement: clients must check `held !== true` before scoring.
 The game backend does this and processes each boot/frame pair once.
 
+`sensors_used_mask` identifies the selected sensors (bits 0/1/2 = Node 1/AP/Node 2).
+`available_mask` identifies the current solver inputs after range gating.
+`sensor_status[].used_for_position` identifies a currently contributing sensor;
+`excluded_from_position` identifies a usable echo outside the selected subset.
+Freshness and frame-span checks use the selected sensors. A held fix keeps the
+previous mask in the position object but reports no currently contributing echoes.
+A fresh pair may also replace a three-range fit whose readings are too far
+apart in time; this is reported as `two_ranges_timing`. A pair itself must still
+meet the 300 ms frame-span limit.
+
 `game_area` contains `x_min_m`, `x_max_m`, `start_y_m`, `end_y_m`, all in world
 coordinates. `ranges_m` and `sensor_status` are ordered [Node 1, AP, Node 2].
 `raw_m` is corrected but ungated; `range_m` is accepted by the spike gate,
@@ -210,16 +244,20 @@ On Windows use WSL bash with g++ for native tests. PlatformIO builds the three
 environments `access_point`, `node_1`, `node_2`. The build-only command does not
 flash hardware. Choose a specific environment/physical port for uploading.
 
-Validated 2026-09-14 with ESP32 Arduino core 2.0.17 and Espressif32 7.0.1:
+Validated 2026-10-05 with ESP32 Arduino core 2.0.17 and Espressif32 7.0.1:
 all three firmware builds; 196 geometric grid points; six target centres with
 three sensors and every two-sensor combination; jitter, spike, sustained
-movement, dropout and clock-wrap tests; held/stale/outside-zone scoring
-suppression and MVP compatibility. In a seeded 600-frame stationary simulation
-with 1.2 cm range noise, tracked RMS position error was 1.64 cm versus 2.69 cm
-for the same solver without tracking; 16 injected spikes were rejected.
+movement, dropout and clock-wrap tests; two-beam edge coverage, background-echo
+fallback and competing-pair ambiguity; current website and modular backend
+scoring, held/stale/outside-zone suppression and MVP compatibility. In a seeded
+600-frame stationary simulation with 1.2 cm range noise, tracked RMS position
+error was 2.14 cm versus 3.28 cm for the same solver without tracking, over 577
+fresh outputs. Sixteen injected spikes were excluded while the other pair kept
+providing fixes. The baseline uses the current 35/35 cm layout and pair fallback.
 This simulation does not establish accuracy on the real sensor rig.
 
 For browser QA, `python "ESP-32 Code/tests/preview_server.py"` serves a labelled
-synthetic dashboard at http://127.0.0.1:8766/. Query modes `partial`, `held`,
-`invalid`, `warning` and `offline` exercise alternative states. This server is
+synthetic dashboard at http://127.0.0.1:8766/ and the actual game at `/game/`.
+Query modes `partial`, `fallback`, `held`, `invalid`, `warning` and `offline`
+exercise alternative states. This server is
 only a test fixture; the actual firmware never substitutes synthetic data.

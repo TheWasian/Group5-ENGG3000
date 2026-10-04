@@ -5,7 +5,11 @@ GameView.init();
 SensorService.init();
 
 // When the ESP32 thinks you have whacked the mole it flashes the hole, and then scores it.
-SensorService.onHit = function (holeIndex) {
+SensorService.onHit = function (holeIndex, kind) {
+  // A fresh occupancy sample only whacks a mole at that location; polling
+  // another cell must not reset a streak or repeatedly flash an empty hole.
+  var game = GameService.game;
+  if (kind === "occupancy" && (!game || !game.playing || !game.mole || game.mole.hole !== holeIndex)) return;
   GameView.flashSensorHit(holeIndex);
   GameService.whack(holeIndex, "sensor");
 };

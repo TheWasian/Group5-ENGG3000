@@ -1,104 +1,106 @@
-//Sensor Logic
+// Shared sensor API adapter for gameLogic.js and the modular main.js backend.
+// Both game entry points keep their own scoring rules; this service owns polling.
 var SensorService = {
   POLL_EVERY_MS: 75,
   MAX_EVENT_AGE_MS: 1000,
-
-  // ESP32 URL
+  MAX_POSITION_AGE_MS: 500,
+  REQUEST_TIMEOUT_MS: 1200,
   baseUrl: "http://192.168.4.1",
-
-  lastEventId: null, // last event_id seen or null
-  timer: null,
-  busy: false, //checks if there is already a request no over flooding
-  onHit: null, // function in main.js to check the sensor has detected a hit
-
-  holes: [],
-  sensorStatus: null,
-  playerMarker: null,
-  debugLabels: [],
-  debugDisplays: [],
-  debugLastEvent: null,
-
-  // Grab page element when backends main calls it
+  lastEventId: null, lastBootId: null, lastFrame: null,
+  timer: null, busy: false, onHit: null,
+  lastData: null, receivedAt: 0,
   init: function () {
-    if (window.location.hostname === "192.168.4.1") {
-      this.baseUrl = "";
-    }
+    if (window.location.hostname === "192.168.4.1") this.baseUrl = "";
     this.holes = Array.from(document.querySelectorAll(".hole"));
     this.sensorStatus = document.getElementById("sensor-status");
     this.playerMarker = document.getElementById("player-marker");
-    this.debugLabels = [document.getElementById("debug-label-1"), document.getElementById("debug-label-2")];
-    this.debugDisplays = [document.getElementById("debug-sensor-1"), document.getElementById("debug-sensor-2")];
+    this.debugSensorLabels = [document.getElementById("debug-label-1"), document.getElementById("debug-label-2")];
+    this.debugSensorDisplays = [document.getElementById("debug-sensor-1"), document.getElementById("debug-sensor-2")];
     this.debugLastEvent = document.getElementById("debug-last-event");
   },
-
-  // Keep Polling until the esp's switch off
   start: function () {
-    this.check(); // check once right away
     clearInterval(this.timer);
-    var self = this;
-    this.timer = setInterval(function () {
-      self.check();
-    }, this.POLL_EVERY_MS);
+    this.check();
+    this.timer = setInterval(() => { this.expireDisplay(); this.check(); }, this.POLL_EVERY_MS);
   },
-
-  //start the game and the esp32 is rearmed and if offline then any failure flagged is thrown out
-  //Mouse is still working as i need it to test
+  request: async function (path, method = "GET") {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(this.baseUrl + path, {method, cache: "no-store", signal: controller.signal});
+      if (!response.ok) throw new Error("Sensor HTTP " + response.status);
+      return method === "GET" ? await response.json() : null;
+    } finally { clearTimeout(timeout); }
+  },
   notifyGameStart: function () {
-    fetch(this.baseUrl + "/api/game/start", { method: "POST" }).catch(function () { 
-    });
+    // Retain the frame cursor: a restart must not replay the last measurement.
+    return this.request("/api/game/start", "POST").catch(() => null);
   },
-
-  //Instead of multiple poll's, just made it one and ensured that the new movement event's become one poll
-  check: function () {
+  expireDisplay: function () {
+    const data = this.lastData, p = data?.position;
+    if (data?.source === "access_point" && p?.valid &&
+        performance.now() - this.receivedAt + p.age_ms > this.MAX_POSITION_AGE_MS) {
+      this.lastData = null;
+      this.updateSensorStatus(true, {...data, position: {...p, valid: false, reason: "stale"}});
+    }
+  },
+  check: async function () {
     if (this.busy) return;
     this.busy = true;
-    var self = this;
-    fetch(this.baseUrl + "/api/hits", { cache: "no-store" })
-      .then(function (response) {
-        if (!response.ok) throw new Error("Sensor HTTP " + response.status);
-        return response.json();
-      })
-      .then(function (data) {
-        self.busy = false;
-        var eventId = Number(data.event_id);
-        if (!Number.isInteger(eventId) || eventId < 0) {
-          throw new Error("Invalid /api/hits response");
-        }
-        self.updateSensorStatus(true, data);
-
-        if (self.lastEventId === null) {
-          self.lastEventId = eventId;
+    try {
+      const data = await this.request("/api/hits");
+      if (!data || !Number.isSafeInteger(data.event_id) || data.event_id < 0)
+        throw new Error("Invalid /api/hits response");
+      if (data.source === "access_point" && data.frame_id !== undefined &&
+          (!Number.isSafeInteger(data.frame_id) || data.frame_id < 0 ||
+           !Number.isSafeInteger(data.boot_id) || data.boot_id < 0))
+        throw new Error("Invalid AP frame");
+      this.lastData = data; this.receivedAt = performance.now();
+      this.updateSensorStatus(true, data);
+      if (data.source === "access_point") {
+        if (data.boot_id !== this.lastBootId) { this.lastFrame = null; this.lastEventId = null; }
+        this.lastBootId = data.boot_id;
+        if (Number.isSafeInteger(data.frame_id)) {
+          const key = `${data.boot_id}:${data.frame_id}`;
+          if (key !== this.lastFrame) {
+            this.lastFrame = key;
+            const player = this.getPlayerPosition(data);
+            if (player && data.position.held !== true && this.onHit) this.onHit(player.holeIndex, "occupancy");
+          }
+          this.lastEventId = data.event_id;
           return;
         }
-        if (eventId === self.lastEventId) return;
-        self.lastEventId = eventId;
-
-        var eventAgeMs = Number(data.event_age_ms);
-        var eventHole = Number(data.hole);
-        if (
-          Number.isFinite(eventAgeMs) &&
-          eventAgeMs <= self.MAX_EVENT_AGE_MS &&
-          Number.isInteger(eventHole) &&
-          eventHole >= 0 &&
-          eventHole < self.holes.length &&
-          self.onHit
-        ) {
-          self.onHit(eventHole);
-        }
-      })
-      .catch(function () {
-        self.busy = false;
-        self.updateSensorStatus(false);
-      });
+      }
+      // MVP / older event-only AP firmware. Never coerce null into hole zero.
+      const oldEvent = this.lastEventId; this.lastEventId = data.event_id;
+      if (oldEvent === null || data.event_id === oldEvent) return;
+      if (typeof data.event_age_ms === "number" && Number.isFinite(data.event_age_ms) &&
+          data.event_age_ms >= 0 && data.event_age_ms <= this.MAX_EVENT_AGE_MS &&
+          Number.isInteger(data.hole) && data.hole >= 0 && data.hole < this.holes.length &&
+          (data.source !== "access_point" || (this.usableAccessPointPosition(data) &&
+           data.position.held !== true && data.current_hole === data.hole)) && this.onHit)
+        this.onHit(data.hole, "event");
+    } catch (error) {
+      this.lastData = null;
+      this.updateSensorStatus(false);
+      // Keep cursors across a transient HTTP error: a repeated frame/event is
+      // still a duplicate. AP reboot is identified separately by boot_id.
+    } finally { this.busy = false; }
+  },
+  usableAccessPointPosition: function (data) {
+    const p = data?.position;
+    return p?.valid === true && !p.warning && p.in_play_area !== false && p.in_game_area !== false &&
+      Number.isInteger(p.sensors_used) && p.sensors_used >= 2 && p.sensors_used <= 3 &&
+      typeof p.x_m === "number" && Number.isFinite(p.x_m) &&
+      typeof p.y_m === "number" && Number.isFinite(p.y_m) &&
+      typeof p.age_ms === "number" && p.age_ms >= 0 && p.age_ms <= this.MAX_POSITION_AGE_MS;
   },
 
-  // Checks which hole the player is at before returning the values like sensor and hold or null if there not their
   getPlayerPosition: function (data) {
-    var accessPointHole = Number(data && data.current_hole);
+    const accessPointHole = data?.current_hole;
     if (
-      data &&
-      data.position &&
-      data.position.valid &&
+      this.usableAccessPointPosition(data) &&
+      data.current_hole !== null &&
       Number.isInteger(accessPointHole) &&
       accessPointHole >= 0 &&
       accessPointHole < this.holes.length
@@ -112,38 +114,45 @@ var SensorService = {
       };
     }
 
-    if (!data || !Array.isArray(data.sensors)) return null;
+    // The AP's sensors array is a compatibility lane view, not a fallback
+    // source of physical positioning when its actual fix is invalid.
+    if (data?.source === "access_point") return null;
 
-    var validSensorIndexes = [];
-    for (var i = 0; i < data.sensors.length; i++) {
-      if (data.sensors[i].valid && Number.isInteger(Number(data.sensors[i].hole))) {
-        validSensorIndexes.push(i);
-      }
-    }
+    if (!Array.isArray(data?.sensors)) return null;
+
+    const validSensorIndexes = data.sensors
+      .map((sensor, index) =>
+        sensor?.valid === true && Number.isInteger(sensor.hole) ? index : -1,
+      )
+      .filter((index) => index >= 0);
+
     if (validSensorIndexes.length === 0) return null;
 
-    //Getting the players last position based on the last time it was sensed
-    var latestSensorIndex = Number(data.sensor) - 1;
-    var sensorIndex = validSensorIndexes[0];
-    if (validSensorIndexes.indexOf(latestSensorIndex) !== -1) {
-      sensorIndex = latestSensorIndex;
-    }
-    var holeIndex = Number(data.sensors[sensorIndex].hole);
+    // If both beams see the player, prefer the sensor that most recently
+    // produced a movement event. Otherwise use the only valid sensor.
+    const latestSensorIndex = Number(data.sensor) - 1;
+    const sensorIndex = validSensorIndexes.includes(latestSensorIndex)
+      ? latestSensorIndex
+      : validSensorIndexes[0];
+    const holeIndex = Number(data.sensors[sensorIndex].hole);
 
-    if (!Number.isInteger(holeIndex) || holeIndex < 0 || holeIndex >= this.holes.length) {
+    if (
+      !Number.isInteger(holeIndex) ||
+      holeIndex < 0 ||
+      holeIndex >= this.holes.length
+    ) {
       return null;
     }
 
     return {
-      sensorIndex: sensorIndex,
-      holeIndex: holeIndex,
+      sensorIndex,
+      holeIndex,
       distanceCm: data.sensors[sensorIndex].distance_cm,
     };
   },
 
-  // Move the player marker onto their hole (hide it when unknown)
   displayPlayerPosition: function (data) {
-    var position = this.getPlayerPosition(data);
+    const position = this.getPlayerPosition(data);
 
     if (!position) {
       this.playerMarker.classList.add("hidden");
@@ -151,136 +160,138 @@ var SensorService = {
       return null;
     }
 
-    var targetHole = null;
-    for (var i = 0; i < this.holes.length; i++) {
-      if (Number(this.holes[i].dataset.hole) === position.holeIndex) {
-        targetHole = this.holes[i];
-      }
-    }
+    const targetHole = this.holes.find(
+      (hole) => Number(hole.dataset.hole) === position.holeIndex,
+    );
     targetHole.appendChild(this.playerMarker);
     this.playerMarker.classList.remove("hidden");
-    if (Number.isFinite(position.xM)) {
-      this.playerMarker.title =
-        "Player: hole " + (position.holeIndex + 1) + " (" + position.xM.toFixed(2) + ", " + position.yM.toFixed(2) + " m)";
-    } else {
-      this.playerMarker.title = "Player: hole " + (position.holeIndex + 1) + ", sensor " + (position.sensorIndex + 1);
-    }
+    this.playerMarker.title = Number.isFinite(position.xM)
+      ? `Player: hole ${position.holeIndex + 1} (${position.xM.toFixed(2)}, ${position.yM.toFixed(2)} m)`
+      : `Player: hole ${position.holeIndex + 1}, sensor ${position.sensorIndex + 1}`;
     return position;
   },
 
-  // Debug box (top-right of the page), moved it into this js file instead of the old gamelogic file 
-  updateDebugPanel: function (data) {
-    if (!data) {
-      this.debugDisplays[0].textContent = "Disconnected";
-      this.debugDisplays[1].textContent = "Disconnected";
-      this.debugLastEvent.textContent = "Disconnected";
-      return;
-    }
+  updateDebugPanel: function (data = null) {
+    if (data?.source === "access_point") {
+      this.debugSensorLabels[0].textContent = "Position";
+      this.debugSensorLabels[1].textContent = "Network";
 
-    if (data.source === "access_point") {
-      this.debugLabels[0].textContent = "Position";
-      this.debugLabels[1].textContent = "Network";
+      const xM = Number(data.position?.x_m);
+      const yM = Number(data.position?.y_m);
+      const currentHole = Number(data.current_hole);
+      const positionValid = data.position?.valid &&
+        data.position.x_m !== null && data.position.y_m !== null &&
+        Number.isFinite(xM) && Number.isFinite(yM);
+      this.debugSensorDisplays[0].textContent = positionValid
+        ? `${xM.toFixed(2)}, ${yM.toFixed(2)} m | ${currentHole >= 0 ? `Hole ${currentHole + 1}` : "stabilising"}`
+        : `No valid fix | ${Number(data.position?.sensors_used) || 0} ranges`;
 
-      var xM = Number(data.position && data.position.x_m);
-      var yM = Number(data.position && data.position.y_m);
-      var currentHole = Number(data.current_hole);
-      var positionValid = data.position && data.position.valid && Number.isFinite(xM) && Number.isFinite(yM);
-      var holeText = currentHole >= 0 ? "Hole " + (currentHole + 1) : "stabilising";
-      this.debugDisplays[0].textContent = positionValid
-        ? xM.toFixed(2) + ", " + yM.toFixed(2) + " m | " + holeText
-        : "No valid fix | " + (Number(data.position && data.position.sensors_used) || 0) + " ranges";
-
-      var nodeOnline = Array.isArray(data.node_online) ? data.node_online : [false, false];
-      var validRangeCount = 0;
-      var totalRangeCount = 0;
-      if (Array.isArray(data.ranges_m)) {
-        totalRangeCount = data.ranges_m.length;
-        for (var i = 0; i < data.ranges_m.length; i++) {
-          if (data.ranges_m[i] !== null && Number.isFinite(Number(data.ranges_m[i]))) {
-            validRangeCount++;
-          }
-        }
-      }
-      this.debugDisplays[1].textContent =
-        "N1 " + (nodeOnline[0] ? "online" : "offline") + " | " +
-        "N2 " + (nodeOnline[1] ? "online" : "offline") + " | " +
-        validRangeCount + "/" + totalRangeCount + " ranges";
+      const nodeOnline = Array.isArray(data.node_online)
+        ? data.node_online
+        : [false, false];
+      const validRangeCount = Array.isArray(data.ranges_m)
+        ? data.ranges_m.filter(
+            (range) => range !== null && Number.isFinite(Number(range)),
+          ).length
+        : 0;
+      const totalRangeCount = Array.isArray(data.ranges_m)
+        ? data.ranges_m.length
+        : 0;
+      this.debugSensorDisplays[1].textContent =
+        `N1 ${nodeOnline[0] ? "online" : "offline"} | ` +
+        `N2 ${nodeOnline[1] ? "online" : "offline"} | ` +
+        `${validRangeCount}/${totalRangeCount} ranges`;
+      const physicalRanges = (data.ranges_m || []).map((r, i) =>
+        `${["N1", "AP", "N2"][i]} ${typeof r === "number" && Number.isFinite(r) ? r.toFixed(2) + " m" : "no echo"}`);
+      this.debugSensorDisplays[1].textContent += ` | ${physicalRanges.join(" / ")}`;
+      this.debugSensorDisplays[0].textContent += ` | ${data.position?.reason || "positioning"}`;
+      const mask = data.position?.sensors_used_mask;
+      const usedNames = ["N1", "AP", "N2"].filter((name, i) => Number.isInteger(mask) && (mask & (1 << i)));
+      if (usedNames.length) this.debugSensorDisplays[0].textContent += ` | ${data.position.held ? "Last fix:" : "Using"} ${usedNames.join(" + ")}`;
+      if (data.position?.held) this.debugSensorDisplays[0].textContent += " | Held: no scoring";
 
       if (Number(data.event_id) === 0) {
         this.debugLastEvent.textContent = "None";
       } else {
         this.debugLastEvent.textContent =
-          "#" + data.event_id + " | Hole " + (Number(data.hole) + 1) + " | " +
-          Number(data.distance_cm).toFixed(1) + " cm from screen";
+          `#${data.event_id} | Hole ${Number(data.hole) + 1} | ` +
+          `${Number(data.distance_cm).toFixed(1)} cm from screen`;
       }
       return;
     }
 
-    this.debugLabels[0].textContent = "Sensor 1";
-    this.debugLabels[1].textContent = "Sensor 2";
-    for (var s = 0; s < this.debugDisplays.length; s++) {
-      var sensor = data.sensors && data.sensors[s];
+    this.debugSensorLabels[0].textContent = "Sensor 1";
+    this.debugSensorLabels[1].textContent = "Sensor 2";
+    this.debugSensorDisplays.forEach((display, index) => {
+      const sensor = data?.sensors?.[index];
       if (!sensor) {
-        this.debugDisplays[s].textContent = "Disconnected";
-      } else {
-        var distance = sensor.distance_cm === null ? "No echo" : "Avg " + sensor.distance_cm + " cm";
-        var hole = sensor.valid && Number(sensor.hole) >= 0 ? "Hole " + (Number(sensor.hole) + 1) : "No player";
-        this.debugDisplays[s].textContent = distance + " | " + hole;
+        display.textContent = "Disconnected";
+        return;
       }
-    }
 
-    if (Number(data.event_id) === 0) {
+      const distance =
+        sensor.distance_cm === null ? "No echo" : `Avg ${sensor.distance_cm} cm`;
+      const hole =
+        sensor.valid && Number(sensor.hole) >= 0
+          ? `Hole ${Number(sensor.hole) + 1}`
+          : "No player";
+      display.textContent = `${distance} | ${hole}`;
+    });
+
+    if (!data) {
+      this.debugLastEvent.textContent = "Disconnected";
+    } else if (Number(data.event_id) === 0) {
       this.debugLastEvent.textContent = "None";
     } else {
-      this.debugLastEvent.textContent =
-        "#" + data.event_id + " | S" + data.sensor + " | Hole " + (Number(data.hole) + 1) + " | " + data.distance_cm + " cm";
+      this.debugLastEvent.textContent = `#${data.event_id} | S${data.sensor} | Hole ${Number(data.hole) + 1} | ${data.distance_cm} cm`;
     }
   },
 
-  // Status line under the game (This is for debugging, was just trying to emulate, doesn't effect much)
-  updateSensorStatus: function (connected, data) {
+  updateSensorStatus: function (connected, data = null) {
     this.sensorStatus.classList.toggle("connected", connected);
     this.sensorStatus.classList.toggle("disconnected", !connected);
 
     if (!connected) {
       this.playerMarker.classList.add("hidden");
-      this.updateDebugPanel(null);
-      this.sensorStatus.textContent = "Sensor controller: disconnected (mouse testing is available)";
+      this.updateDebugPanel();
+      this.sensorStatus.textContent =
+        "Sensor controller: disconnected (mouse testing is available)";
       return;
     }
 
     this.updateDebugPanel(data);
-    var playerPosition = this.displayPlayerPosition(data);
+    const playerPosition = this.displayPlayerPosition(data);
 
-    //Too close logic, basically so ian doesn't say we don't warn players
-    if (data && data.source === "access_point") {
-      var position = data.position;
-      var axM = Number(position && position.x_m);
-      var ayM = Number(position && position.y_m);
-      var warning = position && position.warning ? "WARNING: too close to screen — " : "";
-      if (position && position.valid) {
-        var where = playerPosition ? "hole " + (playerPosition.holeIndex + 1) : "position";
-        this.sensorStatus.textContent =
-          warning + "Access point: tracking " + where + " at " + axM.toFixed(2) + ", " + ayM.toFixed(2) + " m";
-      } else {
-        this.sensorStatus.textContent = "Access point: connected — waiting for a valid player position";
+    if (data?.source === "access_point") {
+      const position = data.position;
+      const g = data.game_area;
+      if (g && [g.x_min_m, g.x_max_m, g.start_y_m, g.end_y_m].every(Number.isFinite)) {
+        this.holes.forEach(hole => {
+          const index = Number(hole.dataset.hole);
+          const x = g.x_min_m + (index % 2 + 0.5) * (g.x_max_m - g.x_min_m) / 2;
+          const y = g.start_y_m + (Math.floor(index / 2) + 0.5) * (g.end_y_m - g.start_y_m) / 3;
+          hole.title = `Stand at x=${Math.round(x * 100)} cm from the area's left edge, ${Math.round(y * 100)} cm from the screen`;
+        });
       }
+      const xM = Number(position?.x_m);
+      const yM = Number(position?.y_m);
+      const warning = position?.warning ? "WARNING: too close to screen — " : "";
+      this.sensorStatus.textContent = position?.valid && position.x_m !== null && position.y_m !== null
+        ? `${warning}Access point: tracking ${playerPosition ? `hole ${playerPosition.holeIndex + 1}` : "position"} at ${xM.toFixed(2)}, ${yM.toFixed(2)} m`
+        : `${warning}Access point: connected — ${position?.reason || "waiting for a valid player position"}`;
+      if (position?.held) this.sensorStatus.textContent += " | Position held; waiting for confirmation before scoring";
+      else if (position?.valid) this.sensorStatus.textContent += ` | ${position.sensors_used}-sensor tracking`;
+      if (position?.valid && position.in_game_area === false) this.sensorStatus.textContent += " | Move into the target zones shown at 192.168.4.1";
       return;
     }
 
-    //checking if there is a player and if the sensor is live
-    var activeSensors = [];
-    var list = Array.isArray(data && data.sensors) ? data.sensors : [];
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].valid) {
-        activeSensors.push("S" + (i + 1) + ": " + list[i].distance_cm + " cm");
-      }
-    }
-    if (activeSensors.length) {
-      var who = playerPosition ? "hole " + (playerPosition.holeIndex + 1) : "position unknown";
-      this.sensorStatus.textContent = "Player: " + who + " — " + activeSensors.join(" | ");
-    } else {
-      this.sensorStatus.textContent = "Sensor controller: connected — waiting for player";
-    }
+    const activeSensors = (Array.isArray(data?.sensors) ? data.sensors : [])
+      .map((sensor, index) =>
+        sensor.valid ? `S${index + 1}: ${sensor.distance_cm} cm` : null,
+      )
+      .filter(Boolean);
+    this.sensorStatus.textContent = activeSensors.length
+      ? `Player: ${playerPosition ? `hole ${playerPosition.holeIndex + 1}` : "position unknown"} — ${activeSensors.join(" | ")}`
+      : "Sensor controller: connected — waiting for player";
   },
 };
