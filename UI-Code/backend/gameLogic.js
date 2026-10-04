@@ -79,6 +79,11 @@ const livesDisplay = document.getElementById("lives");
 const damageIndicator = document.getElementById("damage-indicator"); //changed to show the damage (red screen)
 
 const POINTS_PER_MOLE = 50;
+const GOLDEN_POINTS = 200;
+const GOLDEN_CHANCE = 0.15;
+const FROZEN_CHANCE = 0.08;
+const FREEZE_SECONDS = 5;
+const GOLDEN_LIFETIME_FACTOR = 0.75;
 let SPAWN_INTERVAL = 3500;
 let MOLE_LIFETIME = 3200; 
 const ROUND_TIME = 300;
@@ -107,6 +112,7 @@ let countdownTimer = null;
 let activeHole = null;
 let lastHole = null;
 let activeMoleType = "normal"; 
+let freezeTicksLeft = 0;
 let lastSensorEventId = null;
 let sensorPollTimer = null;
 let sensorRequestInProgress = false;
@@ -124,7 +130,8 @@ function startGame() {
   lives = STARTING_LIVES;
   gameActive = true;
   lastHole = null;
-
+  
+  clearFreeze();
   clearGameTimers();
   clearMole();
   resetRewards();
@@ -157,8 +164,27 @@ function clearGameTimers() {
   countdownTimer = null;
   moleLifetimeTimer = null;
 }
+function clearFreeze() {
+  freezeTicksLeft = 0;
+  timerDisplay.classList.remove("frozen");
+}
+
+function freezeTimer(seconds) {
+  freezeTicksLeft += seconds;
+  timerDisplay.classList.add("frozen");
+}
 
 function tick() {
+   if (freezeTicksLeft > 0) {
+    freezeTicksLeft--;
+
+    if (freezeTicksLeft <= 0) {
+      timerDisplay.classList.remove("frozen");
+      statusMessage.textContent = "Freeze ended! Keep whacking!";
+    }
+
+    return;
+  }
   timeLeft--;
   timerDisplay.textContent = timeLeft;
   if (timeLeft <= 0) endGame(false);
@@ -169,7 +195,7 @@ function clearMole() {
     activeHole.classList.remove("active");
     
     const moleWrapper = activeHole.querySelector(".mole");
-    if (moleWrapper) moleWrapper.classList.remove("has-bomb");
+    if (moleWrapper) moleWrapper.classList.remove("has-bomb", "has-golden", "has-frozen");
   }
   activeHole = null;
   activeMoleType = "normal";
@@ -186,24 +212,53 @@ function spawnMole() {
   lastHole = activeHole;
   
   // bomb spawn rate
-  let bombChance = 0;
-  
-  if (level === 1) {
-    bombChance = 0.1;
-  } else if (level === 2) {
-    bombChance = 0.25;
-  } else if (level === 3) {
-    bombChance = 0.4;
-  }
-  
-  activeMoleType = Math.random() < bombChance ? "bomb" : "normal";
-  
-  if (activeMoleType === "bomb") {
-    const moleWrapper = activeHole.querySelector(".mole");
-    if (moleWrapper) moleWrapper.classList.add("has-bomb");
-  }
-  
+ let bombChance = 0;
 
+if (level === 1) {
+  bombChance = 0.10;
+} else if (level === 2) {
+  bombChance = 0.25;
+} else if (level === 3) {
+  bombChance = 0.40;
+}
+
+const random = Math.random();
+
+if (random < bombChance) {
+  activeMoleType = "bomb";
+} else if (random < bombChance + GOLDEN_CHANCE) {
+  activeMoleType = "golden";
+} else if (
+  random < bombChance + GOLDEN_CHANCE + FROZEN_CHANCE
+) {
+  activeMoleType = "frozen";
+} else {
+  activeMoleType = "normal";
+}
+
+const moleWrapper = activeHole.querySelector(".mole");
+
+if (moleWrapper) {
+  moleWrapper.classList.remove(
+    "has-bomb",
+    "has-golden",
+    "has-frozen"
+  );
+
+  // for diff types of moles
+  if (activeMoleType === "bomb") {
+    moleWrapper.classList.add("has-bomb");
+  }
+
+  if (activeMoleType === "golden") {
+    moleWrapper.classList.add("has-golden");
+  }
+
+  if (activeMoleType === "frozen") {
+    moleWrapper.classList.add("has-frozen");
+  }
+  
+}
 const renderStart = performance.now();
 
 activeHole.classList.add("active");
@@ -220,18 +275,19 @@ requestAnimationFrame(() => {
     }
 });
 
-  moleLifetimeTimer = setTimeout(() => {
-    if (!gameActive || !activeHole) return;
-    
-    const expiredType = activeMoleType;
-    clearMole();
-    
-    if (expiredType === "normal") {
-      loseLife();
-    }
-  }, MOLE_LIFETIME);
-}
+ const moleLifetime =
+  activeMoleType === "golden"
+    ? MOLE_LIFETIME * GOLDEN_LIFETIME_FACTOR
+    : MOLE_LIFETIME;
 
+moleLifetimeTimer = setTimeout(() => {
+  clearMole(activeHole);
+
+  if (activeMoleType === "normal") {
+    loseLife("Too slow! You missed the mole!");
+  }
+}, moleLifetime);
+}
 function whackHole(holeIndex, source = "mouse") {
   if (!gameActive || !Number.isInteger(holeIndex)) return false;
    const whackStart = performance.now();
@@ -257,11 +313,28 @@ function whackHole(holeIndex, source = "mouse") {
   clearMole();
   
   if (hitType === "bomb") {
-    loseLife("Boom! You hit a bomb!");
-  } else {
-    addScore(POINTS_PER_MOLE);
-    statusMessage.textContent = `Whack! +${POINTS_PER_MOLE} points`;
-  }
+  loseLife("Boom! You hit a bomb!");
+
+} else if (hitType === "golden") {
+  addScore(GOLDEN_POINTS);
+
+  statusMessage.textContent =
+    `Golden Mole! +${GOLDEN_POINTS} points! `;
+
+} else if (hitType === "frozen") {
+  addScore(POINTS_PER_MOLE);
+
+  freezeTimer(FREEZE_SECONDS);
+
+  statusMessage.textContent =
+    `Frozen Mole! +${POINTS_PER_MOLE} points! Timer frozen for ${FREEZE_SECONDS}s! `;
+
+} else {
+  addScore(POINTS_PER_MOLE);
+
+  statusMessage.textContent =
+    `Whack! +${POINTS_PER_MOLE} points`;
+}
   
   const responseTime = performance.now() - whackStart;
 
@@ -394,6 +467,38 @@ function checkLevel() {
   }
 
   updateProgress();
+}
+// hammer based on cursor position
+const hammerCursor = document.getElementById("hammer-cursor");
+
+if (hammerCursor) {
+
+    document.addEventListener("mousemove", (event) => {
+        hammerCursor.style.left = `${event.clientX}px`;
+        hammerCursor.style.top = `${event.clientY}px`;
+    });
+
+    document.addEventListener("mouseenter", () => {
+        hammerCursor.style.display = "block";
+    });
+
+    document.addEventListener("mouseleave", () => {
+        hammerCursor.style.display = "none";
+    });
+
+    document.addEventListener("mousedown", () => {
+        hammerCursor.classList.remove("swinging");
+
+        void hammerCursor.offsetWidth;
+
+        hammerCursor.classList.add("swinging");
+    });
+
+    document.addEventListener("mouseup", () => {
+        setTimeout(() => {
+            hammerCursor.classList.remove("swinging");
+        }, 80);
+    });
 }
 
 function unlockReward(id, threshold) {

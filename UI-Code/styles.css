@@ -333,6 +333,7 @@ h1 {
   gap: 10px;
 
   max-width: 620px;
+  cursor: none;
   margin: 15px auto 0;
 
 }
@@ -538,7 +539,79 @@ h1 {
   display: block;
 }
 
+/* golden mole*/
+.mole.has-golden .css-mole {
+  background:
+    radial-gradient(
+      circle at 35% 25%,
+      #fff8a8 0%,
+      #ffe45c 25%,
+      #ffc107 55%,
+      #d89600 100%
+    );
 
+  border: 3px solid #ffd700;
+
+  box-shadow:
+    inset -5px -5px 12px rgba(150, 90, 0, 0.35),
+    inset 5px 5px 12px rgba(255, 255, 220, 0.5),
+    0 0 18px rgba(255, 215, 0, 0.9);
+
+  animation: goldenGlow 0.65s ease-in-out infinite alternate;
+}
+
+.mole.has-golden .mole-nose {
+  background: #ffb300;
+}
+
+.mole.has-golden .css-mole::before,
+.mole.has-golden .css-mole::after {
+  background: #5c3b00;
+}
+
+@keyframes goldenGlow {
+  from {
+    filter: brightness(0.95);
+  }
+
+  to {
+    filter: brightness(1.2);
+  }
+}
+
+/* frozen mole*/
+.mole.has-frozen .css-mole {
+  background:
+    radial-gradient(
+      circle at 35% 20%,
+      #e9fbff 0%,
+      #9eeaff 25%,
+      #4fc3f7 55%,
+      #1976b9 100%
+    );
+
+  border: 3px solid #bff6ff;
+
+  box-shadow:
+    inset -5px -5px 12px rgba(0, 80, 140, 0.35),
+    inset 5px 5px 12px rgba(255, 255, 255, 0.5),
+    0 0 18px rgba(90, 220, 255, 0.9);
+}
+
+.mole.has-frozen .mole-nose {
+  background: #bff6ff;
+}
+
+.mole.has-frozen .css-mole::before,
+.mole.has-frozen .css-mole::after {
+  background: #123b5d;
+}
+
+.mole.has-frozen .mole-whiskers::before,
+.mole.has-frozen .mole-whiskers::after {
+  background: #dffaff;
+  box-shadow: 0 6px 0 #dffaff;
+}
 .screen h2 {
 
   font-size: 48px;
@@ -687,72 +760,224 @@ h1 {
   }
 }
 
-.css-hammer {
-  --hammer-scale: 1.35; 
-  
-  position: relative;
-  width: 56px;
-  height: 64px;
-  transform-origin: bottom center; 
-  transform: rotate(15deg) scale(var(--hammer-scale));
-  margin-left: 0; 
+
+#hammer-cursor {
+    position: fixed;
+    left: 0;
+    top: 0;
+
+    width: 85px;
+    height: 105px;
+
+    pointer-events: none;
+    z-index: 99999;
+
+    display: none;
+
+    transform:
+        translate(-18px, -18px)
+        rotate(-38deg);
+
+    transform-origin: 45% 78%;
+
+    transition: transform 0.08s ease-out;
 }
+
+
+
 
 .hammer-handle {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14px;
-  height: 48px;
-  background: #d4a373; 
-  border-radius: 6px;
-  box-shadow: inset -3px -3px 5px rgba(0,0,0,0.3);
-  z-index: 1;
+    position: absolute;
+
+    width: 17px;
+    height: 82px;
+
+    left: 35px;
+    top: 22px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #6f3518 0%,
+            #a95727 22%,
+            #d27a3d 48%,
+            #a95727 75%,
+            #683016 100%
+        );
+
+    border: 3px solid #4b2413;
+
+    border-radius: 10px 10px 14px 14px;
+
+    transform: rotate(-6deg);
+
+    box-shadow:
+        3px 4px 0 rgba(0, 0, 0, 0.25);
 }
+
+
+/* Wood highlight */
+
+.hammer-handle::before {
+    content: "";
+
+    position: absolute;
+
+    width: 4px;
+    height: 58px;
+
+    left: 4px;
+    top: 8px;
+
+    background: rgba(255, 220, 170, 0.45);
+
+    border-radius: 5px;
+}
+
+
+.hammer-handle::after {
+    content: "";
+
+    position: absolute;
+
+    width: 19px;
+    height: 14px;
+
+    left: -4px;
+    bottom: 5px;
+
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            #552713 0px,
+            #552713 3px,
+            #7d391c 3px,
+            #7d391c 6px
+        );
+
+    border-radius: 7px;
+
+    border: 2px solid #4b2413;
+}
+
 
 .hammer-head {
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 56px;
-  height: 30px;
-  background: #ef233c; 
-  border-radius: 8px;
-  box-shadow: inset -2px -4px 6px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.4);
-  z-index: 2;
+    position: absolute;
+
+    width: 67px;
+    height: 34px;
+
+    left: 8px;
+    top: 7px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #9b9b9b 0%,
+            #777 42%,
+            #5a5a5a 100%
+        );
+
+    border: 3px solid #353535;
+
+    border-radius: 15px 13px 13px 15px;
+
+    box-shadow:
+        2px 4px 0 rgba(0, 0, 0, 0.28),
+        inset 0 3px 0 rgba(255, 255, 255, 0.22);
 }
 
-.hammer-head::before, 
+
+
+
+.hammer-head::before {
+    content: "";
+
+    position: absolute;
+
+    width: 30px;
+    height: 6px;
+
+    left: 10px;
+    top: 5px;
+
+    background: rgba(255, 255, 255, 0.4);
+
+    border-radius: 10px;
+
+    transform: rotate(-2deg);
+}
+
+
+
+
 .hammer-head::after {
-  content: '';
-  position: absolute;
-  top: -2px;
-  width: 12px;
-  height: 34px;
-  background: #d90429;
-  border-radius: 6px;
+    content: "";
+
+    position: absolute;
+
+    width: 43px;
+    height: 5px;
+
+    left: 8px;
+    bottom: 3px;
+
+    background: rgba(35, 35, 35, 0.35);
+
+    border-radius: 8px;
 }
 
-.hammer-head::before { 
-  left: -4px; 
-  box-shadow: -2px 0 3px rgba(0,0,0,0.2); 
+
+.hammer-face {
+    position: absolute;
+
+    width: 18px;
+    height: 30px;
+
+    right: -10px;
+    top: -1px;
+
+    background:
+        linear-gradient(
+            to right,
+            #777,
+            #a5a5a5,
+            #666
+        );
+
+    border: 3px solid #353535;
+
+    border-radius: 6px;
+
+    box-shadow:
+        2px 2px 0 rgba(0, 0, 0, 0.2);
 }
 
-.hammer-head::after { 
-  right: -4px; 
-  box-shadow: 2px 0 3px rgba(0,0,0,0.2); 
+
+.hammer-face::before {
+    content: "";
+
+    position: absolute;
+
+    width: 5px;
+    height: 19px;
+
+    left: 3px;
+    top: 3px;
+
+    background: rgba(255, 255, 255, 0.3);
+
+    border-radius: 5px;
 }
 
-.hole.sensor-hit .css-hammer {
-  animation: hammerSmash 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
-}
 
-@keyframes hammerSmash {
-  0% { transform: rotate(15deg) scale(var(--hammer-scale)); }
-  30% { transform: rotate(-75deg) scale(var(--hammer-scale)); } 
-  100% { transform: rotate(15deg) scale(var(--hammer-scale)); } 
+#hammer-cursor.swinging {
+    transform:
+        translate(-18px, -18px)
+        rotate(38deg);
+
+    transition:
+        transform 0.07s cubic-bezier(.2, .8, .3, 1);
 }
 
 @keyframes sensorHit {
@@ -843,6 +1068,44 @@ h1 {
   transform: translate(-50%, -100%) rotate(0deg);
   animation: timerSweep 2s linear infinite;
 }
+
+/* =========================
+   FROZEN MOLE
+   ========================= */
+
+.mole.has-frozen .css-mole {
+  background:
+    radial-gradient(
+      circle at 35% 20%,
+      #e9fbff 0%,
+      #9eeaff 25%,
+      #4fc3f7 55%,
+      #1976b9 100%
+    );
+
+  border: 3px solid #bff6ff;
+
+  box-shadow:
+    inset -5px -5px 12px rgba(0, 80, 140, 0.35),
+    inset 5px 5px 12px rgba(255, 255, 255, 0.5),
+    0 0 18px rgba(90, 220, 255, 0.9);
+}
+
+.mole.has-frozen .mole-nose {
+  background: #bff6ff;
+}
+
+.mole.has-frozen .css-mole::before,
+.mole.has-frozen .css-mole::after {
+  background: #123b5d;
+}
+
+.mole.has-frozen .mole-whiskers::before,
+.mole.has-frozen .mole-whiskers::after {
+  background: #dffaff;
+  box-shadow: 0 6px 0 #dffaff;
+}
+
 
 @keyframes timerSweep {
   100% { transform: translate(-50%, -100%) rotate(360deg); }
@@ -1463,6 +1726,131 @@ body.env-toxic .game-container {
   filter: drop-shadow(0 0 10px rgba(100, 255, 0, 0.2));
 }
 
+/* =========================
+   HAMMER CURSOR
+   ========================= */
+
+#hammer-cursor {
+    position: fixed;
+    left: 0;
+    top: 0;
+
+    width: 75px;
+    height: 100px;
+
+    pointer-events: none;
+    z-index: 99999;
+
+    transform:
+        translate(-12px, -12px)
+        rotate(-35deg);
+
+    transform-origin: 50% 80%;
+
+    transition: transform 0.08s ease-out;
+
+    display: none;
+}
+
+/* Wooden handle */
+.hammer-handle {
+    position: absolute;
+
+    width: 16px;
+    height: 75px;
+
+    left: 29px;
+    top: 25px;
+
+    background: linear-gradient(
+        to right,
+        #8b451f,
+        #b96832,
+        #8b451f
+    );
+
+    border: 3px solid #5c2f18;
+    border-radius: 8px;
+
+    transform: rotate(-8deg);
+
+    box-shadow:
+        2px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Main hammer head */
+.hammer-head {
+    position: absolute;
+
+    width: 62px;
+    height: 30px;
+
+    left: 7px;
+    top: 8px;
+
+    background: linear-gradient(
+        to bottom,
+        #777,
+        #555
+    );
+
+    border: 3px solid #333;
+
+    border-radius: 12px;
+
+    transform: rotate(-5deg);
+
+    box-shadow:
+        2px 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Hammer striking face */
+.hammer-face {
+    position: absolute;
+
+    width: 15px;
+    height: 27px;
+
+    right: -8px;
+    top: -1px;
+
+    background: linear-gradient(
+        to right,
+        #888,
+        #555
+    );
+
+    border: 3px solid #333;
+
+    border-radius: 5px;
+}
+
+/* Little highlight on hammer */
+.hammer-head::before {
+    content: "";
+
+    position: absolute;
+
+    width: 28px;
+    height: 5px;
+
+    left: 9px;
+    top: 5px;
+
+    background: rgba(255, 255, 255, 0.25);
+
+    border-radius: 5px;
+}
+
+/* Swing animation */
+#hammer-cursor.swinging {
+    transform:
+        translate(-12px, -12px)
+        rotate(35deg);
+
+    transition:
+        transform 0.07s ease-in;
+}
 .performance-metrics {
     margin-top: 20px;
     padding: 15px;
