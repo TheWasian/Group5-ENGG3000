@@ -50,6 +50,8 @@ let moleTimer = null;
 let moleLifetimeTimer = null;
 let countdownTimer = null;
 let activeHole = null;
+let lastHole = null;
+let activeMoleType = "normal"; 
 let lastSensorEventId = null;
 let sensorPollTimer = null;
 let sensorRequestInProgress = false;
@@ -66,6 +68,7 @@ function startGame() {
   timeLeft = ROUND_TIME;
   lives = STARTING_LIVES;
   gameActive = true;
+  lastHole = null;
 
   clearGameTimers();
   clearMole();
@@ -107,8 +110,14 @@ function tick() {
 }
 
 function clearMole() {
-  if (activeHole) activeHole.classList.remove("active");
+  if (activeHole) {
+    activeHole.classList.remove("active");
+    
+    const moleWrapper = activeHole.querySelector(".mole");
+    if (moleWrapper) moleWrapper.classList.remove("has-bomb");
+  }
   activeHole = null;
+  activeMoleType = "normal";
   clearTimeout(moleLifetimeTimer);
   moleLifetimeTimer = null;
 }
@@ -116,17 +125,40 @@ function clearMole() {
 function spawnMole() {
   if (!gameActive) return;
 
-  const previousHole = activeHole;
   clearMole();
-  const availableHoles = holes.filter((hole) => hole !== previousHole);
-  activeHole =
-    availableHoles[Math.floor(Math.random() * availableHoles.length)];
+  const availableHoles = holes.filter((hole) => hole !== lastHole);
+  activeHole = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+  lastHole = activeHole;
+  
+  // bomb spawn rate
+  let bombChance = 0;
+  
+  if (level === 1) {
+    bombChance = 0.1;
+  } else if (level === 2) {
+    bombChance = 0.25;
+  } else if (level === 3) {
+    bombChance = 0.4;
+  }
+  
+  activeMoleType = Math.random() < bombChance ? "bomb" : "normal";
+  
+  if (activeMoleType === "bomb") {
+    const moleWrapper = activeHole.querySelector(".mole");
+    if (moleWrapper) moleWrapper.classList.add("has-bomb");
+  }
+  
   activeHole.classList.add("active");
 
   moleLifetimeTimer = setTimeout(() => {
     if (!gameActive || !activeHole) return;
+    
+    const expiredType = activeMoleType;
     clearMole();
-    loseLife();
+    
+    if (expiredType === "normal") {
+      loseLife();
+    }
   }, MOLE_LIFETIME);
 }
 
@@ -150,9 +182,16 @@ function whackHole(holeIndex, source = "mouse") {
     return false;
   }
 
+  const hitType = activeMoleType;
   clearMole();
-  addScore(POINTS_PER_MOLE);
-  statusMessage.textContent = `Whack! +${POINTS_PER_MOLE} points`;
+  
+  if (hitType === "bomb") {
+    loseLife("Boom! You hit a bomb!");
+  } else {
+    addScore(POINTS_PER_MOLE);
+    statusMessage.textContent = `Whack! +${POINTS_PER_MOLE} points`;
+  }
+  
   return true;
 }
 
@@ -196,13 +235,13 @@ function updateLives() {
   livesDisplay.textContent = lives;
 }
 
-function loseLife() {
+function loseLife(messagePrefix = "Missed!") {
   lives--;
   updateLives();
   damageIndicator.classList.remove("damage-flash");
   damageIndicator.getBoundingClientRect();
   damageIndicator.classList.add("damage-flash");
-  statusMessage.textContent = `Missed! ${lives} ${lives === 1 ? "life" : "lives"} left.`;
+  statusMessage.textContent = `${messagePrefix} ${lives} ${lives === 1 ? "life" : "lives"} left.`;
   if (lives <= 0) endGame(false);
 }
 

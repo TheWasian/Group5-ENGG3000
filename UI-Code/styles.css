@@ -437,6 +437,60 @@ h1 {
   background: #ff9999;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2; 
+}
+
+.mole-nose::before,
+.mole-nose::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  width: 5px;
+  height: 8px;
+  background: #ffffff;
+  border-radius: 0 0 3px 3px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+  z-index: -1; 
+}
+
+.mole-nose::before { 
+  left: 3px; 
+}
+
+.mole-nose::after { 
+  right: 3px; 
+}
+
+.mole-whiskers {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 42px;
+  height: 2px;
+  z-index: 1; 
+}
+
+.mole-whiskers::before,
+.mole-whiskers::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 2px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  
+  box-shadow: 0 6px 0 #e0e0e0;
+}
+
+.mole-whiskers::before {
+  left: 0;
+  transform: rotate(15deg);
+}
+
+.mole-whiskers::after {
+  right: 0;
+  transform: rotate(-15deg);
 }
 
 .mole-bomb {
