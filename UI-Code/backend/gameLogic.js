@@ -1,3 +1,58 @@
+// frontend metrics for data/testing
+const frontendMetrics = {
+    pageLoadTime: null,
+    moleRenderTimes: [],
+    whackResponseTimes: [],
+    levelTransitionTimes: [],
+    fpsSamples: []
+};
+
+let lastFrameTime = performance.now();
+let fpsUpdateTime = performance.now();
+let fpsFrameCount = 0;
+
+// measure frames per sec, frontend metric data
+function measureFPS(currentTime) {
+    fpsFrameCount++;
+
+    const elapsed = currentTime - fpsUpdateTime;
+
+    if (elapsed >= 1000) {
+        const fps = (fpsFrameCount * 1000) / elapsed;
+
+        frontendMetrics.fpsSamples.push(fps);
+
+        const fpsDisplay = document.getElementById("fps");
+
+        if (fpsDisplay) {
+            fpsDisplay.textContent = fps.toFixed(1);
+        }
+
+        fpsFrameCount = 0;
+        fpsUpdateTime = currentTime;
+    }
+
+    lastFrameTime = currentTime;
+
+    requestAnimationFrame(measureFPS);
+}
+
+requestAnimationFrame(measureFPS);
+
+
+// frontend metric, load time for page
+window.addEventListener("load", () => {
+    frontendMetrics.pageLoadTime = performance.now();
+
+    const loadTimeDisplay = document.getElementById("load-time");
+
+    if (loadTimeDisplay) {
+        loadTimeDisplay.textContent =
+            frontendMetrics.pageLoadTime.toFixed(2);
+    }
+});
+
+
 const holes = Array.from(document.querySelectorAll(".hole"));
 const scoreDisplay = document.getElementById("score");
 const levelDisplay = document.getElementById("level");
@@ -24,8 +79,8 @@ const livesDisplay = document.getElementById("lives");
 const damageIndicator = document.getElementById("damage-indicator"); //changed to show the damage (red screen)
 
 const POINTS_PER_MOLE = 50;
-let SPAWN_INTERVAL = 5000;
-let MOLE_LIFETIME = 4950;
+let SPAWN_INTERVAL = 3500;
+let MOLE_LIFETIME = 3200; 
 const ROUND_TIME = 300;
 const LEVEL_2_AT = 500;
 const LEVEL_3_AT = 1000;
@@ -148,7 +203,22 @@ function spawnMole() {
     if (moleWrapper) moleWrapper.classList.add("has-bomb");
   }
   
-  activeHole.classList.add("active");
+
+const renderStart = performance.now();
+
+activeHole.classList.add("active");
+
+requestAnimationFrame(() => {
+    const renderTime = performance.now() - renderStart;
+
+    frontendMetrics.moleRenderTimes.push(renderTime);
+
+    const display = document.getElementById("mole-render-time");
+
+    if (display) {
+        display.textContent = renderTime.toFixed(2);
+    }
+});
 
   moleLifetimeTimer = setTimeout(() => {
     if (!gameActive || !activeHole) return;
@@ -164,6 +234,7 @@ function spawnMole() {
 
 function whackHole(holeIndex, source = "mouse") {
   if (!gameActive || !Number.isInteger(holeIndex)) return false;
+   const whackStart = performance.now();
 
   const hole = holes.find((item) => Number(item.dataset.hole) === holeIndex);
   if (!hole) return false;
@@ -192,6 +263,16 @@ function whackHole(holeIndex, source = "mouse") {
     statusMessage.textContent = `Whack! +${POINTS_PER_MOLE} points`;
   }
   
+  const responseTime = performance.now() - whackStart;
+
+  frontendMetrics.whackResponseTimes.push(responseTime);
+
+  const display = document.getElementById("whack-response-time");
+
+  if (display) {
+    display.textContent = responseTime.toFixed(2);
+  }
+
   return true;
 }
 
@@ -211,23 +292,42 @@ function updateScore() {
 
 function updateLevel() {
   levelDisplay.textContent = level;
-
+  const transitionStart = performance.now();
     if(level === 1){
-      SPAWN_INTERVAL = 5000;
-      MOLE_LIFETIME = 4950;
+      SPAWN_INTERVAL = 3500;
+      MOLE_LIFETIME = 3200;
       GameView.setEnvironment("grassland");
     }
 
     if (level === 2){
-      SPAWN_INTERVAL = 4000;
-      MOLE_LIFETIME = 3950;
+      SPAWN_INTERVAL = 2200;
+      MOLE_LIFETIME = 1800;
       GameView.setEnvironment("freezing");
   }
 
     if (level === 3){
-      SPAWN_INTERVAL = 3000;
-      MOLE_LIFETIME = 2950;
+      SPAWN_INTERVAL = 1400;
+      MOLE_LIFETIME = 1100;
       GameView.setEnvironment("fire");
+  }
+  requestAnimationFrame(() => {
+    const transitionTime =
+      performance.now() - transitionStart;
+
+    frontendMetrics.levelTransitionTimes.push(transitionTime);
+
+    const display =
+      document.getElementById("level-transition-time");
+
+    if (display) {
+      display.textContent =
+        transitionTime.toFixed(2);
+    }
+  });
+
+  if (gameActive) {
+    clearInterval(moleTimer);
+    moleTimer = setInterval(spawnMole, SPAWN_INTERVAL);
   }
 }
 
@@ -282,12 +382,17 @@ function checkLevel() {
     endGame(true);
     return;
   }
+  
+  var previousLevel = level;
 
   if (score >= LEVEL_3_AT) level = 3;
   else if (score >= LEVEL_2_AT) level = 2;
   else level = 1;
-
+  
+  if(level !== previousLevel){
   updateLevel();
+  }
+
   updateProgress();
 }
 

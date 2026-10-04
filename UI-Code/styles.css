@@ -1463,6 +1463,22 @@ body.env-toxic .game-container {
   filter: drop-shadow(0 0 10px rgba(100, 255, 0, 0.2));
 }
 
+.performance-metrics {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 12px;
+    font-family: monospace;
+}
+
+.performance-metrics h3 {
+    margin-top: 0;
+}
+
+.performance-metrics p {
+    margin: 6px 0;
+}
+
 
   
 
