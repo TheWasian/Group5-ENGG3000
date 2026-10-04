@@ -8,11 +8,11 @@ wam::Fix fixAt(float x, float y) {
   wam::Fix p; p.x=x;p.y=y;p.valid=true;p.count=3;p.reason="three_ranges";return p;
 }
 int main() {
-  // Current measured layout: centre .75 m, left gap .36 m, right gap .48 m.
+  // Current measured layout: centre .75 m, both gaps .35 m.
   const wam::Sensor sensors[3] = {
-    {.39f,.3f,atan2f(.36f,1)*180/wam::PI_F,15,4.5f},
+    {.4f,.3f,atan2f(.35f,1)*180/wam::PI_F,15,4.5f},
     {.75f,.3f,0,15,4.5f},
-    {1.23f,.3f,-atan2f(.48f,1)*180/wam::PI_F,15,4.5f}
+    {1.1f,.3f,-atan2f(.35f,1)*180/wam::PI_F,15,4.5f}
   };
   const wam::Area area{1.5f,.6f,1.4f}, game{.6f,1,1};
   for(int row=0;row<3;++row)for(int col=0;col<2;++col){
@@ -21,13 +21,13 @@ int main() {
       assert(wam::inCone(x,y,sensors[i])); // All six centres have THREE beams.
       ranges[i]=wam::distance(x,y,sensors[i]);
     }
-    const auto p=wam::solve(sensors,ranges,area);
+    const auto p=wam::solveBestAvailable(sensors,ranges,area);
     assert(p.valid && hypotf(p.x-x,p.y-y)<.002f);
     assert(wam::holeForPosition(p.x-.45f,p.y,-1,game)==row*2+col);
     // Any one missing sensor still permits these target centres.
     for(int missing=0;missing<3;++missing){
       const float saved=ranges[missing];ranges[missing]=NAN;
-      const auto partial=wam::solve(sensors,ranges,area);ranges[missing]=saved;
+      const auto partial=wam::solveBestAvailable(sensors,ranges,area);ranges[missing]=saved;
       assert(partial.valid && partial.count==2 && hypotf(partial.x-x,partial.y-y)<.002f);
     }
   }
@@ -74,13 +74,15 @@ int main() {
       if(frame>20 && frame%37==0 && i==0)raw+=.4f;
       r[i]=gates[i].update(raw,now,.16f,.1f,500);rejected|=gates[i].rejected;
     }
-    auto raw=wam::solve(sensors,r,area);
-    if(rejected){raw.valid=false;raw.reason="range_spike";++rejections;}
+    auto raw=wam::solveBestAvailable(sensors,r,area);
+    if(rejected){++rejections;assert(raw.valid && raw.count==2);}
     p=tracker.update(raw,now,options);
     if(frame>20 && raw.valid && p.valid && !p.held){
       unfilteredError+=wam::square(raw.x-.75f)+wam::square(raw.y-1.5f);
       trackedError+=wam::square(p.x-.75f)+wam::square(p.y-1.5f);++count;
     }
+    if(frame>20 && p.valid && hypotf(p.x-.75f,p.y-1.5f)>=.1f)
+      fprintf(stderr,"stationary excursion: frame=%d raw=(%.3f,%.3f) filtered=(%.3f,%.3f) sensors=%d uncertainty=%.3f held=%d\n",frame,raw.x,raw.y,p.x,p.y,raw.count,raw.uncertainty,p.held);
     if(frame>20 && p.valid)assert(hypotf(p.x-.75f,p.y-1.5f)<.1f);
   }
   assert(count>500 && rejections>=15);

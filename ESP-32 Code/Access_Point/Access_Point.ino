@@ -45,12 +45,16 @@ constexpr float MAX_FIT_RESIDUAL_M = 0.18f;
 constexpr float HUBER_LIMIT_M = 0.06f;
 constexpr float ASSUMED_RANGE_NOISE_M = 0.025f;
 constexpr float MAX_POSITION_UNCERTAINTY_M = 0.20f;
+// All three agreeing ranges are preferred; any unique valid pair can track.
+constexpr float PAIR_AGREEMENT_M = 0.10f;
+constexpr float PAIR_PREVIOUS_RADIUS_M = 0.25f;
 constexpr float RANGE_SPIKE_LIMIT_M = 0.16f;
 constexpr float RANGE_CONFIRM_TOLERANCE_M = 0.10f;
 constexpr float POSITION_JUMP_LIMIT_M = 0.14f;
 constexpr float POSITION_CONFIRM_RADIUS_M = 0.08f;
 constexpr float POSITION_STATIONARY_TAU_S = 0.35f;
 constexpr float POSITION_MOVING_TAU_S = 0.12f;
+constexpr float POSITION_TWO_SENSOR_TAU_S = 0.50f;
 constexpr uint32_t POSITION_HOLD_MS = 350; // Display only; held fixes cannot score.
 constexpr uint32_t RANGE_STALE_MS = 500;
 constexpr uint32_t MAX_FRAME_SPAN_MS = 300;
@@ -110,7 +114,7 @@ bool positionFresh(uint32_t now) {
   if (!position.valid || now - positionTime > RANGE_STALE_MS) return false;
   if (position.held) return now - positionTime <= POSITION_HOLD_MS;
   for (int i = 0; i < 3; ++i)
-    if (isfinite(ranges[i].metres) && !rangeFresh(i, now)) return false;
+    if ((position.usedMask & (1u << i)) && !rangeFresh(i, now)) return false;
   return true;
 }
 
@@ -172,28 +176,20 @@ void updateWarning(uint32_t now) {
 void finishFrame() {
   const uint32_t now = millis();
   float input[3];
-  uint32_t minAge = UINT32_MAX, maxAge = 0;
-  bool rejected = false;
+  uint32_t ages[3];
   for (int i = 0; i < 3; ++i) {
     ranges[i] = pending[i];
+    ages[i] = now - ranges[i].time;
     const float raw = ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS ? ranges[i].raw : NAN;
     ranges[i].metres = rangeGates[i].update(raw, now, RANGE_SPIKE_LIMIT_M,
       RANGE_CONFIRM_TOLERANCE_M, RANGE_STALE_MS);
-    rejected |= rangeGates[i].rejected;
-    if (isfinite(ranges[i].metres)) {
-      const uint32_t age = now - ranges[i].time;
-      if (age < minAge) minAge = age;
-      if (age > maxAge) maxAge = age;
-    }
     input[i] = rangeFresh(i, now) ? ranges[i].metres : NAN;
   }
-  rawPosition = wam::solve(SENSORS, input, PLAY_AREA, MAX_FIT_RMS_M, MAX_FIT_RESIDUAL_M,
-    HUBER_LIMIT_M, ASSUMED_RANGE_NOISE_M, MAX_POSITION_UNCERTAINTY_M);
-  // A rejected third reading is not permission to trust the remaining pair.
-  if (rejected) { rawPosition.valid = false; rawPosition.reason = "range_spike"; }
-  if (rawPosition.count >= 2 && maxAge - minAge > MAX_FRAME_SPAN_MS) {
-    rawPosition.valid = false; rawPosition.reason = "frame_too_slow";
-  }
+  const wam::Fix *previous = tracker.accepted.valid && now - tracker.acceptedMs <= POSITION_HOLD_MS
+    ? &tracker.accepted : nullptr;
+  rawPosition = wam::solveBestAvailable(SENSORS, input, PLAY_AREA, previous, MAX_FIT_RMS_M, MAX_FIT_RESIDUAL_M,
+    HUBER_LIMIT_M, ASSUMED_RANGE_NOISE_M, MAX_POSITION_UNCERTAINTY_M, PAIR_AGREEMENT_M, PAIR_PREVIOUS_RADIUS_M,
+    ages, MAX_FRAME_SPAN_MS);
   position = tracker.update(rawPosition, now, trackingOptions);
   positionTime = tracker.acceptedMs; frameTime = now; ++frameId;
   updateWarning(now); updateGamePosition(now);
@@ -279,6 +275,8 @@ String positionJson(uint32_t now) {
   s += ",\"uncertainty_m\":" + number(position.uncertainty);
   s += ",\"rms_error_m\":" + number(position.rms);
   s += ",\"sensors_used\":" + String(position.count);
+  s += ",\"sensors_used_mask\":" + String(valid ? position.usedMask : 0);
+  s += ",\"available_mask\":" + String(rawPosition.availableMask);
   s += ",\"reason\":\"" + String(position.valid && !valid ? "stale" : position.reason) + "\"";
   s += ",\"in_play_area\":" + jsonBool(valid && wam::inPlayArea(position.x, position.y, PLAY_AREA));
   s += ",\"in_game_area\":" + jsonBool(valid && inGameArea(position.x, position.y));
@@ -296,10 +294,13 @@ String rangeFields(uint32_t now) {
     const bool online = i == 1 || nodeOnline[i == 0 ? 0 : 1];
     const bool fresh = rangeFresh(i, now);
     const bool rawFresh = ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS;
-    const bool agrees = fresh && positionFresh(now) && !position.held && wam::inCone(position.x, position.y, SENSORS[i]) &&
+    const bool used = fresh && positionFresh(now) && !position.held && (position.usedMask & (1u << i));
+    const bool agrees = used && wam::inCone(position.x, position.y, SENSORS[i]) &&
       fabsf(wam::distance(position.x, position.y, SENSORS[i]) - ranges[i].metres) <= MAX_FIT_RESIDUAL_M;
     s += "{\"online\":" + jsonBool(online) + ",\"echo\":" + jsonBool(rawFresh && isfinite(ranges[i].raw));
     s += ",\"rejected\":" + jsonBool(rawFresh && rangeGates[i].rejected);
+    s += ",\"used_for_position\":" + jsonBool(used);
+    s += ",\"excluded_from_position\":" + jsonBool(fresh && rawPosition.valid && !(rawPosition.usedMask & (1u << i)));
     s += ",\"raw_m\":" + number(ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS ? ranges[i].raw : NAN);
     s += ",\"range_m\":" + number(fresh ? ranges[i].metres : NAN);
     s += ",\"age_ms\":" + (ranges[i].seen ? String(now - ranges[i].time) : String("null"));
@@ -371,6 +372,7 @@ void setup() {
   trackingOptions.confirmationRadius = POSITION_CONFIRM_RADIUS_M;
   trackingOptions.stationaryTau = POSITION_STATIONARY_TAU_S;
   trackingOptions.movingTau = POSITION_MOVING_TAU_S;
+  trackingOptions.twoRangeTau = POSITION_TWO_SENSOR_TAU_S;
   trackingOptions.holdMs = POSITION_HOLD_MS;
   trackingOptions.resetMs = RANGE_STALE_MS;
   if (TRIG_PIN < 0 || ECHO_PIN < 0 || TRIG_PIN == ECHO_PIN ||

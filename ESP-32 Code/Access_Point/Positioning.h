@@ -12,6 +12,7 @@ struct Fix {
   float x = 0, y = 0, rms = NAN;
   float uncertainty = NAN;
   uint8_t count = 0;
+  uint8_t usedMask = 0, availableMask = 0;
   bool valid = false, held = false;
   const char *reason = "insufficient_ranges";
 };
@@ -105,7 +106,7 @@ inline Fix solve(const Sensor *s, const float *input, const Area &area,
   for (int i = 0; i < 3; ++i) {
     r[i] = isfinite(input[i]) && input[i] >= 0.02f && input[i] <= s[i].maxRange
              ? input[i] : NAN;
-    if (isfinite(r[i])) ids[result.count++] = i;
+    if (isfinite(r[i])) { ids[result.count++] = i; result.availableMask |= 1u << i; }
   }
   if (result.count < 2) return result;
 
@@ -131,6 +132,7 @@ inline Fix solve(const Sensor *s, const float *input, const Area &area,
     result.rms = result.valid ? 0 : NAN;
     result.reason = result.valid ? "two_ranges" : (accepted > 1 ? "ambiguous" : "outside_cones_or_area");
     checkUncertainty(result, s, r, rangeNoise, maxUncertainty);
+    if (result.valid) result.usedMask = result.availableMask;
     return result;
   }
 
@@ -173,6 +175,61 @@ inline Fix solve(const Sensor *s, const float *input, const Area &area,
     if (fabsf(distance(bestX, bestY, s[i]) - r[i]) > maxResidual) return result;
   result.x = bestX; result.y = bestY; result.valid = true; result.reason = "three_ranges";
   checkUncertainty(result, s, r, rangeNoise, maxUncertainty);
+  if (result.valid) result.usedMask = result.availableMask;
+  return result;
+}
+
+// Prefer a consistent three-range fit; otherwise test every two-sensor pair.
+// Pair residuals are all zero by construction, so never rank competing pairs
+// by residual alone. Distinct plausible positions require recent track support.
+inline bool coherentFrame(uint8_t mask, const uint32_t *ages, uint32_t maxSpan) {
+  if (!ages) return true;
+  uint32_t youngest = UINT32_MAX, oldest = 0;
+  for (int i = 0; i < 3; ++i) if (mask & (1u << i)) {
+    if (ages[i] < youngest) youngest = ages[i];
+    if (ages[i] > oldest) oldest = ages[i];
+  }
+  return mask && oldest-youngest <= maxSpan;
+}
+inline Fix solveBestAvailable(const Sensor *s, const float *input, const Area &area,
+                 const Fix *previous = nullptr, float maxRms = .10f,
+                 float maxResidual = .18f, float huberLimit = .06f,
+                 float rangeNoise = .025f, float maxUncertainty = .20f,
+                 float pairAgreement = .10f, float previousRadius = .25f,
+                 const uint32_t *ages = nullptr, uint32_t maxSpan = 300) {
+  Fix full = solve(s, input, area, maxRms, maxResidual, huberLimit, rangeNoise, maxUncertainty);
+  const bool fullTimeMismatch = full.valid && !coherentFrame(full.usedMask, ages, maxSpan);
+  if (fullTimeMismatch) {
+    full.valid = false; full.usedMask = 0; full.reason = "frame_too_slow";
+  }
+  if (full.valid || full.count < 3) return full;
+  Fix candidates[3]; int size = 0;
+  for (int excluded = 0; excluded < 3; ++excluded) {
+    float pair[3] = {input[0], input[1], input[2]}; pair[excluded] = NAN;
+    Fix candidate = solve(s, pair, area, maxRms, maxResidual, huberLimit, rangeNoise, maxUncertainty);
+    if (candidate.valid && coherentFrame(candidate.usedMask, ages, maxSpan)) candidates[size++] = candidate;
+  }
+  if (!size) return full;
+  bool agrees = true;
+  for (int i = 0; i < size; ++i) for (int j = i+1; j < size; ++j)
+    if (hypotf(candidates[i].x-candidates[j].x, candidates[i].y-candidates[j].y) > pairAgreement) agrees = false;
+  int selected = -1;
+  if (agrees) {
+    // Prefer the pair with the least geometric amplification of range noise.
+    for (int i = 0; i < size; ++i)
+      if (selected < 0 || candidates[i].uncertainty < candidates[selected].uncertainty) selected = i;
+  } else if (previous && previous->valid) {
+    for (int i = 0; i < size; ++i) {
+      if (hypotf(candidates[i].x-previous->x, candidates[i].y-previous->y) <= previousRadius) {
+        if (selected >= 0) { selected = -1; break; } // More than one plausible continuation.
+        selected = i;
+      }
+    }
+  }
+  if (selected < 0) { full.reason = "ambiguous_pairs"; return full; }
+  Fix result = candidates[selected];
+  result.availableMask = full.availableMask;
+  result.reason = fullTimeMismatch ? "two_ranges_timing" : "two_ranges_fallback";
   return result;
 }
 } // namespace wam

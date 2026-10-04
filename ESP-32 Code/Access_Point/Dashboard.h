@@ -88,7 +88,7 @@ function draw(){
   ctx.beginPath();ctx.moveTo(X(s.x_m),Y(s.y_m));ctx.arc(X(s.x_m),Y(s.y_m),r*scale,a,b);ctx.closePath();
   ctx.fillStyle=colours[i]+(status?.player_in_cone?'36':'13');ctx.fill();ctx.strokeStyle=colours[i]+'80';ctx.lineWidth=1;ctx.stroke();
   for(let d=.5;d<=r;d+=.5){ctx.beginPath();ctx.arc(X(s.x_m),Y(s.y_m),d*scale,a,b);ctx.stroke();}
-  if(status?.echo&&metric(status.range_m)){ctx.strokeStyle=colours[i];ctx.lineWidth=4;ctx.beginPath();ctx.arc(X(s.x_m),Y(s.y_m),status.range_m*scale,a,b);ctx.stroke();}
+  if(status?.echo&&metric(status.range_m)){ctx.strokeStyle=colours[i]+(status.excluded_from_position?'70':'');ctx.lineWidth=4;if(status.excluded_from_position)ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(X(s.x_m),Y(s.y_m),status.range_m*scale,a,b);ctx.stroke();}
   ctx.restore();
   ctx.fillStyle=colours[i];ctx.beginPath();ctx.arc(X(s.x_m),Y(s.y_m),6,0,2*Math.PI);ctx.fill();
   const labelX=[X(0)-8,X(config.width_m/2),X(config.width_m)+8][i], labelY=Y(s.y_m)-22;
@@ -112,14 +112,17 @@ function render(){
  const current=live();$('connection').textContent=current?'Receiving live measurements':connected?'Waiting for fresh measurements':'Controller disconnected';
  for(let i=0;i<3;i++){
   const s=current?sample.sensor_status?.[i]:null,c=config?.sensors[i];
-  $('state'+i).textContent=!current?'No live data':!s?.online?'Offline':s?.rejected?'Spike rejected':s?.player_in_cone?'Position in cone':s?.echo?'Echo detected':'No echo';
+  $('state'+i).textContent=!current?'No live data':!s?.online?'Offline':s?.rejected?'Spike rejected':s?.used_for_position?'Used for position':s?.excluded_from_position?'Echo excluded':s?.player_in_cone?'Position in cone':s?.echo?'Echo detected':'No echo';
   $('range'+i).textContent=s?.echo&&metric(s.range_m)?s.range_m.toFixed(2)+' m':'—';
   $('detail'+i).textContent=c?`Aim ${c.bearing_deg.toFixed(1)}° · cone ±${c.half_angle_deg.toFixed(0)}° · max ${c.max_range_m.toFixed(1)} m`:'Waiting for geometry';
   if(s?.rejected&&metric(s.raw_m))$('detail'+i).textContent+=` · ignored echo ${s.raw_m.toFixed(2)} m`;
  }
  $('fix').textContent=current&&sample.valid&&metric(sample.x_m)&&metric(sample.y_m)?`${sample.x_m.toFixed(2)}, ${sample.y_m.toFixed(2)} m`:'No player position';
- const reasons={insufficient_ranges:'At least two echoes needed',outside_cones_or_area:'Ranges do not identify a point in the configured cones and area',inconsistent_ranges:'Echo distances disagree',ambiguous:'Two possible positions',weak_geometry:'Poor sensor geometry',frame_too_slow:'Measurements too far apart in time',stale:'Measurements expired',range_spike:'Sudden echo change rejected',confirming_movement:'Confirming a sudden position change'};
+ const reasons={insufficient_ranges:'At least two echoes needed',outside_cones_or_area:'Ranges do not identify a point in the configured cones and area',inconsistent_ranges:'Echo distances disagree',ambiguous:'Two possible positions',ambiguous_pairs:'Different sensor pairs suggest different positions',weak_geometry:'Poor sensor geometry',frame_too_slow:'Measurements too far apart in time',stale:'Measurements expired',range_spike:'Sudden echo change rejected',confirming_movement:'Confirming a sudden position change'};
  $('quality').textContent=!current?'Live detections are hidden until fresh data arrives.':sample.held?'Held · no scoring · '+(reasons[sample.reason]||sample.reason):sample.valid?sample.sensors_used===2?'Two-range estimate · no third-sensor cross-check':`Three-range fit · residual ${metric(sample.rms_error_m)?(sample.rms_error_m*100).toFixed(1):'—'} cm`:reasons[sample.reason]||sample.reason;
+ if(current&&sample.valid&&!sample.held&&sample.reason==='two_ranges_fallback')$('quality').textContent='Two-sensor tracking · conflicting third echo excluded';
+ if(current&&sample.valid&&!sample.held&&sample.reason==='two_ranges_timing')$('quality').textContent='Two-sensor tracking · older third reading excluded';
+ if(current&&sample.valid&&Number.isInteger(sample.sensors_used_mask))$('quality').textContent+=' · '+config.sensors.filter((s,i)=>sample.sensors_used_mask&(1<<i)).map(s=>s.name).join(' + ');
  if(current&&sample.valid&&metric(sample.uncertainty_m))$('quality').textContent+=` · model uncertainty ${(sample.uncertainty_m*100).toFixed(1)} cm`;
  $('warning').textContent=current&&sample.warning?'Move away from the screen.':'';draw();
 }

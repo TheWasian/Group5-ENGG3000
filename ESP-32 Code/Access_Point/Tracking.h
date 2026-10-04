@@ -24,6 +24,7 @@ struct RangeGate {
 struct TrackingOptions {
   float jumpLimit = .14f, confirmationRadius = .08f;
   float stationaryTau = .35f, movingTau = .12f, movingThreshold = .06f;
+  float twoRangeTau = .50f; // A short baseline pair amplifies sideways noise.
   uint32_t holdMs = 350, resetMs = 500;
 };
 struct PositionTracker {
@@ -57,7 +58,8 @@ struct PositionTracker {
       accepted = measurement;
     } else {
       const float dt = (now-acceptedMs) * .001f;
-      const float tau = movement > options.movingThreshold ? options.movingTau : options.stationaryTau;
+      float tau = movement > options.movingThreshold ? options.movingTau : options.stationaryTau;
+      if (measurement.count == 2) tau = fmaxf(tau, options.twoRangeTau);
       const float alpha = 1-expf(-dt/fmaxf(.001f,tau));
       Fix filtered = measurement;
       filtered.x = accepted.x + alpha*(measurement.x-accepted.x);

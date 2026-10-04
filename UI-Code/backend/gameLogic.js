@@ -1,3 +1,58 @@
+// frontend metrics for data/testing
+const frontendMetrics = {
+    pageLoadTime: null,
+    moleRenderTimes: [],
+    whackResponseTimes: [],
+    levelTransitionTimes: [],
+    fpsSamples: []
+};
+
+let lastFrameTime = performance.now();
+let fpsUpdateTime = performance.now();
+let fpsFrameCount = 0;
+
+// measure frames per sec, frontend metric data
+function measureFPS(currentTime) {
+    fpsFrameCount++;
+
+    const elapsed = currentTime - fpsUpdateTime;
+
+    if (elapsed >= 1000) {
+        const fps = (fpsFrameCount * 1000) / elapsed;
+
+        frontendMetrics.fpsSamples.push(fps);
+
+        const fpsDisplay = document.getElementById("fps");
+
+        if (fpsDisplay) {
+            fpsDisplay.textContent = fps.toFixed(1);
+        }
+
+        fpsFrameCount = 0;
+        fpsUpdateTime = currentTime;
+    }
+
+    lastFrameTime = currentTime;
+
+    requestAnimationFrame(measureFPS);
+}
+
+requestAnimationFrame(measureFPS);
+
+
+// frontend metric, load time for page
+window.addEventListener("load", () => {
+    frontendMetrics.pageLoadTime = performance.now();
+
+    const loadTimeDisplay = document.getElementById("load-time");
+
+    if (loadTimeDisplay) {
+        loadTimeDisplay.textContent =
+            frontendMetrics.pageLoadTime.toFixed(2);
+    }
+});
+
+
 const holes = Array.from(document.querySelectorAll(".hole"));
 const scoreDisplay = document.getElementById("score");
 const levelDisplay = document.getElementById("level");
@@ -7,39 +62,24 @@ const winScreen = document.getElementById("win-screen");
 const loseScreen = document.getElementById("lose-screen");
 const restartButtons = document.querySelectorAll(".restart-button");
 const statusMessage = document.getElementById("status-message");
-const sensorStatus = document.getElementById("sensor-status");
-const playerMarker = document.getElementById("player-marker");
-const debugSensorLabels = [
-  document.getElementById("debug-label-1"),
-  document.getElementById("debug-label-2"),
-];
-const debugSensorDisplays = [
-  document.getElementById("debug-sensor-1"),
-  document.getElementById("debug-sensor-2"),
-];
-const debugLastEvent = document.getElementById("debug-last-event");
 const progressBar = document.getElementById("progress-bar");
 const progressText = document.getElementById("progress-text");
 const livesDisplay = document.getElementById("lives");
 const damageIndicator = document.getElementById("damage-indicator"); //changed to show the damage (red screen)
 
 const POINTS_PER_MOLE = 50;
-let SPAWN_INTERVAL = 5000;
-let MOLE_LIFETIME = 4950;
+const GOLDEN_POINTS = 200;
+const GOLDEN_CHANCE = 0.15;
+const FROZEN_CHANCE = 0.08;
+const FREEZE_SECONDS = 5;
+const GOLDEN_LIFETIME_FACTOR = 0.75;
+let SPAWN_INTERVAL = 3500;
+let MOLE_LIFETIME = 3200; 
 const ROUND_TIME = 300;
 const LEVEL_2_AT = 500;
 const LEVEL_3_AT = 1000;
 const WIN_AT = 2000;
 const STARTING_LIVES = 3;
-
-// When this page is opened from the ESP32, a relative URL is enough. When it
-// is opened locally or from a development server, requests go to the ESP32 AP.
-const SENSOR_API_BASE =
-  window.location.hostname === "192.168.4.1" ? "" : "http://192.168.4.1";
-const SENSOR_POLL_INTERVAL = 75;
-const MAX_EVENT_AGE_MS = 1000;
-const MAX_POSITION_AGE_MS = 500;
-const SENSOR_REQUEST_TIMEOUT_MS = 1200;
 
 let score = 0;
 let level = 1;
@@ -50,23 +90,21 @@ let moleTimer = null;
 let moleLifetimeTimer = null;
 let countdownTimer = null;
 let activeHole = null;
-let lastSensorEventId = null;
-let sensorPollTimer = null;
-let sensorRequestInProgress = false;
-let lastSensorBootId = null;
-let lastPlayerFrame = null;
-
+let lastHole = null;
+let activeMoleType = "normal"; 
+let freezeTicksLeft = 0;
 startBtn.addEventListener("click", startGame);
 restartButtons.forEach((button) => button.addEventListener("click", startGame));
 
 function startGame() {
-  lastPlayerFrame = null;
   score = 0;
   level = 1;
   timeLeft = ROUND_TIME;
   lives = STARTING_LIVES;
   gameActive = true;
-
+  lastHole = null;
+  
+  clearFreeze();
   clearGameTimers();
   clearMole();
   resetRewards();
@@ -81,10 +119,7 @@ function startGame() {
   winScreen.classList.add("hidden");
   loseScreen.classList.add("hidden");
 
-  // Re-arm both ESP32 lanes, including if a player is already in range.
-  fetch(`${SENSOR_API_BASE}/api/game/start`, { method: "POST" }).catch(() => {
-    // Mouse input remains usable when developing without the ESP32.
-  });
+  SensorService.notifyGameStart();
 
   countdownTimer = setInterval(tick, 1000);
   moleTimer = setInterval(spawnMole, SPAWN_INTERVAL);
@@ -99,16 +134,41 @@ function clearGameTimers() {
   countdownTimer = null;
   moleLifetimeTimer = null;
 }
+function clearFreeze() {
+  freezeTicksLeft = 0;
+  timerDisplay.classList.remove("frozen");
+}
+
+function freezeTimer(seconds) {
+  freezeTicksLeft += seconds;
+  timerDisplay.classList.add("frozen");
+}
 
 function tick() {
+   if (freezeTicksLeft > 0) {
+    freezeTicksLeft--;
+
+    if (freezeTicksLeft <= 0) {
+      timerDisplay.classList.remove("frozen");
+      statusMessage.textContent = "Freeze ended! Keep whacking!";
+    }
+
+    return;
+  }
   timeLeft--;
   timerDisplay.textContent = timeLeft;
   if (timeLeft <= 0) endGame(false);
 }
 
 function clearMole() {
-  if (activeHole) activeHole.classList.remove("active");
+  if (activeHole) {
+    activeHole.classList.remove("active");
+    
+    const moleWrapper = activeHole.querySelector(".mole");
+    if (moleWrapper) moleWrapper.classList.remove("has-bomb", "has-golden", "has-frozen");
+  }
   activeHole = null;
+  activeMoleType = "normal";
   clearTimeout(moleLifetimeTimer);
   moleLifetimeTimer = null;
 }
@@ -116,22 +176,91 @@ function clearMole() {
 function spawnMole() {
   if (!gameActive) return;
 
-  const previousHole = activeHole;
   clearMole();
-  const availableHoles = holes.filter((hole) => hole !== previousHole);
-  activeHole =
-    availableHoles[Math.floor(Math.random() * availableHoles.length)];
-  activeHole.classList.add("active");
+  const availableHoles = holes.filter((hole) => hole !== lastHole);
+  activeHole = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+  lastHole = activeHole;
+  
+  // bomb spawn rate
+ let bombChance = 0;
 
-  moleLifetimeTimer = setTimeout(() => {
-    if (!gameActive || !activeHole) return;
-    clearMole();
-    loseLife();
-  }, MOLE_LIFETIME);
+if (level === 1) {
+  bombChance = 0.10;
+} else if (level === 2) {
+  bombChance = 0.25;
+} else if (level === 3) {
+  bombChance = 0.40;
 }
 
+const random = Math.random();
+
+if (random < bombChance) {
+  activeMoleType = "bomb";
+} else if (random < bombChance + GOLDEN_CHANCE) {
+  activeMoleType = "golden";
+} else if (
+  random < bombChance + GOLDEN_CHANCE + FROZEN_CHANCE
+) {
+  activeMoleType = "frozen";
+} else {
+  activeMoleType = "normal";
+}
+
+const moleWrapper = activeHole.querySelector(".mole");
+
+if (moleWrapper) {
+  moleWrapper.classList.remove(
+    "has-bomb",
+    "has-golden",
+    "has-frozen"
+  );
+
+  // for diff types of moles
+  if (activeMoleType === "bomb") {
+    moleWrapper.classList.add("has-bomb");
+  }
+
+  if (activeMoleType === "golden") {
+    moleWrapper.classList.add("has-golden");
+  }
+
+  if (activeMoleType === "frozen") {
+    moleWrapper.classList.add("has-frozen");
+  }
+  
+}
+const renderStart = performance.now();
+
+activeHole.classList.add("active");
+
+requestAnimationFrame(() => {
+    const renderTime = performance.now() - renderStart;
+
+    frontendMetrics.moleRenderTimes.push(renderTime);
+
+    const display = document.getElementById("mole-render-time");
+
+    if (display) {
+        display.textContent = renderTime.toFixed(2);
+    }
+});
+
+ const moleLifetime =
+  activeMoleType === "golden"
+    ? MOLE_LIFETIME * GOLDEN_LIFETIME_FACTOR
+    : MOLE_LIFETIME;
+
+moleLifetimeTimer = setTimeout(() => {
+  clearMole(activeHole);
+
+  if (activeMoleType === "normal") {
+    loseLife("Too slow! You missed the mole!");
+  }
+}, moleLifetime);
+}
 function whackHole(holeIndex, source = "mouse") {
   if (!gameActive || !Number.isInteger(holeIndex)) return false;
+   const whackStart = performance.now();
 
   const hole = holes.find((item) => Number(item.dataset.hole) === holeIndex);
   if (!hole) return false;
@@ -150,9 +279,43 @@ function whackHole(holeIndex, source = "mouse") {
     return false;
   }
 
+  const hitType = activeMoleType;
   clearMole();
+  
+  if (hitType === "bomb") {
+  loseLife("Boom! You hit a bomb!");
+
+} else if (hitType === "golden") {
+  addScore(GOLDEN_POINTS);
+
+  statusMessage.textContent =
+    `Golden Mole! +${GOLDEN_POINTS} points! `;
+
+} else if (hitType === "frozen") {
   addScore(POINTS_PER_MOLE);
-  statusMessage.textContent = `Whack! +${POINTS_PER_MOLE} points`;
+
+  freezeTimer(FREEZE_SECONDS);
+
+  statusMessage.textContent =
+    `Frozen Mole! +${POINTS_PER_MOLE} points! Timer frozen for ${FREEZE_SECONDS}s! `;
+
+} else {
+  addScore(POINTS_PER_MOLE);
+
+  statusMessage.textContent =
+    `Whack! +${POINTS_PER_MOLE} points`;
+}
+  
+  const responseTime = performance.now() - whackStart;
+
+  frontendMetrics.whackResponseTimes.push(responseTime);
+
+  const display = document.getElementById("whack-response-time");
+
+  if (display) {
+    display.textContent = responseTime.toFixed(2);
+  }
+
   return true;
 }
 
@@ -172,14 +335,42 @@ function updateScore() {
 
 function updateLevel() {
   levelDisplay.textContent = level;
+  const transitionStart = performance.now();
+    if(level === 1){
+      SPAWN_INTERVAL = 3500;
+      MOLE_LIFETIME = 3200;
+      GameView.setEnvironment("grassland");
+    }
+
     if (level === 2){
-      SPAWN_INTERVAL = 4000;
-      MOLE_LIFETIME = 3950;
+      SPAWN_INTERVAL = 2200;
+      MOLE_LIFETIME = 1800;
+      GameView.setEnvironment("freezing");
   }
 
     if (level === 3){
-      SPAWN_INTERVAL = 3000;
-      MOLE_LIFETIME = 2950;
+      SPAWN_INTERVAL = 1400;
+      MOLE_LIFETIME = 1100;
+      GameView.setEnvironment("fire");
+  }
+  requestAnimationFrame(() => {
+    const transitionTime =
+      performance.now() - transitionStart;
+
+    frontendMetrics.levelTransitionTimes.push(transitionTime);
+
+    const display =
+      document.getElementById("level-transition-time");
+
+    if (display) {
+      display.textContent =
+        transitionTime.toFixed(2);
+    }
+  });
+
+  if (gameActive) {
+    clearInterval(moleTimer);
+    moleTimer = setInterval(spawnMole, SPAWN_INTERVAL);
   }
 }
 
@@ -187,13 +378,13 @@ function updateLives() {
   livesDisplay.textContent = lives;
 }
 
-function loseLife() {
+function loseLife(messagePrefix = "Missed!") {
   lives--;
   updateLives();
   damageIndicator.classList.remove("damage-flash");
   damageIndicator.getBoundingClientRect();
   damageIndicator.classList.add("damage-flash");
-  statusMessage.textContent = `Missed! ${lives} ${lives === 1 ? "life" : "lives"} left.`;
+  statusMessage.textContent = `${messagePrefix} ${lives} ${lives === 1 ? "life" : "lives"} left.`;
   if (lives <= 0) endGame(false);
 }
 
@@ -234,13 +425,50 @@ function checkLevel() {
     endGame(true);
     return;
   }
+  
+  var previousLevel = level;
 
   if (score >= LEVEL_3_AT) level = 3;
   else if (score >= LEVEL_2_AT) level = 2;
   else level = 1;
-
+  
+  if(level !== previousLevel){
   updateLevel();
+  }
+
   updateProgress();
+}
+// hammer based on cursor position
+const hammerCursor = document.getElementById("hammer-cursor");
+
+if (hammerCursor) {
+
+    document.addEventListener("mousemove", (event) => {
+        hammerCursor.style.left = `${event.clientX}px`;
+        hammerCursor.style.top = `${event.clientY}px`;
+    });
+
+    document.addEventListener("mouseenter", () => {
+        hammerCursor.style.display = "block";
+    });
+
+    document.addEventListener("mouseleave", () => {
+        hammerCursor.style.display = "none";
+    });
+
+    document.addEventListener("mousedown", () => {
+        hammerCursor.classList.remove("swinging");
+
+        void hammerCursor.offsetWidth;
+
+        hammerCursor.classList.add("swinging");
+    });
+
+    document.addEventListener("mouseup", () => {
+        setTimeout(() => {
+            hammerCursor.classList.remove("swinging");
+        }, 80);
+    });
 }
 
 function unlockReward(id, threshold) {
@@ -269,281 +497,12 @@ function endGame(won) {
   else loseScreen.classList.remove("hidden");
 }
 
-function usableAccessPointPosition(data) {
-  const p = data?.position;
-  return p?.valid === true && !p.warning && p.in_play_area !== false && p.in_game_area !== false &&
-    typeof p.x_m === "number" && Number.isFinite(p.x_m) &&
-    typeof p.y_m === "number" && Number.isFinite(p.y_m) &&
-    typeof p.age_ms === "number" && p.age_ms >= 0 && p.age_ms <= MAX_POSITION_AGE_MS;
-}
-
-function getPlayerPosition(data) {
-  const accessPointHole = Number(data?.current_hole);
-  if (
-    usableAccessPointPosition(data) &&
-    data.current_hole !== null &&
-    Number.isInteger(accessPointHole) &&
-    accessPointHole >= 0 &&
-    accessPointHole < holes.length
-  ) {
-    return {
-      sensorIndex: accessPointHole % 2,
-      holeIndex: accessPointHole,
-      distanceCm: Number(data.position.y_m) * 100,
-      xM: Number(data.position.x_m),
-      yM: Number(data.position.y_m),
-    };
-  }
-
-  // The AP's sensors array is a compatibility lane view, not a fallback
-  // source of physical positioning when its actual fix is invalid.
-  if (data?.source === "access_point") return null;
-
-  if (!Array.isArray(data?.sensors)) return null;
-
-  const validSensorIndexes = data.sensors
-    .map((sensor, index) =>
-      sensor.valid && Number.isInteger(Number(sensor.hole)) ? index : -1,
-    )
-    .filter((index) => index >= 0);
-
-  if (validSensorIndexes.length === 0) return null;
-
-  // If both beams see the player, prefer the sensor that most recently
-  // produced a movement event. Otherwise use the only valid sensor.
-  const latestSensorIndex = Number(data.sensor) - 1;
-  const sensorIndex = validSensorIndexes.includes(latestSensorIndex)
-    ? latestSensorIndex
-    : validSensorIndexes[0];
-  const holeIndex = Number(data.sensors[sensorIndex].hole);
-
-  if (
-    !Number.isInteger(holeIndex) ||
-    holeIndex < 0 ||
-    holeIndex >= holes.length
-  ) {
-    return null;
-  }
-
-  return {
-    sensorIndex,
-    holeIndex,
-    distanceCm: data.sensors[sensorIndex].distance_cm,
-  };
-}
-
-function displayPlayerPosition(data) {
-  const position = getPlayerPosition(data);
-
-  if (!position) {
-    playerMarker.classList.add("hidden");
-    playerMarker.removeAttribute("title");
-    return null;
-  }
-
-  const targetHole = holes.find(
-    (hole) => Number(hole.dataset.hole) === position.holeIndex,
-  );
-  targetHole.appendChild(playerMarker);
-  playerMarker.classList.remove("hidden");
-  playerMarker.title = Number.isFinite(position.xM)
-    ? `Player: hole ${position.holeIndex + 1} (${position.xM.toFixed(2)}, ${position.yM.toFixed(2)} m)`
-    : `Player: hole ${position.holeIndex + 1}, sensor ${position.sensorIndex + 1}`;
-  return position;
-}
-
-function updateDebugPanel(data = null) {
-  if (data?.source === "access_point") {
-    debugSensorLabels[0].textContent = "Position";
-    debugSensorLabels[1].textContent = "Network";
-
-    const xM = Number(data.position?.x_m);
-    const yM = Number(data.position?.y_m);
-    const currentHole = Number(data.current_hole);
-    const positionValid = data.position?.valid &&
-      data.position.x_m !== null && data.position.y_m !== null &&
-      Number.isFinite(xM) && Number.isFinite(yM);
-    debugSensorDisplays[0].textContent = positionValid
-      ? `${xM.toFixed(2)}, ${yM.toFixed(2)} m | ${currentHole >= 0 ? `Hole ${currentHole + 1}` : "stabilising"}`
-      : `No valid fix | ${Number(data.position?.sensors_used) || 0} ranges`;
-
-    const nodeOnline = Array.isArray(data.node_online)
-      ? data.node_online
-      : [false, false];
-    const validRangeCount = Array.isArray(data.ranges_m)
-      ? data.ranges_m.filter(
-          (range) => range !== null && Number.isFinite(Number(range)),
-        ).length
-      : 0;
-    const totalRangeCount = Array.isArray(data.ranges_m)
-      ? data.ranges_m.length
-      : 0;
-    debugSensorDisplays[1].textContent =
-      `N1 ${nodeOnline[0] ? "online" : "offline"} | ` +
-      `N2 ${nodeOnline[1] ? "online" : "offline"} | ` +
-      `${validRangeCount}/${totalRangeCount} ranges`;
-    const physicalRanges = (data.ranges_m || []).map((r, i) =>
-      `${["N1", "AP", "N2"][i]} ${typeof r === "number" && Number.isFinite(r) ? r.toFixed(2) + " m" : "no echo"}`);
-    debugSensorDisplays[1].textContent += ` | ${physicalRanges.join(" / ")}`;
-    debugSensorDisplays[0].textContent += ` | ${data.position?.reason || "positioning"}`;
-    if (data.position?.held) debugSensorDisplays[0].textContent += " | Held: no scoring";
-
-    if (Number(data.event_id) === 0) {
-      debugLastEvent.textContent = "None";
-    } else {
-      debugLastEvent.textContent =
-        `#${data.event_id} | Hole ${Number(data.hole) + 1} | ` +
-        `${Number(data.distance_cm).toFixed(1)} cm from screen`;
-    }
-    return;
-  }
-
-  debugSensorLabels[0].textContent = "Sensor 1";
-  debugSensorLabels[1].textContent = "Sensor 2";
-  debugSensorDisplays.forEach((display, index) => {
-    const sensor = data?.sensors?.[index];
-    if (!sensor) {
-      display.textContent = "Disconnected";
-      return;
-    }
-
-    const distance =
-      sensor.distance_cm === null ? "No echo" : `Avg ${sensor.distance_cm} cm`;
-    const hole =
-      sensor.valid && Number(sensor.hole) >= 0
-        ? `Hole ${Number(sensor.hole) + 1}`
-        : "No player";
-    display.textContent = `${distance} | ${hole}`;
-  });
-
-  if (!data) {
-    debugLastEvent.textContent = "Disconnected";
-  } else if (Number(data.event_id) === 0) {
-    debugLastEvent.textContent = "None";
-  } else {
-    debugLastEvent.textContent = `#${data.event_id} | S${data.sensor} | Hole ${Number(data.hole) + 1} | ${data.distance_cm} cm`;
-  }
-}
-
-function updateSensorStatus(connected, data = null) {
-  sensorStatus.classList.toggle("connected", connected);
-  sensorStatus.classList.toggle("disconnected", !connected);
-
-  if (!connected) {
-    playerMarker.classList.add("hidden");
-    updateDebugPanel();
-    sensorStatus.textContent =
-      "Sensor controller: disconnected (mouse testing is available)";
-    return;
-  }
-
-  updateDebugPanel(data);
-  const playerPosition = displayPlayerPosition(data);
-
-  if (data?.source === "access_point") {
-    const position = data.position;
-    const g = data.game_area;
-    if (g && [g.x_min_m, g.x_max_m, g.start_y_m, g.end_y_m].every(Number.isFinite)) {
-      holes.forEach(hole => {
-        const index = Number(hole.dataset.hole);
-        const x = g.x_min_m + (index % 2 + 0.5) * (g.x_max_m - g.x_min_m) / 2;
-        const y = g.start_y_m + (Math.floor(index / 2) + 0.5) * (g.end_y_m - g.start_y_m) / 3;
-        hole.title = `Stand at x=${Math.round(x * 100)} cm from the area's left edge, ${Math.round(y * 100)} cm from the screen`;
-      });
-    }
-    const xM = Number(position?.x_m);
-    const yM = Number(position?.y_m);
-    const warning = position?.warning ? "WARNING: too close to screen — " : "";
-    sensorStatus.textContent = position?.valid && position.x_m !== null && position.y_m !== null
-      ? `${warning}Access point: tracking ${playerPosition ? `hole ${playerPosition.holeIndex + 1}` : "position"} at ${xM.toFixed(2)}, ${yM.toFixed(2)} m`
-      : `${warning}Access point: connected — ${position?.reason || "waiting for a valid player position"}`;
-    if (position?.held) sensorStatus.textContent += " | Position held; waiting for confirmation before scoring";
-    else if (position?.valid && position.in_game_area === false) sensorStatus.textContent += " | Move into the target zones shown at 192.168.4.1";
-    return;
-  }
-
-  const activeSensors = (Array.isArray(data?.sensors) ? data.sensors : [])
-    .map((sensor, index) =>
-      sensor.valid ? `S${index + 1}: ${sensor.distance_cm} cm` : null,
-    )
-    .filter(Boolean);
-  sensorStatus.textContent = activeSensors.length
-    ? `Player: ${playerPosition ? `hole ${playerPosition.holeIndex + 1}` : "position unknown"} — ${activeSensors.join(" | ")}`
-    : "Sensor controller: connected — waiting for player";
-}
-
-async function pollSensors() {
-  if (sensorRequestInProgress) return;
-  sensorRequestInProgress = true;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), SENSOR_REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(`${SENSOR_API_BASE}/api/hits`, {
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`Sensor HTTP ${response.status}`);
-    const data = await response.json();
-    const eventId = data.event_id;
-    if (!Number.isSafeInteger(eventId) || eventId < 0) {
-      throw new Error("Invalid /api/hits response");
-    }
-    updateSensorStatus(true, data);
-
-    // A stationary player can hit a newly appearing mole. Only use a new,
-    // fresh AP measurement frame; repeated HTTP responses cannot rescore it.
-    if (data.source === "access_point") {
-      const bootChanged = data.boot_id !== undefined && lastSensorBootId !== data.boot_id;
-      if (bootChanged) { lastPlayerFrame = null; lastSensorEventId = null; }
-      lastSensorBootId = data.boot_id ?? null;
-      const frameKey = `${data.boot_id}:${data.frame_id}`;
-      if (Number.isInteger(data.frame_id) && frameKey !== lastPlayerFrame) {
-        lastPlayerFrame = frameKey;
-        const player = getPlayerPosition(data);
-        if (player && data.position?.held !== true && activeHole && Number(activeHole.dataset.hole) === player.holeIndex)
-          whackHole(player.holeIndex, "sensor");
-      }
-      // Updated AP firmware scores occupancy above. Keep event logic below
-      // for MVP and older AP firmware that has no frame counter.
-      if (Number.isInteger(data.frame_id)) { lastSensorEventId = eventId; return; }
-    }
-
-    if (lastSensorEventId === null) {
-      lastSensorEventId = eventId;
-    } else if (eventId !== lastSensorEventId) {
-      lastSensorEventId = eventId;
-      const eventAgeMs = Number(data.event_age_ms);
-      const eventHole = Number(data.hole);
-      if (
-        Number.isFinite(eventAgeMs) &&
-        data.event_age_ms !== null &&
-        data.hole !== null &&
-        eventAgeMs >= 0 &&
-        eventAgeMs <= MAX_EVENT_AGE_MS &&
-        Number.isInteger(eventHole) &&
-        eventHole >= 0 &&
-        eventHole < holes.length &&
-        (data.source !== "access_point" || (usableAccessPointPosition(data) && data.position?.held !== true))
-      ) {
-        whackHole(eventHole, "sensor");
-      }
-    }
-  } catch (error) {
-    updateSensorStatus(false);
-    lastSensorEventId = null;
-    lastPlayerFrame = null;
-  } finally {
-    clearTimeout(timeout);
-    sensorRequestInProgress = false;
-  }
-}
-
-function startSensorPolling() {
-  clearInterval(sensorPollTimer);
-  pollSensors();
-  sensorPollTimer = setInterval(pollSensors, SENSOR_POLL_INTERVAL);
-}
+// The current game and modular backend share the same sensor adapter.
+SensorService.init();
+SensorService.onHit = (holeIndex, kind) => {
+  if (kind === "occupancy" && (!gameActive || !activeHole || Number(activeHole.dataset.hole) !== holeIndex)) return;
+  whackHole(holeIndex, "sensor");
+};
 
 holes.forEach((hole) => {
   hole.addEventListener("click", () =>
@@ -551,4 +510,4 @@ holes.forEach((hole) => {
   );
 });
 
-startSensorPolling();
+SensorService.start();

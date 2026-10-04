@@ -1,13 +1,16 @@
 """Local visual QA only: clearly labelled synthetic API; never used on the ESP.
 
 python tests/preview_server.py; open http://127.0.0.1:8766/
-Use ?mode=partial, ?mode=held, ?mode=invalid, ?mode=warning or ?mode=offline.
+Use ?mode=partial, ?mode=fallback, ?mode=held, ?mode=invalid, ?mode=warning or ?mode=offline.
+The /game/ route serves the current game UI with this same synthetic sensor API.
 """
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 import json
 import math
+import mimetypes
+import time
 
 root = Path(__file__).resolve().parents[1]
 class Handler(BaseHTTPRequestHandler):
@@ -16,31 +19,61 @@ class Handler(BaseHTTPRequestHandler):
         mode = parse_qs(url.query).get('mode', ['tracking'])[0]
         sensors = [dict(name=name, x_m=x, y_m=.3, bearing_deg=angle,
                         half_angle_deg=15, max_range_m=4.5)
-                   for name, x, angle in [('Node 1', .39, math.degrees(math.atan2(.36, 1))),
+                   for name, x, angle in [('Node 1', .4, math.degrees(math.atan2(.35, 1))),
                                          ('Access Point', .75, 0),
-                                         ('Node 2', 1.23, -math.degrees(math.atan2(.48, 1)))]]
+                                         ('Node 2', 1.1, -math.degrees(math.atan2(.35, 1)))]]
+        game_area = dict(x_min_m=.45,x_max_m=1.05,start_y_m=1,end_y_m=2)
         if url.path == '/api/config':
             body = json.dumps(dict(width_m=1.5, depth_m=1.4, play_start_y_m=.6, stale_ms=500, sensors=sensors,
-                game_area=dict(x_min_m=.45,x_max_m=1.05,start_y_m=1,end_y_m=2)))
+                game_area=game_area))
             content_type = 'application/json'
-        elif url.path == '/api/position':
+        elif url.path in ('/api/position', '/api/hits'):
             if mode == 'offline':
                 self.send_error(503)
                 return
             y = .5 if mode == 'warning' else 1.3
             ranges = [math.hypot(.75-s['x_m'], y-.3) for s in sensors]
             if mode == 'partial': ranges[1] = None
+            if mode == 'fallback': ranges[0] = 3
             valid = mode not in ('invalid', 'warning')
-            body = json.dumps(dict(valid=valid,x_m=.75 if valid else None,y_m=y if valid else None,
-                rms_error_m=.004 if valid else None,sensors_used=2 if mode=='partial' else 3,
+            used = 5 if mode=='partial' else 6 if mode=='fallback' else 7
+            position = dict(valid=valid,x_m=.75 if valid else None,y_m=y if valid else None,
+                rms_error_m=.004 if valid else None,sensors_used=2 if mode in ('partial','fallback') else 3,
+                sensors_used_mask=used if valid else 0,available_mask=5 if mode=='partial' else 7,
+                in_play_area=valid,in_game_area=valid,age_ms=15,
                 held=mode=='held',raw_x_m=None if mode=='held' else .76 if valid else None,
                 raw_y_m=y if valid and mode!='held' else None,uncertainty_m=.05 if valid else None,
-                warning=mode=='warning',reason='range_spike' if mode=='held' else 'two_ranges' if mode=='partial' else 'three_ranges' if valid else 'outside_cones_or_area',
-                boot_id=1,frame_id=1,ranges_m=ranges,node_online=[True,True],
+                warning=mode=='warning',reason='range_spike' if mode=='held' else 'two_ranges_fallback' if mode=='fallback' else 'two_ranges' if mode=='partial' else 'three_ranges' if valid else 'outside_cones_or_area')
+            diagnostics = dict(boot_id=1,frame_id=int(time.monotonic()*5),ranges_m=ranges,node_online=[True,True],
                 sensor_status=[dict(online=True,echo=r is not None,range_m=None if mode=='held' and i==0 else r,
                     raw_m=r+.4 if mode=='held' and i==0 else r,rejected=mode=='held' and i==0,
-                    age_ms=15,player_in_cone=valid and mode!='held' and r is not None) for i,r in enumerate(ranges)]))
+                    used_for_position=valid and mode!='held' and bool(used & (1<<i)),
+                    excluded_from_position=valid and mode!='held' and r is not None and not bool(used & (1<<i)),
+                    age_ms=15,player_in_cone=valid and mode!='held' and bool(used & (1<<i))) for i,r in enumerate(ranges)])
+            if url.path == '/api/hits':
+                body = json.dumps(dict(**diagnostics,position=position,source='access_point',protocol='wam-hits-v1',api_version=2,
+                    event_id=1,event_age_ms=15,hole=0,current_hole=0 if valid else -1,sensor=1,zone=0,
+                    distance_cm=130,game_area=game_area,sensors=[]))
+            else:
+                body = json.dumps(dict(**position,**diagnostics))
             content_type = 'application/json'
+        elif url.path.startswith('/game/'):
+            ui = (root.parent/'UI-Code').resolve()
+            file = (ui/(url.path[len('/game/'):] or 'index.html')).resolve()
+            if ui not in file.parents or not file.is_file():
+                self.send_error(404)
+                return
+            payload = file.read_bytes()
+            if file.suffix == '.html':
+                payload = payload.replace(b'<h1>Whack-A-Mole</h1>',b'<h1>Whack-A-Mole SIMULATED TEST</h1>')
+            elif file.name == 'SensorService.js':
+                payload = payload.replace(b'baseUrl: "http://192.168.4.1"', b'baseUrl: ""')
+                payload = payload.replace(b'this.baseUrl + path,', b'this.baseUrl + path + window.location.search,')
+            self.send_response(200)
+            self.send_header('Content-Type',mimetypes.guess_type(file)[0] or 'application/octet-stream')
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         elif url.path == '/':
             body = (root/'Access_Point/cones.html').read_text(encoding='utf-8')
             body = body.replace("const API = location.hostname === '192.168.4.1' ? '' : 'http://192.168.4.1';", "const API = '';" )
@@ -58,6 +91,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
     def log_message(self, *_): pass
+    def do_POST(self):
+        if urlparse(self.path).path != '/api/game/start':
+            self.send_error(404)
+            return
+        self.send_response(204)
+        self.end_headers()
 
 if __name__ == '__main__':
     print('Simulated cone viewer: http://127.0.0.1:8766/', flush=True)
