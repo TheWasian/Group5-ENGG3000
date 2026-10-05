@@ -4,12 +4,18 @@ const frontendMetrics = {
     moleRenderTimes: [],
     whackResponseTimes: [],
     levelTransitionTimes: [],
-    fpsSamples: []
+    fpsSamples: [],
+
+    normalWhackResponseTimes: [],
+    frozenWhackResponseTimes: [],
+    freezeDurations: [],
+    goldenLifetimeSamples: []
 };
 
 let lastFrameTime = performance.now();
 let fpsUpdateTime = performance.now();
 let fpsFrameCount = 0;
+
 
 // measure frames per sec, frontend metric data
 function measureFPS(currentTime) {
@@ -93,6 +99,7 @@ let activeHole = null;
 let lastHole = null;
 let activeMoleType = "normal"; 
 let freezeTicksLeft = 0;
+let moleSpawnTime = null;
 startBtn.addEventListener("click", startGame);
 restartButtons.forEach((button) => button.addEventListener("click", startGame));
 
@@ -140,8 +147,21 @@ function clearFreeze() {
 }
 
 function freezeTimer(seconds) {
+   const freezeStart = performance.now();
   freezeTicksLeft += seconds;
   timerDisplay.classList.add("frozen");
+  setTimeout(() => {
+    const freezeDuration = performance.now() - freezeStart;
+
+    frontendMetrics.freezeDurations.push(freezeDuration);
+
+    const display =
+      document.getElementById("freeze-duration");
+
+    if (display) {
+      display.textContent = freezeDuration.toFixed(2);
+    }
+  }, seconds * 1000);
 }
 
 function tick() {
@@ -233,6 +253,8 @@ const renderStart = performance.now();
 
 activeHole.classList.add("active");
 
+moleSpawnTime = performance.now();
+
 requestAnimationFrame(() => {
     const renderTime = performance.now() - renderStart;
 
@@ -251,13 +273,33 @@ requestAnimationFrame(() => {
     : MOLE_LIFETIME;
 
 moleLifetimeTimer = setTimeout(() => {
-  clearMole(activeHole);
+   const expiredType = activeMoleType;
 
-  if (activeMoleType === "normal") {
+  if (moleSpawnTime !== null) {
+    const lifetime = performance.now() - moleSpawnTime;
+
+    if (expiredType === "golden") {
+      frontendMetrics.goldenLifetimeSamples.push(lifetime);
+
+      const display =
+        document.getElementById("golden-lifetime");
+
+      if (display) {
+        display.textContent = lifetime.toFixed(2);
+      }
+    }
+  }
+
+  clearMole();
+
+  if (expiredType === "normal") {
     loseLife("Too slow! You missed the mole!");
   }
+
 }, moleLifetime);
+
 }
+
 function whackHole(holeIndex, source = "mouse") {
   if (!gameActive || !Number.isInteger(holeIndex)) return false;
    const whackStart = performance.now();
@@ -309,6 +351,26 @@ function whackHole(holeIndex, source = "mouse") {
   const responseTime = performance.now() - whackStart;
 
   frontendMetrics.whackResponseTimes.push(responseTime);
+  if (hitType === "frozen") {
+  frontendMetrics.frozenWhackResponseTimes.push(responseTime);
+
+  const display =
+    document.getElementById("frozen-response-time");
+
+  if (display) {
+    display.textContent = responseTime.toFixed(2);
+  }
+
+} else if (hitType === "normal") {
+  frontendMetrics.normalWhackResponseTimes.push(responseTime);
+
+  const display =
+    document.getElementById("normal-response-time");
+
+  if (display) {
+    display.textContent = responseTime.toFixed(2);
+  }
+}
 
   const display = document.getElementById("whack-response-time");
 
@@ -438,38 +500,7 @@ function checkLevel() {
 
   updateProgress();
 }
-// hammer based on cursor position
-const hammerCursor = document.getElementById("hammer-cursor");
 
-if (hammerCursor) {
-
-    document.addEventListener("mousemove", (event) => {
-        hammerCursor.style.left = `${event.clientX}px`;
-        hammerCursor.style.top = `${event.clientY}px`;
-    });
-
-    document.addEventListener("mouseenter", () => {
-        hammerCursor.style.display = "block";
-    });
-
-    document.addEventListener("mouseleave", () => {
-        hammerCursor.style.display = "none";
-    });
-
-    document.addEventListener("mousedown", () => {
-        hammerCursor.classList.remove("swinging");
-
-        void hammerCursor.offsetWidth;
-
-        hammerCursor.classList.add("swinging");
-    });
-
-    document.addEventListener("mouseup", () => {
-        setTimeout(() => {
-            hammerCursor.classList.remove("swinging");
-        }, 80);
-    });
-}
 
 function unlockReward(id, threshold) {
   if (score < threshold) return;
@@ -511,3 +542,5 @@ holes.forEach((hole) => {
 });
 
 SensorService.start();
+
+
