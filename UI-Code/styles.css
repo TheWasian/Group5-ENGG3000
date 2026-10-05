@@ -305,6 +305,8 @@ h1 {
 }
 
 .normal-mini { background: #5c4033; }
+.ice-mini { background: #4c91c7; }
+.bomb-mini { background: #222; }
 .speedy-mini { background: #3b82f6; }
 .dark-mini { background: #1f2937; }
 .toxic-mini { background: #10b981; }
@@ -535,6 +537,68 @@ h1 {
 }
 
 .mole.has-bomb .mole-bomb {
+  display: block;
+}
+
+.mole.has-normal-ice .css-mole,
+.mole.has-bomb-ice .css-mole {
+  background: #4c91c7;
+  box-shadow: inset -5px -5px 10px rgba(0, 40, 80, 0.4);
+}
+
+.mole.has-normal-ice .mole-nose,
+.mole.has-bomb-ice .mole-nose {
+  background: #a8ddf0;
+}
+
+.mole.has-normal-ice .css-mole::before,
+.mole.has-normal-ice .css-mole::after,
+.mole.has-bomb-ice .css-mole::before,
+.mole.has-bomb-ice .css-mole::after {
+  background: #0f273d; 
+}
+
+
+.mole.has-normal-ice .mole-whiskers::before,
+.mole.has-normal-ice .mole-whiskers::after,
+.mole.has-bomb-ice .mole-whiskers::before,
+.mole.has-bomb-ice .mole-whiskers::after {
+  background: #e9fbff;
+  box-shadow: 0 6px 0 #e9fbff;
+}
+
+.mole.has-bomb-ice .mole-bomb{
+  display: block;
+}
+
+
+.mole.has-normal-fire .css-mole,
+.mole.has-bomb-fire .css-mole {
+  background: #e30f0f;
+  box-shadow: inset -5px -5px 10px rgba(60, 10, 0, 0.5);
+}
+
+.mole.has-normal-fire .mole-nose,
+.mole.has-bomb-fire .mole-nose {
+  background: #ff7a18;
+}
+
+.mole.has-normal-fire .css-mole::before,
+.mole.has-normal-fire .css-mole::after,
+.mole.has-bomb-fire .css-mole::before,
+.mole.has-bomb-fire .css-mole::after {
+  background: #250706;
+}
+
+.mole.has-normal-fire .mole-whiskers::before,
+.mole.has-normal-fire .mole-whiskers::after,
+.mole.has-bomb-fire .mole-whiskers::before,
+.mole.has-bomb-fire .mole-whiskers::after {
+  background: #ffd84a;
+  box-shadow: 0 6px 0 #ffd84a;
+}
+
+.mole.has-bomb-fire .mole-bomb{
   display: block;
 }
 
