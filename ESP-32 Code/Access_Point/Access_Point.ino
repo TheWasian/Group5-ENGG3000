@@ -13,10 +13,10 @@
 
 // --------------------- EDIT YOUR SETUP HERE -------------------------
 // Preserve the GPIOs already configured for the centre board.
-constexpr int TRIG_PIN = 27;
-constexpr int ECHO_PIN = 26;
-constexpr int BUZZER_PIN = 4;       // Active buzzer; -1 disables output.
-constexpr int WARNING_LED_PIN = 5; // -1 disables output.
+constexpr int TRIG_PIN = 10;
+constexpr int ECHO_PIN = 3;
+constexpr int BUZZER_PIN = 18;       // Active buzzer; -1 disables output.
+//constexpr int WARNING_LED_PIN = 7; // -1 disables output.
 
 constexpr float PLAY_AREA_WIDTH_M = 1.50f;
 constexpr float PLAY_AREA_DEPTH_M = 1.40f;
