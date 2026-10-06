@@ -79,7 +79,7 @@ const GOLDEN_CHANCE = 0.15;
 const FROZEN_CHANCE = 0.08;
 const FREEZE_SECONDS = 5;
 const GOLDEN_LIFETIME_FACTOR = 0.75;
-let SPAWN_INTERVAL = 500;
+let SPAWN_INTERVAL = 3500;
 let MOLE_LIFETIME = 3200; 
 const ROUND_TIME = 300;
 const LEVEL_2_AT = 500;
@@ -129,7 +129,6 @@ function startGame() {
   SensorService.notifyGameStart();
 
   countdownTimer = setInterval(tick, 1000);
-  moleTimer = setInterval(spawnMole, SPAWN_INTERVAL);
   spawnMole();
 }
 
@@ -399,20 +398,20 @@ function updateLevel() {
   levelDisplay.textContent = level;
   const transitionStart = performance.now();
     if(level === 1){
-      SPAWN_INTERVAL = 3500;
-      MOLE_LIFETIME = 3200;
+      SPAWN_INTERVAL = 3800;
+      MOLE_LIFETIME = 3800;
       GameView.setEnvironment("grassland");
     }
 
     if (level === 2){
-      SPAWN_INTERVAL = 2200;
-      MOLE_LIFETIME = 1800;
+      SPAWN_INTERVAL = 3500;
+      MOLE_LIFETIME = 3500;
       GameView.setEnvironment("freezing");
   }
 
     if (level === 3){
-      SPAWN_INTERVAL = 1400;
-      MOLE_LIFETIME = 1100;
+      SPAWN_INTERVAL = 3100;
+      MOLE_LIFETIME = 3100;
       GameView.setEnvironment("fire");
   }
   requestAnimationFrame(() => {
