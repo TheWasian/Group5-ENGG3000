@@ -129,7 +129,6 @@ function startGame() {
   SensorService.notifyGameStart();
 
   countdownTimer = setInterval(tick, 1000);
-  moleTimer = setInterval(spawnMole, SPAWN_INTERVAL);
   spawnMole();
 }
 
