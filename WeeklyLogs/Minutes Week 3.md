@@ -26,9 +26,8 @@ minute_taker: Alleluya Hamisi
 | Cammilus John Baptist   | 48322288   | EE         | Engineer       | p                |
 | Shreenidhi Arunachalam  | 48552453   | SE         | Scrum Master   | P                |
 
-## Scrum Board Snapshot
-
-![[Dashboard 2.png]]
+## Scrum Board Snapshot  
+![Week 3 board](Images/Dashboard2.png)
 
 | Task ID                          | No. Subtasks | Project Status                                      | Issues / Solution                                                                                                                                                                                                                                                                                                          | Assignee                |
 | -------------------------------- | ------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
@@ -60,7 +59,7 @@ minute_taker: Alleluya Hamisi
 ## Meeting Notes
 > There was a lot of work that was completed this week.
 - The main concern was the lack of time that everyone could find to do the next sections especially since there larger and more complex tasks highlighting that the next subtasks may be our main focus as we prepare for the MVP
-- We highlighted there is a lack of testing and we might focus on testing everything before week 5 meeting
+- We highlighted there is a lack of testing, and we might focus on testing everything before week 5 meeting
 - We all Agreed to show up on week 5 especially since before 3pm which is our elected time for the presentation
 - We agreeed we would only talk about our sections in the meeting if asked
 
@@ -130,22 +129,21 @@ B -->|Time = 0| J[Game Over]
 ```
 
 A simple leveling system data flow chart that showcases the relationship between the mole and the objective/leveling system.
-## UI Diagrams
+## UI Diagrams  
+Basic concept Game HTML & CSS    
+![UI](Images/skeletonui.png.png)  
+  
+Initial skeleton version of the MVP prior to merging both UI's  
+![UI](Images/skeletonUI2.png.png)  
 
-![[skeletonui.png.png]]
-Basic concept Game HTML & CSS
+Lose condition  
+![UI](Images/loseCond.png.png)  
 
-![[skeletonUI2.png.png]]
-Initial skeleton version of the MVP prior to merging both UI's
+Wind Condition  
+![UI](Images/winCond.png.png)
 
-![[loseCond.png.png]]
-
-![[winCond.png.png]]
-
-Skeleton win & Lose condition UI
-
-![[ImprovedUI.png.png]]
-Alternative UI that was designed without a JS backend
+Alternative UI that was designed without a JS backend  
+![UI](Images/ImprovedUI.png.png)
 
 ## Sprint Review
 - We expect that next week may be too busy for us to do major changes and will mainly focus on doing minor improvements if possible or attempting to fix / merge existing features that just need minor changes.

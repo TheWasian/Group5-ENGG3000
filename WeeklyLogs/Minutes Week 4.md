@@ -26,7 +26,7 @@ minute_taker: Alleluya Hamisi
 | Shreenidhi Arunachalam  | 48552453   | SE         | Engineer       | P                |
 
 ## Scrum Board Snapshot
-![[Dash.png.png|700]]
+![Week 3 board](Images/Dash.png.png)
 
 | Task ID                          | No. Subtasks | Project Status                                      | Issues / Solution                                                                                                                    | Assignee                |
 | -------------------------------- | ------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
@@ -52,7 +52,7 @@ minute_taker: Alleluya Hamisi
 
 ## Meeting Notes
 > Client requirements, design decisions, budget/scope discussion, constraints raised.
-- We were focused on trying to get anything we possible could do safely without breaking the code or the function done this week this meant abonding big updates like differnet moles, comprehensive leveling system and potential triangulation. 
+- We were focused on trying to get anything we possibly could do safely without breaking the code or the function done this week this meant abounding big updates like different moles, comprehensive leveling system and potential triangulation. 
 - We made it clear that the assignment report is going to be next week main task meaning we might not see much progress with the assignment in week 5 but will need to work harder in week 6 to ensure were on track'
 - Anyone with photos or testing details need to share it on discord to allow other to be able to use it for their assignment
 
@@ -87,9 +87,9 @@ The formula Matthew used was a simple distance collocation at first
 | 8    | **1.4 m**            | Reduced                | Noticeable drop in detection reliability                                                            |
 | 9    | **1.5 m**            | Reduced                | Detection still possible but less consistent, might need a cone or stand to improve detection       |
 | 10   | 1.75 m               | Poor                   | Significant detection drop                                                                          |
-The test in conculsion indicated the minimum range would be 50cm. The ultrasonic reading became more unreliable the longer the range although there was no stand or cone utilised within this test leaving us to presume that if the sensors were raised off the ground and the cones hyper focus the sensors then there could be a drastic increase of performance epsecially around 1.2m to 1.5m. 
+The test in conclusion indicated the minimum range would be 50cm. The ultrasonic reading became more unreliable the longer the range although there was no stand or cone utilised within this test leaving us to presume that if the sensors were raised off the ground and the cones hyper focus the sensors then there could be a drastic increase of performance especially around 1.2m to 1.5m. 
 
-There for in the MVP we will be focused on working around this error but in the following week 9 presentation we will need to ensure this is address and tested again to see the reliabily with the said assisted 3D printed parts.
+Therefore, in the MVP we will be focused on working around this error but in the following week 9 presentation we will need to ensure this is address and tested again to see the reliability with the said assisted 3D printed parts.
 
 ### Position Error Handling (on the table without a stand / cone)
 This test was conducted without the 3D printed components and focused on:
@@ -107,7 +107,7 @@ RMS = Root Mean Squared
 | **0.75 m** |    Detected     |
 | **0.80 m** |   Unreliable    |
 |   1.00 m   |   Unreliable    |
-In the backend we are testing for the error handling across all available sensors. Finding the range in which the system will detect as too large for it to be counted as a human, deciding that the error of 0.75m was acceptable and anything greater then that was unreliable there for will be rejected and not counted as a human being detected but instead be counted as an error.
+In the backend we are testing for the error handling across all available sensors. Finding the range in which the system will detect as too large for it to be counted as a human, deciding that the error of 0.75m was acceptable and anything greater than that was unreliable there for will be rejected and not counted as a human being detected but instead be counted as an error.
 
 
 ### API Interval fetch Test (on the table without a stand / cone)
@@ -126,7 +126,7 @@ In the backend we are testing for the error handling across all available sensor
 
 ## Sprint Retrospective
 - What went well:
-	  - We were able to get all the tests done but there was errors and flaws we found in the test that we could not get fixed before the presentation but has been flaged for the next presentation in week 9
+	  - We were able to get all the tests done but there were errors and flaws we found in the test that we could not get fixed before the presentation but has been flagged for the next presentation in week 9
 - What to improve:
 	  - We need to improve our error handling
 	  - We need to implement a working triangulation after week 5

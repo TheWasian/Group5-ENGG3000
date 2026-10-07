@@ -25,8 +25,8 @@ minute_taker: Alleluya Hamisi
 | Cammilus John Baptist   | 48322288   | EE         | Engineer       | p                |
 | Shreenidhi Arunachalam  | 48552453   | SE         | Engineer       | P                |
 
-## Scrum Board Snapshot
-![[Dashboard.png]]
+## Scrum Board Snapshot  
+![Week 2 board](Images/Dashboard.png)
 
 | Task ID                          | No. Subtasks | Project Status                                       | Issues / Solution                                                                                                                                                                                                              | Assignee                |
 | -------------------------------- | ------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
@@ -46,7 +46,7 @@ minute_taker: Alleluya Hamisi
 | Start wiring the ESP32 for testing next week    | Electrical Design & Proto Typing | 7 - 10            | Cammilus           |
 
 ## Sprint Actions (goals for this week)
-- [ ] Add LIves System
+- [ ] Add Lives System
 - [ ] Loss / Win Function
 - [ ] Add Visual Damage Indicator
 - [ ] GUI levels & Win/Condition Screen
@@ -54,7 +54,7 @@ minute_taker: Alleluya Hamisi
 
 ## Meeting Notes
 > Client requirements, design decisions, budget/scope discussion, constraints raised.
-- There are confecting files so we will need to either merge or remove files that are not needed
+- There are connecting files so we will need to either merge or remove files that are not needed
 - The pcb is going to take a few weeks to design and then order which will mean that we need to use the existing esp32 provided to test for week 5
 - The access point is currently working but sometimes the device is not connecting with other devices so we might need to improve it when we get the chance
 - We need to keep each other accountable and also updated to ensure everyone feels like their contributing and are not left out to dry
@@ -210,7 +210,7 @@ end
 ```
 
 Simplified Box Diagram
-![[Sensordiagram.png.png]]
+![Simplified Box Diagram](Images/Sensordiagram.png.png)
 ## Sprint Review
 - Everyone is expected to have something prior to the Tuesday workshop
 - We will be reviewing the UI code to ensure at least some components have been designed and is ready to code or has at least a skeleton or sketch out of the potential code
@@ -222,7 +222,7 @@ Simplified Box Diagram
 	- We were all able to voice our opinion's and provide good advice on the changing customer requirements
 	- We were all able to divide tasks for areas we believe were most confident within
 - What to improve:
-	- Communication between other roles or tasks so that we are not too tunnel focused but view the overal project
+	- Communication between other roles or tasks so that we are not too tunnel focused but view the overall project
 - Support needed from other members:
 	- No member has voiced for help and instead all members are on track
 
