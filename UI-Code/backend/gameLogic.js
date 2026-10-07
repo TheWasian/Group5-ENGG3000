@@ -398,20 +398,20 @@ function updateLevel() {
   levelDisplay.textContent = level;
   const transitionStart = performance.now();
     if(level === 1){
-      SPAWN_INTERVAL = 3500;
-      MOLE_LIFETIME = 3200;
+      SPAWN_INTERVAL = 3800;
+      MOLE_LIFETIME = 3800;
       GameView.setEnvironment("grassland");
     }
 
     if (level === 2){
-      SPAWN_INTERVAL = 2200;
-      MOLE_LIFETIME = 1800;
+      SPAWN_INTERVAL = 3500;
+      MOLE_LIFETIME = 3500;
       GameView.setEnvironment("freezing");
   }
 
     if (level === 3){
-      SPAWN_INTERVAL = 1400;
-      MOLE_LIFETIME = 1100;
+      SPAWN_INTERVAL = 3100;
+      MOLE_LIFETIME = 3100;
       GameView.setEnvironment("fire");
   }
   requestAnimationFrame(() => {
