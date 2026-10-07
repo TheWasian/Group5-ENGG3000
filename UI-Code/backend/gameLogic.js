@@ -79,7 +79,7 @@ const GOLDEN_CHANCE = 0.15;
 const FROZEN_CHANCE = 0.08;
 const FREEZE_SECONDS = 5;
 const GOLDEN_LIFETIME_FACTOR = 0.75;
-let SPAWN_INTERVAL = 3500;
+let SPAWN_INTERVAL = 500;
 let MOLE_LIFETIME = 3200; 
 const ROUND_TIME = 300;
 const LEVEL_2_AT = 500;
@@ -474,37 +474,48 @@ function updateProgress() {
     Math.min(score - progressStart, progressEnd - progressStart),
   );
   const levelRange = progressEnd - progressStart;
-  progressBar.style.width = `${(levelProgress / levelRange) * 100}%`;
+  const percent = (levelProgress / levelRange) * 100;
+  progressBar.style.width = `${percent}%`;
   progressText.textContent = `${levelProgress} / ${levelRange} (${levelLabel})`;
+
+  const progressPct = document.getElementById("progress-pct");
+  if (progressPct) {
+    progressPct.textContent = `${Math.round(percent * 10) / 10}%`;
+  }
 }
 
 function checkLevel() {
-  unlockReward("bronze-reward", 50);
-  unlockReward("silver-reward", 250);
-  unlockReward("gold-reward", 500);
+  try {
+    unlockReward("bronze-reward", 50);
+    unlockReward("silver-reward", 250);
+    unlockReward("gold-reward", 500);
 
-  if (score >= WIN_AT) {
-    endGame(true);
-    return;
+    if (score >= WIN_AT) {
+      endGame(true);
+      return;
+    }
+
+    var previousLevel = level;
+
+    if (score >= LEVEL_3_AT) level = 3;
+    else if (score >= LEVEL_2_AT) level = 2;
+    else level = 1;
+
+    if(level !== previousLevel){
+    updateLevel();
+    }
+  } finally {
+    updateProgress();
   }
-  
-  var previousLevel = level;
-
-  if (score >= LEVEL_3_AT) level = 3;
-  else if (score >= LEVEL_2_AT) level = 2;
-  else level = 1;
-  
-  if(level !== previousLevel){
-  updateLevel();
-  }
-
-  updateProgress();
 }
 
 
 function unlockReward(id, threshold) {
   if (score < threshold) return;
   const reward = document.getElementById(id);
+  // Optional UI: the rewards block can be removed from the page, and a missing
+  // element must not stop the score, the level, or the progress bar.
+  if (!reward) return;
   if (!reward.classList.contains("unlocked")) {
     reward.classList.remove("locked");
     reward.classList.add("unlocked");
