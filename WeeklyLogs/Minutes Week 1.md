@@ -1,9 +1,3 @@
----
-Unit: Eng3000 
-Group: Group 5
-Date: 2026-07-29
----
-
 # 🖊️Project Overview:
 
 **Unit:** Eng3000

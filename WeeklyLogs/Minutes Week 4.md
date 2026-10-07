@@ -1,13 +1,3 @@
----
-tags:
-  - eng3000
-  - minutes
-  - scrum
-date: 2026-08-21
-sprint: Week 4
-minute_taker: Alleluya Hamisi
----
-
 # 🛠️ ENG3000 — Scrum Minutes: Week 4
 
 ## Project Overview
