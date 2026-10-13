@@ -1,9 +1,3 @@
----
-Unit: Eng3000 
-Group: Group 5
-Date: 2026-07-29
----
-
 # 🖊️Project Overview:
 
 **Unit:** Eng3000
@@ -19,7 +13,7 @@ Date: 2026-07-29
 | Cammilus John Baptist   | 48322288   | EE         | Scrum Master           | p                         |
 | Shreenidhi Arunachalam  | 48552453   | SE         | Engineer               | P                         |
 ## Scrum Board
-![[scrumweek1.png]]
+![Week 1 board](Images/scrumweek1.png)
 
 ## Sprint Backlog
 |                                  |              |                         |                                                                                                                                                                                                                                                                                                                                    |                          |

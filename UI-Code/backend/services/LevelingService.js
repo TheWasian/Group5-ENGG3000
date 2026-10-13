@@ -1,20 +1,19 @@
 //Leveling System
+// 3 levels, matching the live game: L1 0-499, L2 500-999, L3 1000-1999, win 2000.
 var LevelingService = {
-  MAX_LEVEL: 5,
+  MAX_LEVEL: 3,
   WIN_AT: 2000,
 
-  // Score -> level (1-5)
+  // Score -> level (1-3)
   getLevel: function (score) {
-    if (score >= 800) return 5;
-    if (score >= 600) return 4;
-    if (score >= 400) return 3;
-    if (score >= 200) return 2;
+    if (score >= 1000) return 3;
+    if (score >= 500) return 2;
     return 1;
   },
 
-  // Lowest score still counting as this level (drains debuffs can't push below it)
+  // Lowest score still counting as this level (drains can't push below it)
   minScoreForLevel: function (level) {
-    var table = { 1: 0, 2: 200, 3: 400, 4: 600, 5: 800 };
+    var table = { 1: 0, 2: 500, 3: 1000 };
     return table[level] || 0;
   },
 
@@ -23,14 +22,12 @@ var LevelingService = {
     return score >= this.WIN_AT;
   },
 
-  // Mole speed per level (This is based on the rough draft on the google docs)
+  // Spawn interval / mole lifetime per level (same numbers as gameLogic.js)
   getSettings: function (level) {
     var table = {
-      1: { spawnEvery: 5500, moleStaysUp: 5450 },
-      2: { spawnEvery: 4500, moleStaysUp: 4450 },
-      3: { spawnEvery: 3500, moleStaysUp: 3450 },
-      4: { spawnEvery: 3000, moleStaysUp: 2950 },
-      5: { spawnEvery: 2000, moleStaysUp: 1950 },
+      1: { spawnEvery: 3500, moleStaysUp: 3200 },
+      2: { spawnEvery: 2200, moleStaysUp: 1800 },
+      3: { spawnEvery: 1400, moleStaysUp: 1100 },
     };
     return table[level] || table[1];
   },
@@ -38,11 +35,9 @@ var LevelingService = {
   // Score and progression towards the next level
   bandFor: function (level) {
     var bands = {
-      1: { from: 0, to: 200, label: "Level 2" },
-      2: { from: 200, to: 400, label: "Level 3" },
-      3: { from: 400, to: 600, label: "Level 4" },
-      4: { from: 600, to: 800, label: "Level 5" },
-      5: { from: 800, to: 2000, label: "Win" },
+      1: { from: 0, to: 500, label: "Level 2" },
+      2: { from: 500, to: 1000, label: "Level 3" },
+      3: { from: 1000, to: 2000, label: "Win" },
     };
     return bands[level] || bands[1];
   },

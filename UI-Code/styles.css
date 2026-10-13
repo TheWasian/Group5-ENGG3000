@@ -216,9 +216,9 @@ h1 {
 .progress-container {
   width: 100%;
   height: 14px; 
-  background: #fff8e6;
+  background: #6b3f1d;
   border-radius: 8px;
-  border: 2px solid #6b3f1d;
+  border: 2px solid #40230f;
   overflow: hidden;
 }
 
@@ -229,12 +229,25 @@ h1 {
   transition: width 0.4s ease;
 }
 
-#progress-text {
+.progress-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+}
+
+#progress-text,
+#progress-pct {
   font-size: 13px;
   font-weight: 700;
   color: #fff;
   margin: 0;
   text-shadow: 1px 1px 2px #000;
+}
+
+#progress-pct {
+  color: #ffd23f;
 }
 
 #rewards {
