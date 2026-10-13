@@ -26,8 +26,8 @@ The firmware uses these ESP32 pins:
 
 | Signal | ESP32 pin |
 | --- | ---: |
-| Ultrasonic trigger | GPIO 26 |
-| Ultrasonic echo | GPIO 27 |
+| Ultrasonic trigger | GPIO 10 |
+| Ultrasonic echo | GPIO 3 |
 | RGB LED red | GPIO 25 |
 | RGB LED green | GPIO 15 |
 | RGB LED blue | GPIO 16 |
@@ -80,10 +80,40 @@ platformio run --target upload
    - `PULSE` - Select live pulse-time mode. The ESP32 continuously returns one echo duration per line in microseconds.
    - `ROOM_TEST <readings> <delay_ms>` - Collect a finite burst of raw echo durations with the specified delay between readings.
    - `STOP` - Stop pulse-time streaming and enter idle mode.
+      - `MULTI_CALIBRATE <readings> <delay_ms>` - The serial-connected ESP32 acts as the master, polls node 1 and node 2 over Wi-Fi, and prints three ranges followed by a trilaterated position for each frame.
+      - `MULTI_TEST <readings> <delay_ms>` - Alias for the multi-sensor test command.
+      - `CONFIG_SENSOR <id> <x_m> <y_m> <bearing_deg> <half_angle_deg> <max_range_m> <scale> <offset_m>` - Set sensor geometry and calibration correction for IDs 0 (master), 1 (left node), and 2 (right node).
+      - `CONFIG_SOLVER <max_rms_m> <max_residual_m> <huber_limit_m> <range_noise_m> <max_uncertainty_m>` - Set trilateration acceptance constants.
+      - `CONFIG_AREA <width_m> <start_y_m> <depth_m>` - Set the area accepted by the trilateration solver.
 
-   The firmware starts in `CALIBRATE` mode for compatibility. The calibration script selects this mode automatically before each request.
+   The firmware starts in `IDLE` mode. Send `CALIBRATE` before using the legacy single-sensor request format.
 
 The firmware is configured for an `esp32-s3-devkitc-1` board at `115200` baud. After uploading, the ESP32 waits for a sample-count request over serial.
+
+### Multi-sensor calibration
+
+Flash the existing `Sensor_Node_1/Sensor_Node_1.ino` and
+`Sensor_Node_2/Sensor_Node_2.ino` sketches to the two remote boards. They join
+the master's `Wacker5` access point at `192.168.4.1`; node 1 uses
+`192.168.4.101` and node 2 uses `192.168.4.102`. The master keeps the serial
+connection and performs the trilateration, so only its USB serial output needs
+to be captured.
+
+Example setup and run:
+
+```text
+CONFIG_SENSOR 0 0.40 0.30 19.29 15 4.5 1.0 0.0
+CONFIG_SENSOR 1 0.75 0.30 0.0 15 4.5 1.0 0.0
+CONFIG_SENSOR 2 1.10 0.30 -19.29 15 4.5 1.0 0.0
+CONFIG_AREA 1.5 0.0 3.0
+CONFIG_SOLVER 0.10 0.18 0.06 0.025 0.20
+MULTI_CALIBRATE 20 100
+```
+
+Each result is emitted as `MULTI,sequence,left_cm,master_cm,right_cm,POS,x_m,y_m,rms_m,count,reason`.
+At least two valid, geometrically consistent ranges are required for a position;
+three ranges are preferred. The scale and offset values are applied in metres
+before solving, allowing each sensor to use its own calibration constants.
 
 ## Serial Protocol
 
@@ -124,6 +154,11 @@ The graph runs continuously and displays only the latest 10 seconds of echo-time
 python scripts\plot_echo_times.py COM4 --baud 115200
 ```
 
+The script asks whether to use single-sensor or multi-sensor mode. In
+multi-sensor mode it confirms the node firmware, wiring, Wi-Fi addresses, and
+master USB connection before starting. The live graph displays the master
+sensor range in centimetres in that mode.
+
 ## Room Echo Test
 
 The room test compares the stability of the first returned echo when the sensor is stationary and no object is moving in range. Stop any other program using the serial port, then run:
@@ -131,6 +166,10 @@ The room test compares the stability of the first returned echo when the sensor 
 ```powershell
 python scripts\room_echo_test.py
 ```
+
+The room test also asks for the sensor mode and confirms the multi-sensor setup
+when selected. Multi-sensor runs use the master range from each `MULTI` record;
+single-sensor runs continue to measure raw echo time in microseconds.
 
 The script asks for the number of readings in each burst, then asks for a lower delay bound, upper delay bound, and delay increment in milliseconds. It automatically tests the requested increment between those bounds and also tests the upper bound if it is not an exact step. It estimates the total and remaining test time from these inputs, the ESP32 timeout, and the 500 ms settling pause. It prints the received serial records and creates:
 
@@ -152,8 +191,14 @@ The port, baud rate, and output paths can be overridden with `COM4`, `--baud`, `
    ```
 
 5. Enter the number of samples per distance.
-6. For each test position, enter the real distance in centimetres. Press Enter on an empty prompt when all distances have been collected.
-7. Keep the sensor and target aligned and stationary during each burst. Repeat calibration if readings contain many `-1` timeout values.
+6. Select single-sensor or multi-sensor mode and confirm the multi-sensor connection checklist if applicable.
+7. For each test position, enter the real distance in centimetres. Press Enter on an empty prompt when all distances have been collected.
+8. Keep the sensor and target aligned and stationary during each burst. Repeat calibration if readings contain many `-1` timeout values.
+
+In multi-sensor mode, the master polls the left, master, and right sensors in
+sequence and requests a one-second interval between records. The CSV stores
+the three measured ranges in separate columns, and the calibration graphs
+draw each sensor's data as a separate line.
 
 The port and baud rate can be overridden on the command line:
 
@@ -165,7 +210,7 @@ python scripts\calibrate_ultrasonic.py COM4 --baud 115200
 
 By default, the calibration run creates:
 
-- `output/ultrasonic_calibration.csv` - Every raw reading with its real distance and sample number.
+- `output/ultrasonic_calibration.csv` - Every raw reading with its real distance and sample number. Multi-sensor runs also include separate left, master, and right distance columns.
 - `output/ultrasonic_calibration.png` - Measured distance versus real distance, with the ideal reference line.
 - `output/ultrasonic_standard_deviation.png` - Average absolute measurement deviation at each real distance.
 - `output/ultrasonic_calibration_equation.txt` - The fitted coefficient, exponent, and $R^2$ value for production use.

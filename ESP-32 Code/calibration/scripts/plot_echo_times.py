@@ -14,6 +14,8 @@ from threading import Event, Thread
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
+from calibration_mode import SensorMode, parse_multi_master_distance, serial_command, select_sensor_mode
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PLATFORMIO_CONFIG = PROJECT_ROOT / "platformio.ini"
@@ -45,6 +47,8 @@ def main() -> None:
         baud_rate = args.baud or int(read_platformio_value("monitor_speed"))
     except ValueError as error:
         raise SystemExit(error) from error
+
+    sensor_mode: SensorMode = select_sensor_mode()
 
     try:
         import serial
@@ -98,11 +102,13 @@ def main() -> None:
     try:
         with serial.Serial(port, baud_rate, timeout=0.1) as connection:
             print(f"Listening for echo times on {port} at {baud_rate} baud.")
+            if sensor_mode == "multi":
+                print("Plotting the master sensor range in centimetres.")
             print("Press Enter in this terminal to stop capture.")
             Thread(target=wait_for_enter, daemon=True).start()
             time.sleep(2)
             connection.reset_input_buffer()
-            connection.write(b"PULSE\n")
+            connection.write(serial_command(sensor_mode, "PULSE", "MULTI_TEST 100 100"))
             start_time = time.monotonic()
 
             try:
@@ -114,10 +120,16 @@ def main() -> None:
 
                     serial_line = raw_line.decode("ascii", errors="replace").strip()
                     print(f"Received: {serial_line}", flush=True)
-                    try:
-                        echo_time = float(serial_line)
-                    except ValueError:
-                        continue
+                    if sensor_mode == "multi":
+                        echo_time = parse_multi_master_distance(serial_line)
+                        if echo_time is None:
+                            continue
+                        echo_time *= 100.0
+                    else:
+                        try:
+                            echo_time = float(serial_line)
+                        except ValueError:
+                            continue
 
                     if echo_time <= 0:
                         continue

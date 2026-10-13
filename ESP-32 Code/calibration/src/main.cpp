@@ -4,8 +4,12 @@
 #include <SPI.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
+#include <esp_system.h>
 
 #include "my_image.h"
+#include "../../Access_Point/Positioning.h"
+#include "../../Access_Point/RangeProtocol.h"
 
 #define TFT_MOSI 8
 #define TFT_SCLK 9
@@ -22,6 +26,7 @@ constexpr uint8_t RGB_RED_PIN = 25;
 constexpr uint8_t RGB_GREEN_PIN = 15;
 constexpr uint8_t RGB_BLUE_PIN = 16;
 constexpr uint8_t BUZZER_PIN = 17;
+constexpr bool BUZZER_ENABLED = false;
 constexpr bool RGB_LED_COMMON_ANODE = false;
 constexpr unsigned long RGB_UPDATE_INTERVAL_MS = 10;
 constexpr unsigned long RGB_CYCLE_PERIOD_MS = 6000;
@@ -29,12 +34,14 @@ constexpr unsigned long BATTERY_DISPLAY_DURATION_MS = 5000;
 constexpr float NIMH_EMPTY_VOLTAGE = 1.0f;
 constexpr float NIMH_FULL_VOLTAGE = 1.4f;
 constexpr unsigned long ECHO_TIMEOUT_US = 30000;
-const char *AP_SSID = "Wacker5-Demo";
+const char *AP_SSID = "Wacker5";
 const char *AP_PASSWORD = "PasswordWacker123456!";
 const IPAddress AP_IP(192, 168, 4, 1);
 const IPAddress AP_SUBNET(255, 255, 255, 0);
+const IPAddress NODE_IPS[2] = {IPAddress(192, 168, 4, 101), IPAddress(192, 168, 4, 102)};
 
 WebServer server(80);
+WiFiUDP udp;
 Adafruit_ST7735 display(TFT_CS, TFT_DC, TFT_RST);
 
 struct SoundNote
@@ -55,6 +62,7 @@ enum class SensorMode
   CALIBRATE,
   PULSE_TIME,
   ROOM_TEST,
+  MULTI_TEST,
   IDLE
 };
 
@@ -85,6 +93,47 @@ const char *sensorModeName();
 void updateDisplay();
 void showDistance(float distanceCm);
 void handleDisplayButton();
+void startMultiMeasurement();
+void updateMultiMeasurement();
+void finishMultiMeasurement();
+void configureSensor(const String &command);
+void configureSolver(const String &command);
+void configureArea(const String &command);
+
+struct MultiMeasurement
+{
+  float ranges[3] = {NAN, NAN, NAN};
+  uint32_t ages[3] = {};
+  uint8_t activeNode = 0;
+  uint32_t sequence = 0;
+  uint32_t deadline = 0;
+  enum Phase { IDLE, QUIET, WAIT_READY, WAIT_RANGE } phase = IDLE;
+};
+
+struct MultiTest
+{
+  bool active = false;
+  uint16_t remaining = 0;
+  uint32_t delayMs = 0;
+  uint32_t nextStart = 0;
+};
+
+MultiMeasurement multiMeasurement;
+MultiTest multiTest;
+uint32_t masterSession = 1;
+wam::Sensor sensors[3] = {
+    {0.40f, 0.30f, 19.29f, 15.0f, 4.5f},
+    {0.75f, 0.30f, 0.0f, 15.0f, 4.5f},
+    {1.10f, 0.30f, -19.29f, 15.0f, 4.5f}};
+float sensorScale[3] = {1.0f, 1.0f, 1.0f};
+float sensorOffset[3] = {0.0f, 0.0f, 0.0f};
+float solverMaxRms = 0.10f;
+float solverMaxResidual = 0.18f;
+float solverHuberLimit = 0.06f;
+float solverRangeNoise = 0.025f;
+float solverMaxUncertainty = 0.20f;
+wam::Area multiArea = {1.5f, 0.0f, 3.0f};
+uint32_t frameSequence = 0;
 
 void setup()
 {
@@ -111,7 +160,9 @@ void setup()
 
   Serial.begin(115200);
   delay(500);
+  masterSession = esp_random();
   startDemoAccessPoint();
+  udp.begin(wam::AP_UDP_PORT);
 }
 
 void loop()
@@ -119,24 +170,50 @@ void loop()
   server.handleClient();
   updateBuzzer();
   handleDisplayButton();
+  updateMultiMeasurement();
+
+  if (multiTest.active && multiMeasurement.phase == MultiMeasurement::IDLE &&
+      static_cast<int32_t>(millis() - multiTest.nextStart) >= 0)
+  {
+    startMultiMeasurement();
+  }
 
   if (Serial.available() > 0)
   {
     String command = Serial.readStringUntil('\n');
     command.trim();
 
+    if (command.startsWith("CONFIG_SENSOR "))
+    {
+      configureSensor(command);
+      return;
+    }
+    if (command.startsWith("CONFIG_SOLVER "))
+    {
+      configureSolver(command);
+      return;
+    }
+    if (command.startsWith("CONFIG_AREA "))
+    {
+      configureArea(command);
+      return;
+    }
+
     if (command.equalsIgnoreCase("CALIBRATE"))
     {
       sensorMode = SensorMode::CALIBRATE;
+        multiTest.active = false;
+        multiMeasurement.phase = MultiMeasurement::IDLE;
       updateLedForMode();
       updateDisplay();
-      playModeSound();
       Serial.println("MODE:CALIBRATE");
       return;
     }
     if (command.equalsIgnoreCase("PULSE"))
     {
       sensorMode = SensorMode::PULSE_TIME;
+        multiTest.active = false;
+        multiMeasurement.phase = MultiMeasurement::IDLE;
       updateLedForMode();
       updateDisplay();
       playModeSound();
@@ -146,6 +223,8 @@ void loop()
     if (command.equalsIgnoreCase("STOP"))
     {
       sensorMode = SensorMode::IDLE;
+        multiTest.active = false;
+        multiMeasurement.phase = MultiMeasurement::IDLE;
       updateLedForMode();
       updateDisplay();
       playModeSound();
@@ -169,6 +248,26 @@ void loop()
       updateDisplay();
       playModeSound();
       runRoomTest();
+      return;
+    }
+
+    if (sscanf(command.c_str(), "MULTI_TEST %d %lu", &requestedSamples, &requestedDelayMs) == 2 ||
+        sscanf(command.c_str(), "MULTI_CALIBRATE %d %lu", &requestedSamples, &requestedDelayMs) == 2)
+    {
+      if (requestedSamples < 1 || requestedSamples > 100 || requestedDelayMs > 60000)
+      {
+        Serial.println("ERROR:MULTI_TEST arguments must be 1-100 samples and 0-60000 ms delay");
+        return;
+      }
+      multiTest.active = true;
+      multiTest.remaining = static_cast<uint16_t>(requestedSamples);
+      multiTest.delayMs = requestedDelayMs;
+      multiTest.nextStart = millis();
+      sensorMode = SensorMode::MULTI_TEST;
+      updateLedForMode();
+      updateDisplay();
+      playModeSound();
+      Serial.println("MULTI_TEST_READY");
       return;
     }
 
@@ -298,6 +397,8 @@ const char *sensorModeName()
     return "PULSE";
   case SensorMode::ROOM_TEST:
     return "ROOM_TEST";
+  case SensorMode::MULTI_TEST:
+    return "MULTI_TEST";
   case SensorMode::IDLE:
     return "IDLE";
   }
@@ -327,6 +428,204 @@ void runRoomTest()
   updateDisplay();
 }
 
+void sendMasterControl(uint8_t type)
+{
+  wam::ControlPacket packet = {};
+  packet.magic = wam::PACKET_MAGIC;
+  packet.version = wam::PROTOCOL_VERSION;
+  packet.type = type;
+  packet.nodeId = multiMeasurement.activeNode;
+  packet.session = masterSession;
+  packet.sequence = multiMeasurement.sequence;
+  packet.crc = wam::packetCrc(packet);
+  udp.beginPacket(NODE_IPS[multiMeasurement.activeNode - 1], wam::NODE_UDP_PORT);
+  udp.write(reinterpret_cast<const uint8_t *>(&packet), sizeof(packet));
+  udp.endPacket();
+}
+
+void startMultiMeasurement()
+{
+  multiMeasurement = MultiMeasurement{};
+  multiMeasurement.sequence = ++frameSequence;
+  multiMeasurement.ranges[1] = readDistanceCm() * 0.01f;
+  if (multiMeasurement.ranges[1] >= 0.0f)
+  {
+    multiMeasurement.ranges[1] = multiMeasurement.ranges[1] * sensorScale[1] + sensorOffset[1];
+  }
+  multiMeasurement.activeNode = 1;
+  multiMeasurement.deadline = millis() + wam::QUIET_MS;
+  multiMeasurement.phase = MultiMeasurement::QUIET;
+}
+
+void advanceMultiMeasurement()
+{
+  if (multiMeasurement.activeNode == 1)
+  {
+    multiMeasurement.activeNode = 2;
+    multiMeasurement.deadline = millis() + wam::QUIET_MS;
+    multiMeasurement.phase = MultiMeasurement::QUIET;
+    return;
+  }
+  finishMultiMeasurement();
+}
+
+void updateMultiMeasurement()
+{
+  if (multiMeasurement.phase == MultiMeasurement::IDLE)
+  {
+    return;
+  }
+
+  const uint32_t now = millis();
+  if (multiMeasurement.phase == MultiMeasurement::QUIET)
+  {
+    if (static_cast<int32_t>(now - multiMeasurement.deadline) >= 0)
+    {
+      sendMasterControl(wam::ARM);
+      multiMeasurement.deadline = now + wam::REPLY_TIMEOUT_MS;
+      multiMeasurement.phase = MultiMeasurement::WAIT_READY;
+    }
+    return;
+  }
+
+  const int packetSize = udp.parsePacket();
+  if (packetSize <= 0)
+  {
+    if (static_cast<int32_t>(now - multiMeasurement.deadline) >= 0)
+    {
+      multiMeasurement.ranges[multiMeasurement.activeNode == 1 ? 0 : 2] = NAN;
+      advanceMultiMeasurement();
+    }
+    return;
+  }
+
+  if (udp.remoteIP() != NODE_IPS[multiMeasurement.activeNode - 1] ||
+      udp.remotePort() != wam::NODE_UDP_PORT)
+  {
+    while (udp.available()) udp.read();
+    return;
+  }
+
+  if (multiMeasurement.phase == MultiMeasurement::WAIT_READY &&
+      packetSize == static_cast<int>(sizeof(wam::ControlPacket)))
+  {
+    wam::ControlPacket packet = {};
+    const int count = udp.read(reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
+    if (count == sizeof(packet) && packet.magic == wam::PACKET_MAGIC &&
+        packet.version == wam::PROTOCOL_VERSION && packet.type == wam::READY &&
+        packet.nodeId == multiMeasurement.activeNode && packet.session == masterSession &&
+        packet.sequence == multiMeasurement.sequence && packet.reserved == 0 &&
+        packet.crc == wam::packetCrc(packet))
+    {
+      sendMasterControl(wam::FIRE);
+      multiMeasurement.deadline = now + wam::REPLY_TIMEOUT_MS;
+      multiMeasurement.phase = MultiMeasurement::WAIT_RANGE;
+    }
+    return;
+  }
+
+  if (multiMeasurement.phase == MultiMeasurement::WAIT_RANGE &&
+      packetSize == static_cast<int>(sizeof(wam::RangePacket)))
+  {
+    wam::RangePacket packet = {};
+    const int count = udp.read(reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
+    if (count == sizeof(packet) && packet.magic == wam::PACKET_MAGIC &&
+        packet.version == wam::PROTOCOL_VERSION && packet.type == wam::RANGES &&
+        packet.nodeId == multiMeasurement.activeNode && packet.session == masterSession &&
+        packet.sequence == multiMeasurement.sequence && packet.validMask <= 1 &&
+        packet.reserved == 0 && packet.crc == wam::packetCrc(packet))
+    {
+      const int index = multiMeasurement.activeNode == 1 ? 0 : 2;
+      multiMeasurement.ranges[index] = packet.validMask
+          ? packet.distanceMm * 0.001f * sensorScale[index] + sensorOffset[index]
+          : NAN;
+      multiMeasurement.ages[index] = now - multiMeasurement.deadline + wam::REPLY_TIMEOUT_MS;
+      advanceMultiMeasurement();
+    }
+  }
+}
+
+void finishMultiMeasurement()
+{
+  const uint32_t now = millis();
+  multiMeasurement.ages[1] = 0;
+  const wam::Fix fix = wam::solveBestAvailable(
+      sensors, multiMeasurement.ranges, multiArea, nullptr, solverMaxRms,
+      solverMaxResidual, solverHuberLimit, solverRangeNoise, solverMaxUncertainty,
+      0.10f, 0.25f, multiMeasurement.ages, 300);
+  Serial.printf("MULTI,%lu,%.3f,%.3f,%.3f,POS,%.3f,%.3f,%.3f,%u,%s\n",
+                static_cast<unsigned long>(multiMeasurement.sequence),
+                multiMeasurement.ranges[0] * 100.0f,
+                multiMeasurement.ranges[1] * 100.0f,
+                multiMeasurement.ranges[2] * 100.0f,
+                fix.valid ? fix.x : -1.0f, fix.valid ? fix.y : -1.0f,
+                fix.valid ? fix.rms : -1.0f, fix.count, fix.reason);
+  if (fix.valid)
+  {
+    lastDistanceCm = hypotf(fix.x - sensors[1].x, fix.y - sensors[1].y) * 100.0f;
+    showDistance(lastDistanceCm);
+  }
+  multiMeasurement.phase = MultiMeasurement::IDLE;
+  if (multiTest.remaining > 0) --multiTest.remaining;
+  if (multiTest.remaining == 0)
+  {
+    multiTest.active = false;
+    sensorMode = SensorMode::IDLE;
+    updateLedForMode();
+    updateDisplay();
+  }
+  else
+  {
+    multiTest.nextStart = now + multiTest.delayMs;
+  }
+}
+
+void configureSensor(const String &command)
+{
+  int id = -1;
+  float x = 0, y = 0, bearing = 0, halfAngle = 0, maxRange = 0, scale = 1, offset = 0;
+  if (sscanf(command.c_str(), "CONFIG_SENSOR %d %f %f %f %f %f %f %f",
+             &id, &x, &y, &bearing, &halfAngle, &maxRange, &scale, &offset) != 8 ||
+      id < 0 || id > 2 || maxRange <= 0 || scale <= 0)
+  {
+    Serial.println("ERROR:CONFIG_SENSOR id x y bearing halfAngle maxRange scale offset");
+    return;
+  }
+  sensors[id] = {x, y, bearing, halfAngle, maxRange};
+  sensorScale[id] = scale;
+  sensorOffset[id] = offset;
+  Serial.printf("SENSOR,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
+                id, x, y, bearing, halfAngle, maxRange, scale, offset);
+}
+
+void configureSolver(const String &command)
+{
+  if (sscanf(command.c_str(), "CONFIG_SOLVER %f %f %f %f %f",
+             &solverMaxRms, &solverMaxResidual, &solverHuberLimit,
+             &solverRangeNoise, &solverMaxUncertainty) != 5 ||
+      solverMaxRms <= 0 || solverMaxResidual <= 0 || solverHuberLimit <= 0 ||
+      solverRangeNoise <= 0 || solverMaxUncertainty <= 0)
+  {
+    Serial.println("ERROR:CONFIG_SOLVER maxRms maxResidual huberLimit rangeNoise maxUncertainty");
+    return;
+  }
+  Serial.printf("SOLVER,%.4f,%.4f,%.4f,%.4f,%.4f\n", solverMaxRms,
+                solverMaxResidual, solverHuberLimit, solverRangeNoise,
+                solverMaxUncertainty);
+}
+
+void configureArea(const String &command)
+{
+  if (sscanf(command.c_str(), "CONFIG_AREA %f %f %f", &multiArea.width,
+             &multiArea.startY, &multiArea.depth) != 3 || multiArea.width <= 0 ||
+      multiArea.depth <= 0 || multiArea.startY < 0)
+  {
+    Serial.println("ERROR:CONFIG_AREA width startY depth");
+    return;
+  }
+  Serial.printf("AREA,%.4f,%.4f,%.4f\n", multiArea.width, multiArea.startY, multiArea.depth);
+}
+
 void updateLedForMode()
 {
   bool red = false;
@@ -344,6 +643,10 @@ void updateLedForMode()
   case SensorMode::ROOM_TEST:
     red = true;
     green = true;
+    break;
+  case SensorMode::MULTI_TEST:
+    red = true;
+    blue = true;
     break;
   case SensorMode::IDLE:
     updateIdleLed();
@@ -426,6 +729,11 @@ void showBatteryLevel()
 
 void startSound(const SoundNote *notes, uint8_t noteCount)
 {
+  if (!BUZZER_ENABLED)
+  {
+    return;
+  }
+
   noTone(BUZZER_PIN);
   activeSoundNotes = notes;
   activeSoundCount = noteCount;
@@ -436,6 +744,11 @@ void startSound(const SoundNote *notes, uint8_t noteCount)
 
 void updateBuzzer()
 {
+  if (!BUZZER_ENABLED)
+  {
+    return;
+  }
+
   if (activeSoundNotes == nullptr || activeSoundIndex >= activeSoundCount)
   {
     return;
@@ -484,6 +797,9 @@ void playModeSound()
     startSound(pulseSound, sizeof(pulseSound) / sizeof(pulseSound[0]));
     break;
   case SensorMode::ROOM_TEST:
+    startSound(roomTestSound, sizeof(roomTestSound) / sizeof(roomTestSound[0]));
+    break;
+  case SensorMode::MULTI_TEST:
     startSound(roomTestSound, sizeof(roomTestSound) / sizeof(roomTestSound[0]));
     break;
   case SensorMode::IDLE:
