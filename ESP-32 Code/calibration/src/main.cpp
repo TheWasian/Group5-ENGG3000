@@ -1,9 +1,24 @@
 #include <Arduino.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
+#include <SPI.h>
+#include <WebServer.h>
+#include <WiFi.h>
+
+#include "my_image.h"
+
+#define TFT_MOSI 8
+#define TFT_SCLK 9
+#define TFT_MISO -1
+#define TFT_CS -1
+#define TFT_DC 14
+#define TFT_RST 21
+#define BUTTON_PIN 40
 
 constexpr uint8_t TRIG_PIN = 10;
 constexpr uint8_t ECHO_PIN = 3;
 constexpr uint8_t BATTERY_PIN = 4;
-constexpr uint8_t RGB_RED_PIN = 7;
+constexpr uint8_t RGB_RED_PIN = 25;
 constexpr uint8_t RGB_GREEN_PIN = 15;
 constexpr uint8_t RGB_BLUE_PIN = 16;
 constexpr uint8_t BUZZER_PIN = 17;
@@ -14,6 +29,13 @@ constexpr unsigned long BATTERY_DISPLAY_DURATION_MS = 5000;
 constexpr float NIMH_EMPTY_VOLTAGE = 1.0f;
 constexpr float NIMH_FULL_VOLTAGE = 1.4f;
 constexpr unsigned long ECHO_TIMEOUT_US = 30000;
+const char *AP_SSID = "Wacker5-Demo";
+const char *AP_PASSWORD = "PasswordWacker123456!";
+const IPAddress AP_IP(192, 168, 4, 1);
+const IPAddress AP_SUBNET(255, 255, 255, 0);
+
+WebServer server(80);
+Adafruit_ST7735 display(TFT_CS, TFT_DC, TFT_RST);
 
 struct SoundNote
 {
@@ -44,6 +66,8 @@ uint8_t activeSoundCount = 0;
 uint8_t activeSoundIndex = 0;
 bool soundNoteStarted = false;
 unsigned long soundPhaseStartedMs = 0;
+bool lastButtonState = HIGH;
+float lastDistanceCm = -1.0f;
 
 float readDistanceCm();
 unsigned long readEchoDurationUs();
@@ -55,6 +79,12 @@ void showBatteryLevel();
 void startSound(const SoundNote *notes, uint8_t noteCount);
 void updateBuzzer();
 void playModeSound();
+void startDemoAccessPoint();
+void handleDemoStatus();
+const char *sensorModeName();
+void updateDisplay();
+void showDistance(float distanceCm);
+void handleDisplayButton();
 
 void setup()
 {
@@ -64,20 +94,31 @@ void setup()
   pinMode(RGB_GREEN_PIN, OUTPUT);
   pinMode(RGB_BLUE_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
   digitalWrite(TRIG_PIN, LOW);
+  SPI.begin(TFT_SCLK, TFT_MISO, TFT_MOSI, TFT_CS);
+  display.initR(INITR_BLACKTAB);
+  display.setRotation(1);
+  display.setTextWrap(false);
+  updateDisplay();
   analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
   showBatteryLevel();
   delay(BATTERY_DISPLAY_DURATION_MS);
+  display.setRotation(1);
+  updateDisplay();
   updateLedForMode();
   startSound(startupJingle, sizeof(startupJingle) / sizeof(startupJingle[0]));
 
   Serial.begin(115200);
   delay(500);
+  startDemoAccessPoint();
 }
 
 void loop()
 {
+  server.handleClient();
   updateBuzzer();
+  handleDisplayButton();
 
   if (Serial.available() > 0)
   {
@@ -88,6 +129,7 @@ void loop()
     {
       sensorMode = SensorMode::CALIBRATE;
       updateLedForMode();
+      updateDisplay();
       playModeSound();
       Serial.println("MODE:CALIBRATE");
       return;
@@ -96,6 +138,7 @@ void loop()
     {
       sensorMode = SensorMode::PULSE_TIME;
       updateLedForMode();
+      updateDisplay();
       playModeSound();
       Serial.println("MODE:PULSE");
       return;
@@ -104,6 +147,7 @@ void loop()
     {
       sensorMode = SensorMode::IDLE;
       updateLedForMode();
+      updateDisplay();
       playModeSound();
       Serial.println("MODE:IDLE");
       return;
@@ -122,6 +166,7 @@ void loop()
       roomTestDelayMs = requestedDelayMs;
       sensorMode = SensorMode::ROOM_TEST;
       updateLedForMode();
+      updateDisplay();
       playModeSound();
       runRoomTest();
       return;
@@ -132,6 +177,8 @@ void loop()
       const int burstNumber = command.toInt();
       const int samples = (burstNumber >= 1 && burstNumber <= 100) ? burstNumber : 1;
       String output = String(readDistanceCm(), 2);
+      lastDistanceCm = output.toFloat();
+      showDistance(lastDistanceCm);
 
       for (int i = 1; i < samples; ++i)
       {
@@ -146,7 +193,10 @@ void loop()
 
   if (sensorMode == SensorMode::PULSE_TIME)
   {
-    Serial.println(readEchoDurationUs());
+    const unsigned long duration = readEchoDurationUs();
+    Serial.println(duration);
+    lastDistanceCm = duration == 0 ? -1.0f : duration * 0.0343f / 2.0f;
+    showDistance(lastDistanceCm);
     delay(50);
   }
 
@@ -156,6 +206,102 @@ void loop()
   }
 
   updateBuzzer();
+}
+
+void startDemoAccessPoint()
+{
+  WiFi.mode(WIFI_AP);
+  if (!WiFi.softAPConfig(AP_IP, AP_IP, AP_SUBNET) || !WiFi.softAP(AP_SSID, AP_PASSWORD))
+  {
+    Serial.println("ERROR: failed to start demo Wi-Fi network");
+    return;
+  }
+
+  server.on("/", HTTP_GET, []()
+  {
+    const String page =
+        "<!doctype html><html><head><meta name=viewport content='width=device-width,initial-scale=1'>"
+        "<title>Ultrasonic Calibration</title></head><body>"
+        "<h1>Ultrasonic Calibration</h1><p>Demo Wi-Fi network is active.</p>"
+        "<p>Mode: <strong>" + String(sensorModeName()) + "</strong></p>"
+        "<p><a href='/api/status'>View status JSON</a></p></body></html>";
+    server.send(200, "text/html", page);
+  });
+  server.on("/api/status", HTTP_GET, handleDemoStatus);
+  server.begin();
+
+  Serial.print("Demo Wi-Fi: ");
+  Serial.print(AP_SSID);
+  Serial.println(" / http://192.168.4.1/");
+}
+
+void handleDemoStatus()
+{
+  String status = "{\"ssid\":\"" + String(AP_SSID) + "\",\"mode\":\"";
+  status += sensorModeName();
+  status += "\",\"ip\":\"";
+  status += WiFi.softAPIP().toString();
+  status += "\"}";
+  server.send(200, "application/json", status);
+}
+
+void updateDisplay()
+{
+  display.fillScreen(ST77XX_BLACK);
+  display.setTextColor(ST77XX_WHITE);
+  display.setTextSize(2);
+  display.setCursor(4, 4);
+  display.print("Wacker5");
+  display.setTextSize(1);
+  display.setCursor(4, 30);
+  display.print("MODE: ");
+  display.println(sensorModeName());
+  display.setCursor(4, 46);
+  display.println("Button: measure");
+  showDistance(lastDistanceCm);
+}
+
+void showDistance(float distanceCm)
+{
+  display.fillRect(0, 68, 160, 35, ST77XX_BLACK);
+  display.setTextColor(ST77XX_CYAN);
+  display.setTextSize(2);
+  display.setCursor(4, 72);
+  if (distanceCm < 0.0f)
+  {
+    display.print("Distance: --");
+    return;
+  }
+
+  display.print(distanceCm, 1);
+  display.print(" cm");
+}
+
+void handleDisplayButton()
+{
+  const bool buttonState = digitalRead(BUTTON_PIN);
+  if (lastButtonState == HIGH && buttonState == LOW)
+  {
+    lastDistanceCm = readDistanceCm();
+    showDistance(lastDistanceCm);
+  }
+  lastButtonState = buttonState;
+}
+
+const char *sensorModeName()
+{
+  switch (sensorMode)
+  {
+  case SensorMode::CALIBRATE:
+    return "CALIBRATE";
+  case SensorMode::PULSE_TIME:
+    return "PULSE";
+  case SensorMode::ROOM_TEST:
+    return "ROOM_TEST";
+  case SensorMode::IDLE:
+    return "IDLE";
+  }
+  return "UNKNOWN";
 }
 
 void runRoomTest()
@@ -178,6 +324,7 @@ void runRoomTest()
   Serial.println("ROOM_TEST_DONE");
   sensorMode = SensorMode::IDLE;
   updateLedForMode();
+  updateDisplay();
 }
 
 void updateLedForMode()
@@ -261,6 +408,8 @@ void showBatteryLevel()
       (voltage - NIMH_EMPTY_VOLTAGE) / (NIMH_FULL_VOLTAGE - NIMH_EMPTY_VOLTAGE),
       0.0f,
       1.0f);
+  display.setRotation(0);
+  display.drawRGBBitmap(0, 0, my_image, MY_IMAGE_WIDTH, MY_IMAGE_HEIGHT);
 
   if (charge < 0.5f)
   {

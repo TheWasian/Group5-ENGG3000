@@ -28,6 +28,17 @@ The firmware uses these ESP32 pins:
 | --- | ---: |
 | Ultrasonic trigger | GPIO 26 |
 | Ultrasonic echo | GPIO 27 |
+| RGB LED red | GPIO 25 |
+| RGB LED green | GPIO 15 |
+| RGB LED blue | GPIO 16 |
+| Buzzer | GPIO 17 |
+| LCD MOSI | GPIO 8 |
+| LCD SCLK | GPIO 9 |
+| LCD DC | GPIO 14 |
+| LCD reset | GPIO 21 |
+| LCD CS | Not connected |
+| LCD MISO | Not connected |
+| LCD button | GPIO 40 |
 | Ground | GND |
 
 Connect the sensor's power according to its datasheet. ESP32 GPIO pins are not 5 V tolerant. If the ultrasonic module outputs a 5 V echo signal, use an appropriate voltage divider or level shifter before connecting it to GPIO 27.
@@ -72,7 +83,7 @@ platformio run --target upload
 
    The firmware starts in `CALIBRATE` mode for compatibility. The calibration script selects this mode automatically before each request.
 
-The firmware is configured for an `esp32dev` board at `115200` baud. After uploading, the ESP32 waits for a sample-count request over serial.
+The firmware is configured for an `esp32-s3-devkitc-1` board at `115200` baud. After uploading, the ESP32 waits for a sample-count request over serial.
 
 ## Serial Protocol
 

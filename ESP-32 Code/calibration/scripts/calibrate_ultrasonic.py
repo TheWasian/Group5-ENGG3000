@@ -346,7 +346,9 @@ def main() -> None:
     try:
         with serial.Serial(port, baud_rate, timeout=3) as connection:
             print(f"Connected to {port} at {baud_rate} baud.")
-            sleep(2)
+            # Opening the port resets the ESP32; wait for its startup delay before sending commands.
+            sleep(6)
+            connection.reset_input_buffer()
             results = collect_distances(connection, sample_count)
     except serial.SerialException as error:
         raise SystemExit(f"Could not open or read serial port {port!r}: {error}") from error
