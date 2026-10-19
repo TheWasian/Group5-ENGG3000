@@ -1584,7 +1584,6 @@ body.env-toxic .game-container {
 }
 
 /* Player Marker: The hammer goes where player was last seen and only swings when a hit is made
-  changed because the sensor hammer was invisible - alley */
 
 .player-marker .css-hammer {
   position: relative;
