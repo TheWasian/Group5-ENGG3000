@@ -1583,9 +1583,9 @@ body.env-toxic .game-container {
   filter: drop-shadow(0 0 10px rgba(100, 255, 0, 0.2));
 }
 
+/* Player Marker: The hammer goes where player was last seen and only swings when a hit is made
+  changed because the sensor hammer was invisible - alley */
 
-/* changed because the sensor hammer was invisible - alley */
-/* The player marker parks on the last hole and swings on a hit. */
 .player-marker .css-hammer {
   position: relative;
   width: 85px;
@@ -1630,13 +1630,13 @@ body.env-toxic .game-container {
   transform: rotate(-2deg);
 }
 
-/* No fresh fix: keep it parked but dimmed. */
+/* didn't change much just dimmed the hammer when parked */
 .player-marker.stale {
   opacity: 0.4;
   filter: grayscale(0.35) drop-shadow(0 4px 3px rgba(0, 0, 0, 0.3));
 }
 
-/* One short swing per hit. */
+/*Swing animation and only once per hit*/
 .player-marker.swinging .css-hammer {
   animation: hammerSwing 0.22s ease-out;
 }
