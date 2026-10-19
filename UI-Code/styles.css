@@ -1583,3 +1583,67 @@ body.env-toxic .game-container {
   filter: drop-shadow(0 0 10px rgba(100, 255, 0, 0.2));
 }
 
+
+/* changed because the sensor hammer was invisible - alley */
+/* The player marker parks on the last hole and swings on a hit. */
+.player-marker .css-hammer {
+  position: relative;
+  width: 85px;
+  height: 105px;
+  transform-origin: 45% 88%;
+}
+
+.player-marker .hammer-handle {
+  position: absolute;
+  width: 17px;
+  height: 82px;
+  left: 35px;
+  top: 20px;
+  background: linear-gradient(90deg, #6f3518 0%, #a95727 22%, #d27a3d 48%, #a95727 75%, #683016 100%);
+  border: 3px solid #4b2413;
+  border-radius: 10px 10px 14px 14px;
+  transform: rotate(-6deg);
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+.player-marker .hammer-head {
+  position: absolute;
+  width: 67px;
+  height: 34px;
+  left: 6px;
+  top: 6px;
+  background: linear-gradient(to bottom, #9b9b9b 0%, #777 42%, #5a5a5a 100%);
+  border: 3px solid #353535;
+  border-radius: 15px 13px 13px 15px;
+  box-shadow: 2px 4px 0 rgba(0, 0, 0, 0.28), inset 0 3px 0 rgba(255, 255, 255, 0.22);
+}
+
+.player-marker .hammer-head::before {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 6px;
+  left: 10px;
+  top: 5px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  transform: rotate(-2deg);
+}
+
+/* No fresh fix: keep it parked but dimmed. */
+.player-marker.stale {
+  opacity: 0.4;
+  filter: grayscale(0.35) drop-shadow(0 4px 3px rgba(0, 0, 0, 0.3));
+}
+
+/* One short swing per hit. */
+.player-marker.swinging .css-hammer {
+  animation: hammerSwing 0.22s ease-out;
+}
+
+@keyframes hammerSwing {
+  0% { transform: rotate(0deg); }
+  45% { transform: rotate(38deg); }
+  100% { transform: rotate(0deg); }
+}
+

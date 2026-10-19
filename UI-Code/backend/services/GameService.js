@@ -1,7 +1,4 @@
-//main Orchestrator for the services, while calling the HTML through GameView
-// Rules are an exact copy of the live game (gameLogic.js): flat points,
-// no streak multiplier (see StreakService.js), 3 levels, win at 2000.
-
+// GameService handles the rules and states and calls other services
 var GameService = {
   ROUND_TIME: 300,
   START_LIVES: 3,
@@ -10,9 +7,11 @@ var GameService = {
   countdownTimer: null,
   moleTimer: null,
   moleLifetimeTimer: null,
+  freezeStartedAt: 0,
+  moleSpawnedAt: 0,
 
-  // default game state
-  newGame: function () {
+  // Default game state
+  newGameState: function () {
     return {
       score: 0,
       level: 1,
@@ -22,63 +21,73 @@ var GameService = {
       streak: 0, // tracked only for the standalone StreakService module
       multiplier: 1, // scoring is flat: multiplier is never applied (D7)
       freezeTicksLeft: 0, // countdown ticks still to burn before the clock runs
-      mole: null, // mole class has (mole and type of mole) and if no mole shows up it is null
+      mole: null, // { hole, type }, or null when no mole is up
       playing: false,
     };
   },
 
-//main game starting logic
-  start: function () {
-    this.game = this.newGame();
+  // Start (or restart) a game
+  startGame: function () {
+    this.game = this.newGameState();
     this.game.playing = true;
     var g = this.game;
 
-    this.clearTimers();
+    this.clearGameTimers();
     GameView.hideAllMoles();
     GameView.resetRewards();
     GameView.setScore(0);
     GameView.setLevel(1);
     GameView.setLives(g.lives);
     GameView.setTimer(g.timeLeft, false);
-    GameView.setEnvironment(EnvironmentService.themeFor(1));
-    this.refreshProgress();
+    GameView.setEnvironment(EnvironmentService.environmentForLevel(1));
+    this.renderProgress();
     GameView.say("Move to the physical hole containing the mole!");
     GameView.setStartButtonText("RESTART GAME");
     GameView.hideEndScreens();
 
-    //this function ensures the mole spawn is done within this file while mole file has the actual type of moles
     var self = this;
     this.countdownTimer = setInterval(function () {
-      self.tickSecond();
+      self.tickClock();
     }, 1000);
-    this.spawnLoop();
+    this.startMoleSpawner();
   },
 
-  // One game second passes. While frozen the tick is consumed by the freeze
-  // and the clock does not drop (same as gameLogic.js tick()).
-  tickSecond: function () {
+  // One game second; a freeze eats the tick
+  tickClock: function () {
     var g = this.game;
     if (!g || !g.playing) return;
     if (g.freezeTicksLeft > 0) {
       g.freezeTicksLeft -= 1;
       GameView.setTimer(g.timeLeft, g.freezeTicksLeft > 0);
-      if (g.freezeTicksLeft <= 0) GameView.say("Freeze ended! Keep whacking!");
+      if (g.freezeTicksLeft <= 0) {
+        this.recordFreezeEnded();
+        GameView.say("Freeze ended! Keep whacking!");
+      }
       return;
     }
     g.timeLeft -= 1;
     GameView.setTimer(g.timeLeft, false);
-    this.checkEnd();
+    this.checkGameOver();
   },
 
-  // Freeze the countdown for N ticks
-  freezeTimer: function (seconds) {
+  // Freeze the countdown (freeze mole)
+  freezeClock: function (seconds) {
     var g = this.game;
     if (!g) return;
     g.freezeTicksLeft += seconds;
+    this.freezeStartedAt = performance.now();
     GameView.setTimer(g.timeLeft, true);
   },
 
-  clearTimers: function () {
+  // Report how long the clock stayed frozen (frontend metrics panel)
+  recordFreezeEnded: function () {
+    if (this.freezeStartedAt && typeof FrontendMetrics !== "undefined") {
+      FrontendMetrics.recordFreeze(performance.now() - this.freezeStartedAt);
+      this.freezeStartedAt = 0;
+    }
+  },
+
+  clearGameTimers: function () {
     clearInterval(this.countdownTimer);
     clearInterval(this.moleTimer);
     clearTimeout(this.moleLifetimeTimer);
@@ -87,12 +96,10 @@ var GameService = {
     this.moleLifetimeTimer = null;
   },
 
-  // Mole logic:
-
-  // Spawn one mole at a time, every few milliseconds
-  spawnLoop: function () {
+  // Spawn one mole at a time, every levelingSpeed(level) milliseconds
+  startMoleSpawner: function () {
     clearInterval(this.moleTimer);
-    var wait = LevelingService.getSettings(this.game.level).spawnEvery;
+    var wait = LevelingService.levelingSpeed(this.game.level);
     var self = this;
     this.moleTimer = setInterval(function () {
       if (self.game.playing) self.spawnMole();
@@ -100,40 +107,44 @@ var GameService = {
     this.spawnMole();
   },
 
-  //This is used to emulate mole spawning (do not remove it)
+  // Show one mole. forcedType/forcedHole are for tests; omit them for play.
   spawnMole: function (forcedType, forcedHole) {
     var g = this.game;
     if (!g || !g.playing) return;
     var holeCount = GameView.holes.length;
 
-    //if not used for testing it frees the holes
     var hole = forcedHole;
     if (hole === undefined) {
       var lastHole = -1;
       if (g.mole) lastHole = g.mole.hole;
-      hole = this.freeHole(lastHole, holeCount);
+      hole = this.pickFreeHole(lastHole, holeCount);
     }
-    // if not used for testing then it is meant to be a bit random
     var type = forcedType;
-    if (!type) type = MoleService.pickType(g.level);
+    if (!type) type = MoleService.pickMoleType(g.level);
 
     g.mole = { hole: hole, type: type };
-    GameView.showMole(hole, type, MoleService.variantFor(type, g.level));
+    this.moleSpawnedAt = performance.now();
 
-    //Delayed response = mole escapes and user gets damage
-    var staysUp = MoleService.lifetimeFor(
+    var renderStart = performance.now();
+    GameView.showMole(hole, type, MoleService.moleVariant(type, g.level));
+    if (typeof FrontendMetrics !== "undefined") {
+      FrontendMetrics.recordMoleRender(performance.now() - renderStart);
+    }
+
+    // Escaped: only a normal mole costs a life
+    var staysUp = MoleService.moleLifetime(
       type,
-      LevelingService.getSettings(g.level).moleStaysUp
+      LevelingService.levelingLifetime(g.level)
     );
     clearTimeout(this.moleLifetimeTimer);
     var self = this;
     this.moleLifetimeTimer = setTimeout(function () {
-      self.onMoleMissed();
+      self.moleEscaped();
     }, staysUp);
   },
 
   // A free hole, preferably not the same one twice in a row
-  freeHole: function (lastHole, holeCount) {
+  pickFreeHole: function (lastHole, holeCount) {
     if (holeCount > 1) {
       var hole = Math.floor(Math.random() * holeCount);
       if (hole === lastHole) hole = (hole + 1) % holeCount;
@@ -142,23 +153,27 @@ var GameService = {
     return 0;
   },
 
-  // Mole escaped: only a normal mole costs a life (live behaviour).
-  onMoleMissed: function () {
+  // Mole escaped: only a normal mole costs a life (live behaviour)
+  moleEscaped: function () {
     var g = this.game;
     if (!g || !g.playing || !g.mole) return { escaped: false };
     var type = g.mole.type;
+    var lifetime = performance.now() - this.moleSpawnedAt;
     g.mole = null;
     GameView.hideAllMoles();
     clearTimeout(this.moleLifetimeTimer);
+    if (type === "golden" && typeof FrontendMetrics !== "undefined") {
+      FrontendMetrics.recordGoldenLifetime(lifetime);
+    }
     if (type === "normal") this.loseLife("Too slow! You missed the mole!");
     return { escaped: true, type: type };
   },
 
-  // Esp32 Recognising a Whacked mole
-
-  whack: function (holeIndex, source) {
+  // Whack at a hole.
+  whackHole: function (holeIndex, source) {
     var g = this.game;
     if (!g || !g.playing || !Number.isInteger(holeIndex)) return { hit: false };
+    var started = performance.now();
     source = source || "mouse";
 
     // Wrong hole (or nothing up): no damage, no streak reset
@@ -172,102 +187,112 @@ var GameService = {
     GameView.hideAllMoles();
     clearTimeout(this.moleLifetimeTimer);
 
-    if (type === "bomb") return this.hitBomb();
-    if (type === "golden") return this.hitGolden();
-    if (type === "frozen") return this.hitFrozen();
-    return this.hitNormal();
+    var result;
+    if (type === "bomb") result = this.bombMole();
+    else if (type === "golden") result = this.goldenMole();
+    else if (type === "frozen") result = this.frozenMole();
+    else result = this.normalMole();
+
+    if (typeof FrontendMetrics !== "undefined") {
+      FrontendMetrics.recordWhack(performance.now() - started, type);
+    }
+    return result;
   },
 
-  // Normal: +50 flat (no streak multiplier anywhere in the pipeline)
-  hitNormal: function () {
+  // Normal mole: +50 flat (no streak multiplier anywhere in the pipeline)
+  normalMole: function () {
     var g = this.game;
-    var points = MoleService.POINTS.normal;
+    var points = MoleService.MOLE_POINTS.normal;
     g.score += points;
     GameView.say("Whack! +" + points + " points");
     GameView.setScore(g.score);
-    this.applyLevel();
-    this.refreshProgress();
-    this.checkEnd();
+    this.levelingApply();
+    this.renderProgress();
+    this.checkGameOver();
     return { hit: true, points: points };
   },
 
   // Bomb: -1 life, 0 points
-  hitBomb: function () {
+  bombMole: function () {
     this.loseLife("Boom! You hit a bomb!");
     return { hit: true, bomb: true, points: 0 };
   },
 
-  // Golden: +200 flat
-  hitGolden: function () {
+  // Golden mole: +200 flat
+  goldenMole: function () {
     var g = this.game;
-    var points = MoleService.POINTS.golden;
+    var points = MoleService.MOLE_POINTS.golden;
     g.score += points;
     GameView.say("Golden Mole! +" + points + " points! ");
     GameView.setScore(g.score);
-    this.applyLevel();
-    this.refreshProgress();
-    this.checkEnd();
+    this.levelingApply();
+    this.renderProgress();
+    this.checkGameOver();
     return { hit: true, points: points };
   },
 
-  // Frozen: +50 flat and the countdown freezes for 5s
-  hitFrozen: function () {
+  // Frozen mole: +50 flat and the countdown freezes for 5s
+  frozenMole: function () {
     var g = this.game;
-    var points = MoleService.POINTS.frozen;
+    var points = MoleService.MOLE_POINTS.frozen;
     g.score += points;
     GameView.say(
       "Frozen Mole! +" + points + " points! Timer frozen for " + MoleService.FREEZE_SECONDS + "s! "
     );
     GameView.setScore(g.score);
-    this.freezeTimer(MoleService.FREEZE_SECONDS);
-    this.applyLevel();
-    this.refreshProgress();
-    this.checkEnd();
+    this.freezeClock(MoleService.FREEZE_SECONDS);
+    this.levelingApply();
+    this.renderProgress();
+    this.checkGameOver();
     return { hit: true, points: points, freezeTicks: g.freezeTicksLeft };
   },
 
-  // Leveling system
-  applyLevel: function () {
+  // Score -> level, then speed + theme
+  levelingApply: function () {
     var g = this.game;
-    var earned = LevelingService.getLevel(g.score);
+    var started = performance.now();
+    var earned = LevelingService.levelingLevelForScore(g.score);
     if (earned > g.maxLevel) {
       g.maxLevel = earned;
       g.level = earned;
       GameView.setLevel(earned);
-      GameView.setEnvironment(EnvironmentService.themeFor(earned));
-      GameView.say("Level " + earned + "! (" + EnvironmentService.themeFor(earned) + ")");
-      this.spawnLoop(); // faster moles at higher levels
+      GameView.setEnvironment(EnvironmentService.environmentForLevel(earned));
+      GameView.say("Level " + earned + "! (" + EnvironmentService.environmentForLevel(earned) + ")");
+      this.startMoleSpawner(); // faster moles at higher levels
     }
     if (g.score >= 50) GameView.unlockReward("bronze-reward");
     if (g.score >= 250) GameView.unlockReward("silver-reward");
     if (g.score >= 500) GameView.unlockReward("gold-reward");
+    if (typeof FrontendMetrics !== "undefined") {
+      FrontendMetrics.recordLevelTransition(performance.now() - started);
+    }
   },
 
-  //Progress bar: pinned to the highest level reached
-  refreshProgress: function () {
-    var p = LevelingService.getProgressInBand(this.game.score, this.game.maxLevel);
+  // Progress bar stays on the highest level
+  renderProgress: function () {
+    var p = LevelingService.levelingProgressInBand(this.game.score, this.game.maxLevel);
     GameView.setProgress(p.done, p.total, p.label);
   },
 
-  //lose life system
+  // Lose a life
   loseLife: function (prefix) {
     var g = this.game;
     g.lives -= 1;
     GameView.setLives(g.lives);
     GameView.flashDamage();
     GameView.say(prefix + " " + g.lives + " " + (g.lives === 1 ? "life" : "lives") + " left.");
-    this.checkEnd();
+    this.checkGameOver();
   },
 
-  //end system
-  checkEnd: function () {
+  // Win / lose / still playing
+  checkGameOver: function () {
     var g = this.game;
-    var result = GameConditionService.check(g.score, g.lives, g.timeLeft);
+    var result = GameConditionService.checkGameCondition(g.score, g.lives, g.timeLeft);
     if (result === "playing") return result;
     g.playing = false;
-    this.clearTimers();
+    this.clearGameTimers();
     GameView.hideAllMoles();
-    // Record best score; frontend draws it later.
+    // Record best score and frontend draws it later (leaderboard still not working yet)
     var record = HighScoreService.submit(g.score);
     g.best = record.best;
     g.isNewBest = record.isNewBest;
