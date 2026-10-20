@@ -1,4 +1,9 @@
 //Streaks Logic
+// STANDALONE / NOT WIRED IN (decision D7): the live game has no streak
+// display and scores flat (+50 / +200), so GameService does not call this
+// module. It is kept as an optional, unit-tested feature module — see
+// tests/test-streak.js, which reports a PARTIAL for "streak applied during
+// play" until a decision is made to reintroduce streaks.
 var StreakService = {
   MAX_MULTIPLIER: 3,
 

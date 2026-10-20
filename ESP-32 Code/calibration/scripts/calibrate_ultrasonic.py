@@ -9,11 +9,29 @@ import math
 import statistics
 from pathlib import Path
 from time import sleep
+from typing import Union
+
+try:
+    from .calibration_mode import (
+        SensorMode,
+        parse_multi_sensor_distances,
+        serial_command,
+        select_sensor_mode,
+    )
+except ImportError:
+    from calibration_mode import (
+        SensorMode,
+        parse_multi_sensor_distances,
+        serial_command,
+        select_sensor_mode,
+    )
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PLATFORMIO_CONFIG = PROJECT_ROOT / "platformio.ini"
 OUTPUT_DIR = PROJECT_ROOT / "output"
+SENSOR_NAMES = ("left", "master", "right")
+CalibrationMeasurements = Union[list[float], dict[str, list[float]]]
 
 
 def read_platformio_value(option: str, config_path: Path = PLATFORMIO_CONFIG) -> str:
@@ -36,31 +54,55 @@ def parse_measurements(line: str) -> list[float]:
     return [float(value) for value in values]
 
 
-def request_measurements(connection: object, sample_count: int) -> list[float]:
+def request_measurements(
+    connection: object, sample_count: int, sensor_mode: SensorMode
+) -> CalibrationMeasurements:
     """Request and read one burst of measurements from the ESP32."""
     connection.reset_input_buffer()
-    connection.write(b"CALIBRATE\n")
-    connection.write(f"{sample_count}\n".encode("ascii"))
+    if sensor_mode == "single":
+        connection.write(serial_command(sensor_mode, "CALIBRATE", ""))
+        connection.write(f"{sample_count}\n".encode("ascii"))
+    else:
+        connection.write(serial_command(sensor_mode, "", f"MULTI_CALIBRATE {sample_count} 1000"))
 
-    while True:
+    if sensor_mode == "multi":
+        measurements_by_sensor = {name: [] for name in SENSOR_NAMES}
+    else:
+        measurements: list[float] = []
+
+    while (
+        len(measurements) < sample_count
+        if sensor_mode == "single"
+        else len(measurements_by_sensor["master"]) < sample_count
+    ):
         raw_line = connection.readline()
         if not raw_line:
             raise TimeoutError("Timed out waiting for the ESP32 response")
 
         line = raw_line.decode("utf-8", errors="replace").strip()
+        if line.startswith("MODE:") or line.startswith("E ("):
+            continue
+        if sensor_mode == "multi":
+            sensor_distances = parse_multi_sensor_distances(line)
+            if sensor_distances is not None:
+                for sensor_name in SENSOR_NAMES:
+                    measurements_by_sensor[sensor_name].append(
+                        sensor_distances[sensor_name]
+                    )
+            continue
         try:
-            measurements = parse_measurements(line)
+            single_measurements = parse_measurements(line)
         except ValueError:
-            print(f"Ignoring invalid serial data: {line!r}")
             continue
 
-        if len(measurements) != sample_count:
+        if len(single_measurements) != sample_count:
             print(
-                f"Ignoring response with {len(measurements)} samples; "
+                f"Ignoring response with {len(single_measurements)} samples; "
                 f"expected {sample_count}."
             )
             continue
-        return measurements
+        return single_measurements
+    return measurements if sensor_mode == "single" else measurements_by_sensor
 
 
 def prompt_positive_float(prompt: str) -> float:
@@ -89,7 +131,9 @@ def prompt_positive_int(prompt: str) -> int:
         print("Enter a whole number greater than zero.")
 
 
-def collect_distances(connection: object, sample_count: int) -> dict[float, list[float]]:
+def collect_distances(
+    connection: object, sample_count: int, sensor_mode: SensorMode
+) -> dict[float, CalibrationMeasurements]:
     """Collect bursts until the user submits an empty distance prompt."""
     results: dict[float, list[float]] = {}
     print("Enter each measured real distance in centimetres. Press Enter when finished.")
@@ -112,20 +156,49 @@ def collect_distances(connection: object, sample_count: int) -> dict[float, list
             continue
 
         print(f"Requesting {sample_count} samples at {real_distance:g} cm...")
-        measurements = request_measurements(connection, sample_count)
+        measurements = request_measurements(connection, sample_count, sensor_mode)
         results[real_distance] = measurements
         valid_count = sum(measurement >= 0 for measurement in measurements)
         print(f"Received {valid_count}/{sample_count} valid measurements.")
 
 
-def save_csv(results: dict[float, list[float]], output_path: Path) -> None:
+def save_csv(
+    results: dict[float, CalibrationMeasurements], output_path: Path
+) -> None:
     """Save the raw calibration readings for later analysis."""
     with output_path.open("w", newline="", encoding="utf-8") as output_file:
         writer = csv.writer(output_file)
-        writer.writerow(["real_distance_cm", "sample_number", "measured_distance_cm"])
+        is_multi_sensor = any(isinstance(item, dict) for item in results.values())
+        if is_multi_sensor:
+            writer.writerow(
+                [
+                    "real_distance_cm",
+                    "sample_number",
+                    "left_measured_distance_cm",
+                    "master_measured_distance_cm",
+                    "right_measured_distance_cm",
+                ]
+            )
+        else:
+            writer.writerow(["real_distance_cm", "sample_number", "measured_distance_cm"])
         for real_distance, measurements in results.items():
-            for sample_number, measurement in enumerate(measurements, start=1):
-                writer.writerow([real_distance, sample_number, measurement])
+            if isinstance(measurements, list):
+                for sample_number, measurement in enumerate(measurements, start=1):
+                    if is_multi_sensor:
+                        writer.writerow([real_distance, sample_number, "", measurement, ""])
+                    else:
+                        writer.writerow([real_distance, sample_number, measurement])
+                continue
+            for sample_number in range(len(measurements["master"])):
+                writer.writerow(
+                    [
+                        real_distance,
+                        sample_number + 1,
+                        measurements["left"][sample_number],
+                        measurements["master"][sample_number],
+                        measurements["right"][sample_number],
+                    ]
+                )
 
 
 def fit_exponential_calibration(
@@ -186,7 +259,7 @@ def save_calibration_equation(
 
 
 def plot_results(
-    results: dict[float, list[float]],
+    results: dict[float, CalibrationMeasurements],
     output_path: Path | None = None,
     calibration_output_path: Path | None = None,
 ) -> None:
@@ -198,38 +271,41 @@ def plot_results(
             "matplotlib is required; install it with: python3 -m pip install matplotlib"
         ) from error
 
-    real_distances: list[float] = []
-    means: list[float] = []
-    errors: list[float] = []
-    coefficient, exponent, r_squared = fit_exponential_calibration(results)
+    coefficient, exponent, r_squared = fit_exponential_calibration(
+        {
+            real_distance: measurements["master"]
+            for real_distance, measurements in results.items()
+            if isinstance(measurements, dict)
+        }
+        if all(isinstance(measurements, dict) for measurements in results.values())
+        else results
+    )
 
     figure, axes = plt.subplots(figsize=(9, 6))
-    for real_distance, measurements in sorted(results.items()):
-        valid_measurements = [measurement for measurement in measurements if measurement >= 0]
-        if not valid_measurements:
-            continue
-
-        axes.scatter(
-            [real_distance] * len(valid_measurements),
-            valid_measurements,
-            alpha=0.65,
-            label=f"{real_distance:g} cm samples",
-        )
-        mean = sum(valid_measurements) / len(valid_measurements)
-        spread = max(valid_measurements) - min(valid_measurements)
-        real_distances.append(real_distance)
-        means.append(mean)
-        errors.append(spread / 2)
-
-    if means:
-        axes.errorbar(
-            real_distances,
-            means,
-            yerr=errors,
-            fmt="ko-",
-            capsize=4,
-            label="Mean and half-range",
-        )
+    for sensor_name in (
+        SENSOR_NAMES if isinstance(next(iter(results.values())), dict) else ("single",)
+    ):
+        real_distances: list[float] = []
+        means: list[float] = []
+        for real_distance, result in sorted(results.items()):
+            sensor_measurements = (
+                result if isinstance(result, list) else result[sensor_name]
+            )
+            valid_measurements = [
+                measurement for measurement in sensor_measurements if measurement >= 0
+            ]
+            if not valid_measurements:
+                continue
+            axes.scatter(
+                [real_distance] * len(valid_measurements),
+                valid_measurements,
+                alpha=0.35,
+                label=f"{sensor_name} samples",
+            )
+            real_distances.append(real_distance)
+            means.append(statistics.mean(valid_measurements))
+        if means:
+            axes.plot(real_distances, means, "o-", label=f"{sensor_name} mean")
 
     axes.plot(real_distances, real_distances, "r--", label="Ideal measurement")
     axes.set_title("Ultrasonic Sensor Calibration")
@@ -254,7 +330,7 @@ def plot_results(
 
 
 def plot_standard_deviation(
-    results: dict[float, list[float]], output_path: Path | None = None
+    results: dict[float, CalibrationMeasurements], output_path: Path | None = None
 ) -> None:
     """Plot the average absolute measurement deviation at each real distance."""
     try:
@@ -264,28 +340,27 @@ def plot_standard_deviation(
             "matplotlib is required; install it with: python3 -m pip install matplotlib"
         ) from error
 
-    real_distances: list[float] = []
-    average_deviations: list[float] = []
-
-    for real_distance, measurements in sorted(results.items()):
-        valid_measurements = [measurement for measurement in measurements if measurement >= 0]
-        if not valid_measurements:
-            continue
-
-        real_distances.append(real_distance)
-        average_deviations.append(
-            statistics.mean(
-                abs(measurement - real_distance)
-                for measurement in valid_measurements
-            )
-        )
-
     figure, axes = plt.subplots(figsize=(9, 6))
-    axes.plot(real_distances, average_deviations, "bo-")
+    for sensor_name in (
+        SENSOR_NAMES if isinstance(next(iter(results.values())), dict) else ("single",)
+    ):
+        real_distances: list[float] = []
+        average_deviations: list[float] = []
+        for real_distance, result in sorted(results.items()):
+            measurements = result if isinstance(result, list) else result[sensor_name]
+            valid_measurements = [measurement for measurement in measurements if measurement >= 0]
+            if not valid_measurements:
+                continue
+            real_distances.append(real_distance)
+            average_deviations.append(
+                statistics.mean(abs(measurement - real_distance) for measurement in valid_measurements)
+            )
+        axes.plot(real_distances, average_deviations, "o-", label=sensor_name)
     axes.set_title("Ultrasonic Sensor Average Measurement Deviation")
     axes.set_xlabel("Real distance (cm)")
     axes.set_ylabel("Average absolute deviation (cm)")
     axes.grid(True, alpha=0.3)
+    axes.legend()
     figure.tight_layout()
 
     if output_path is not None:
@@ -337,6 +412,7 @@ def main() -> None:
         raise SystemExit(error) from error
 
     sample_count = prompt_positive_int("Samples per distance: ")
+    sensor_mode = select_sensor_mode()
 
     try:
         import serial
@@ -346,8 +422,10 @@ def main() -> None:
     try:
         with serial.Serial(port, baud_rate, timeout=3) as connection:
             print(f"Connected to {port} at {baud_rate} baud.")
-            sleep(2)
-            results = collect_distances(connection, sample_count)
+            # Opening the port resets the ESP32; wait for its startup delay before sending commands.
+            sleep(6)
+            connection.reset_input_buffer()
+            results = collect_distances(connection, sample_count, sensor_mode)
     except serial.SerialException as error:
         raise SystemExit(f"Could not open or read serial port {port!r}: {error}") from error
     except (KeyboardInterrupt, EOFError):

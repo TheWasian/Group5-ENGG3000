@@ -5,8 +5,8 @@
 #include "RangeProtocol.h"
 
 // Set these to this board's actual wiring before uploading.
-constexpr int TRIG_PIN = 26;
-constexpr int ECHO_PIN = 27;
+constexpr int TRIG_PIN = 10;
+constexpr int ECHO_PIN = 3;
 constexpr uint8_t NODE_ID = 1;
 const char *AP_SSID = "Wacker5";
 const char *AP_PASSWORD = "PasswordWacker123456!";

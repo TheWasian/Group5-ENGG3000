@@ -4,12 +4,18 @@ const frontendMetrics = {
     moleRenderTimes: [],
     whackResponseTimes: [],
     levelTransitionTimes: [],
-    fpsSamples: []
+    fpsSamples: [],
+
+    normalWhackResponseTimes: [],
+    frozenWhackResponseTimes: [],
+    freezeDurations: [],
+    goldenLifetimeSamples: []
 };
 
 let lastFrameTime = performance.now();
 let fpsUpdateTime = performance.now();
 let fpsFrameCount = 0;
+
 
 // measure frames per sec, frontend metric data
 function measureFPS(currentTime) {
@@ -73,7 +79,7 @@ const GOLDEN_CHANCE = 0.15;
 const FROZEN_CHANCE = 0.08;
 const FREEZE_SECONDS = 5;
 const GOLDEN_LIFETIME_FACTOR = 0.75;
-let SPAWN_INTERVAL = 3500;
+let SPAWN_INTERVAL = 500;
 let MOLE_LIFETIME = 3200; 
 const ROUND_TIME = 300;
 const LEVEL_2_AT = 500;
@@ -93,6 +99,7 @@ let activeHole = null;
 let lastHole = null;
 let activeMoleType = "normal"; 
 let freezeTicksLeft = 0;
+let moleSpawnTime = null;
 startBtn.addEventListener("click", startGame);
 restartButtons.forEach((button) => button.addEventListener("click", startGame));
 
@@ -122,7 +129,6 @@ function startGame() {
   SensorService.notifyGameStart();
 
   countdownTimer = setInterval(tick, 1000);
-  moleTimer = setInterval(spawnMole, SPAWN_INTERVAL);
   spawnMole();
 }
 
@@ -140,8 +146,21 @@ function clearFreeze() {
 }
 
 function freezeTimer(seconds) {
+   const freezeStart = performance.now();
   freezeTicksLeft += seconds;
   timerDisplay.classList.add("frozen");
+  setTimeout(() => {
+    const freezeDuration = performance.now() - freezeStart;
+
+    frontendMetrics.freezeDurations.push(freezeDuration);
+
+    const display =
+      document.getElementById("freeze-duration");
+
+    if (display) {
+      display.textContent = freezeDuration.toFixed(2);
+    }
+  }, seconds * 1000);
 }
 
 function tick() {
@@ -233,6 +252,8 @@ const renderStart = performance.now();
 
 activeHole.classList.add("active");
 
+moleSpawnTime = performance.now();
+
 requestAnimationFrame(() => {
     const renderTime = performance.now() - renderStart;
 
@@ -251,13 +272,33 @@ requestAnimationFrame(() => {
     : MOLE_LIFETIME;
 
 moleLifetimeTimer = setTimeout(() => {
-  clearMole(activeHole);
+   const expiredType = activeMoleType;
 
-  if (activeMoleType === "normal") {
+  if (moleSpawnTime !== null) {
+    const lifetime = performance.now() - moleSpawnTime;
+
+    if (expiredType === "golden") {
+      frontendMetrics.goldenLifetimeSamples.push(lifetime);
+
+      const display =
+        document.getElementById("golden-lifetime");
+
+      if (display) {
+        display.textContent = lifetime.toFixed(2);
+      }
+    }
+  }
+
+  clearMole();
+
+  if (expiredType === "normal") {
     loseLife("Too slow! You missed the mole!");
   }
+
 }, moleLifetime);
+
 }
+
 function whackHole(holeIndex, source = "mouse") {
   if (!gameActive || !Number.isInteger(holeIndex)) return false;
    const whackStart = performance.now();
@@ -309,6 +350,26 @@ function whackHole(holeIndex, source = "mouse") {
   const responseTime = performance.now() - whackStart;
 
   frontendMetrics.whackResponseTimes.push(responseTime);
+  if (hitType === "frozen") {
+  frontendMetrics.frozenWhackResponseTimes.push(responseTime);
+
+  const display =
+    document.getElementById("frozen-response-time");
+
+  if (display) {
+    display.textContent = responseTime.toFixed(2);
+  }
+
+} else if (hitType === "normal") {
+  frontendMetrics.normalWhackResponseTimes.push(responseTime);
+
+  const display =
+    document.getElementById("normal-response-time");
+
+  if (display) {
+    display.textContent = responseTime.toFixed(2);
+  }
+}
 
   const display = document.getElementById("whack-response-time");
 
@@ -337,20 +398,20 @@ function updateLevel() {
   levelDisplay.textContent = level;
   const transitionStart = performance.now();
     if(level === 1){
-      SPAWN_INTERVAL = 3500;
-      MOLE_LIFETIME = 3200;
+      SPAWN_INTERVAL = 3800;
+      MOLE_LIFETIME = 3800;
       GameView.setEnvironment("grassland");
     }
 
     if (level === 2){
-      SPAWN_INTERVAL = 2200;
-      MOLE_LIFETIME = 1800;
+      SPAWN_INTERVAL = 3500;
+      MOLE_LIFETIME = 3500;
       GameView.setEnvironment("freezing");
   }
 
     if (level === 3){
-      SPAWN_INTERVAL = 1400;
-      MOLE_LIFETIME = 1100;
+      SPAWN_INTERVAL = 3100;
+      MOLE_LIFETIME = 3100;
       GameView.setEnvironment("fire");
   }
   requestAnimationFrame(() => {
@@ -412,68 +473,48 @@ function updateProgress() {
     Math.min(score - progressStart, progressEnd - progressStart),
   );
   const levelRange = progressEnd - progressStart;
-  progressBar.style.width = `${(levelProgress / levelRange) * 100}%`;
+  const percent = (levelProgress / levelRange) * 100;
+  progressBar.style.width = `${percent}%`;
   progressText.textContent = `${levelProgress} / ${levelRange} (${levelLabel})`;
+
+  const progressPct = document.getElementById("progress-pct");
+  if (progressPct) {
+    progressPct.textContent = `${Math.round(percent * 10) / 10}%`;
+  }
 }
 
 function checkLevel() {
-  unlockReward("bronze-reward", 50);
-  unlockReward("silver-reward", 250);
-  unlockReward("gold-reward", 500);
+  try {
+    unlockReward("bronze-reward", 50);
+    unlockReward("silver-reward", 250);
+    unlockReward("gold-reward", 500);
 
-  if (score >= WIN_AT) {
-    endGame(true);
-    return;
+    if (score >= WIN_AT) {
+      endGame(true);
+      return;
+    }
+
+    var previousLevel = level;
+
+    if (score >= LEVEL_3_AT) level = 3;
+    else if (score >= LEVEL_2_AT) level = 2;
+    else level = 1;
+
+    if(level !== previousLevel){
+    updateLevel();
+    }
+  } finally {
+    updateProgress();
   }
-  
-  var previousLevel = level;
-
-  if (score >= LEVEL_3_AT) level = 3;
-  else if (score >= LEVEL_2_AT) level = 2;
-  else level = 1;
-  
-  if(level !== previousLevel){
-  updateLevel();
-  }
-
-  updateProgress();
 }
-// hammer based on cursor position
-const hammerCursor = document.getElementById("hammer-cursor");
 
-if (hammerCursor) {
-
-    document.addEventListener("mousemove", (event) => {
-        hammerCursor.style.left = `${event.clientX}px`;
-        hammerCursor.style.top = `${event.clientY}px`;
-    });
-
-    document.addEventListener("mouseenter", () => {
-        hammerCursor.style.display = "block";
-    });
-
-    document.addEventListener("mouseleave", () => {
-        hammerCursor.style.display = "none";
-    });
-
-    document.addEventListener("mousedown", () => {
-        hammerCursor.classList.remove("swinging");
-
-        void hammerCursor.offsetWidth;
-
-        hammerCursor.classList.add("swinging");
-    });
-
-    document.addEventListener("mouseup", () => {
-        setTimeout(() => {
-            hammerCursor.classList.remove("swinging");
-        }, 80);
-    });
-}
 
 function unlockReward(id, threshold) {
   if (score < threshold) return;
   const reward = document.getElementById(id);
+  // Optional UI: the rewards block can be removed from the page, and a missing
+  // element must not stop the score, the level, or the progress bar.
+  if (!reward) return;
   if (!reward.classList.contains("unlocked")) {
     reward.classList.remove("locked");
     reward.classList.add("unlocked");
@@ -511,3 +552,5 @@ holes.forEach((hole) => {
 });
 
 SensorService.start();
+
+

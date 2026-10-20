@@ -9,6 +9,7 @@ var SensorService = {
   lastEventId: null, lastBootId: null, lastFrame: null,
   timer: null, busy: false, onHit: null,
   lastData: null, receivedAt: 0,
+  lastPlayerPosition: null, lastPlayerAt: 0,
   init: function () {
     if (window.location.hostname === "192.168.4.1") this.baseUrl = "";
     this.holes = Array.from(document.querySelectorAll(".hole"));
@@ -20,10 +21,11 @@ var SensorService = {
   },
   start: function () {
     clearInterval(this.timer);
-    this.check();
-    this.timer = setInterval(() => { this.expireDisplay(); this.check(); }, this.POLL_EVERY_MS);
+    this.pollSensors();
+    this.timer = setInterval(() => { this.expireStaleMarker(); this.pollSensors(); }, this.POLL_EVERY_MS);
   },
-  request: async function (path, method = "GET") {
+  fetchSensorJson: async function (path, method) {
+    method = method || "GET";
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT_MS);
     try {
@@ -32,23 +34,24 @@ var SensorService = {
       return method === "GET" ? await response.json() : null;
     } finally { clearTimeout(timeout); }
   },
-  notifyGameStart: function () {
-    // Retain the frame cursor: a restart must not replay the last measurement.
-    return this.request("/api/game/start", "POST").catch(() => null);
+  // Retain the frame cursor: a restart must not replay the last measurement.
+  armSensorsForGameStart: function () {
+    return this.fetchSensorJson("/api/game/start", "POST").catch(() => null);
   },
-  expireDisplay: function () {
+  // Dim the marker when the last fix goes stale.
+  expireStaleMarker: function () {
     const data = this.lastData, p = data?.position;
     if (data?.source === "access_point" && p?.valid &&
         performance.now() - this.receivedAt + p.age_ms > this.MAX_POSITION_AGE_MS) {
       this.lastData = null;
-      this.updateSensorStatus(true, {...data, position: {...p, valid: false, reason: "stale"}});
+      this.renderSensorStatus(true, {...data, position: {...p, valid: false, reason: "stale"}});
     }
   },
-  check: async function () {
+  pollSensors: async function () {
     if (this.busy) return;
     this.busy = true;
     try {
-      const data = await this.request("/api/hits");
+      const data = await this.fetchSensorJson("/api/hits");
       if (!data || !Number.isSafeInteger(data.event_id) || data.event_id < 0)
         throw new Error("Invalid /api/hits response");
       if (data.source === "access_point" && data.frame_id !== undefined &&
@@ -56,7 +59,7 @@ var SensorService = {
            !Number.isSafeInteger(data.boot_id) || data.boot_id < 0))
         throw new Error("Invalid AP frame");
       this.lastData = data; this.receivedAt = performance.now();
-      this.updateSensorStatus(true, data);
+      this.renderSensorStatus(true, data);
       if (data.source === "access_point") {
         if (data.boot_id !== this.lastBootId) { this.lastFrame = null; this.lastEventId = null; }
         this.lastBootId = data.boot_id;
@@ -64,7 +67,7 @@ var SensorService = {
           const key = `${data.boot_id}:${data.frame_id}`;
           if (key !== this.lastFrame) {
             this.lastFrame = key;
-            const player = this.getPlayerPosition(data);
+            const player = this.resolvePlayerHole(data);
             if (player && data.position.held !== true && this.onHit) this.onHit(player.holeIndex, "occupancy");
           }
           this.lastEventId = data.event_id;
@@ -77,17 +80,18 @@ var SensorService = {
       if (typeof data.event_age_ms === "number" && Number.isFinite(data.event_age_ms) &&
           data.event_age_ms >= 0 && data.event_age_ms <= this.MAX_EVENT_AGE_MS &&
           Number.isInteger(data.hole) && data.hole >= 0 && data.hole < this.holes.length &&
-          (data.source !== "access_point" || (this.usableAccessPointPosition(data) &&
+          (data.source !== "access_point" || (this.hasValidAccessPointFix(data) &&
            data.position.held !== true && data.current_hole === data.hole)) && this.onHit)
         this.onHit(data.hole, "event");
     } catch (error) {
       this.lastData = null;
-      this.updateSensorStatus(false);
+      this.renderSensorStatus(false);
       // Keep cursors across a transient HTTP error: a repeated frame/event is
       // still a duplicate. AP reboot is identified separately by boot_id.
     } finally { this.busy = false; }
   },
-  usableAccessPointPosition: function (data) {
+  // A fix we can score from.
+  hasValidAccessPointFix: function (data) {
     const p = data?.position;
     return p?.valid === true && !p.warning && p.in_play_area !== false && p.in_game_area !== false &&
       Number.isInteger(p.sensors_used) && p.sensors_used >= 2 && p.sensors_used <= 3 &&
@@ -96,10 +100,11 @@ var SensorService = {
       typeof p.age_ms === "number" && p.age_ms >= 0 && p.age_ms <= this.MAX_POSITION_AGE_MS;
   },
 
-  getPlayerPosition: function (data) {
+  // Payload -> hole, or null.
+  resolvePlayerHole: function (data) {
     const accessPointHole = data?.current_hole;
     if (
-      this.usableAccessPointPosition(data) &&
+      this.hasValidAccessPointFix(data) &&
       data.current_hole !== null &&
       Number.isInteger(accessPointHole) &&
       accessPointHole >= 0 &&
@@ -151,27 +156,36 @@ var SensorService = {
     };
   },
 
-  displayPlayerPosition: function (data) {
-    const position = this.getPlayerPosition(data);
+  // Park the marker on the last known hole; dim it when stale.
+  //changed because the marker vanished on a bad fix - alley
+  renderPlayerMarker: function (data) {
+    const position = this.resolvePlayerHole(data);
+    if (position) {
+      this.lastPlayerPosition = position;
+      this.lastPlayerAt = performance.now();
+    }
 
-    if (!position) {
+    const shown = position || this.lastPlayerPosition;
+    if (!shown) {
       this.playerMarker.classList.add("hidden");
       this.playerMarker.removeAttribute("title");
       return null;
     }
 
     const targetHole = this.holes.find(
-      (hole) => Number(hole.dataset.hole) === position.holeIndex,
+      (hole) => Number(hole.dataset.hole) === shown.holeIndex,
     );
-    targetHole.appendChild(this.playerMarker);
+    if (targetHole) targetHole.appendChild(this.playerMarker);
     this.playerMarker.classList.remove("hidden");
-    this.playerMarker.title = Number.isFinite(position.xM)
-      ? `Player: hole ${position.holeIndex + 1} (${position.xM.toFixed(2)}, ${position.yM.toFixed(2)} m)`
-      : `Player: hole ${position.holeIndex + 1}, sensor ${position.sensorIndex + 1}`;
+    // Dim it when there is no fresh fix.
+    this.playerMarker.classList.toggle("stale", !position);
+    this.playerMarker.title = Number.isFinite(shown.xM)
+      ? `Player: hole ${shown.holeIndex + 1} (${shown.xM.toFixed(2)}, ${shown.yM.toFixed(2)} m)`
+      : `Player: hole ${shown.holeIndex + 1}, sensor ${shown.sensorIndex + 1}`;
     return position;
   },
 
-  updateDebugPanel: function (data = null) {
+  renderSensorDebug: function (data = null) {
     if (data?.source === "access_point") {
       this.debugSensorLabels[0].textContent = "Position";
       this.debugSensorLabels[1].textContent = "Network";
@@ -247,20 +261,21 @@ var SensorService = {
     }
   },
 
-  updateSensorStatus: function (connected, data = null) {
+  renderSensorStatus: function (connected, data = null) {
     this.sensorStatus.classList.toggle("connected", connected);
     this.sensorStatus.classList.toggle("disconnected", !connected);
 
     if (!connected) {
-      this.playerMarker.classList.add("hidden");
-      this.updateDebugPanel();
+      this.renderSensorDebug();
+      // Keep the marker parked when disconnected.
+      this.renderPlayerMarker(null);
       this.sensorStatus.textContent =
         "Sensor controller: disconnected (mouse testing is available)";
       return;
     }
 
-    this.updateDebugPanel(data);
-    const playerPosition = this.displayPlayerPosition(data);
+    this.renderSensorDebug(data);
+    const playerPosition = this.renderPlayerMarker(data);
 
     if (data?.source === "access_point") {
       const position = data.position;
