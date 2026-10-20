@@ -1,7 +1,7 @@
 // Shared sensor API adapter for gameLogic.js and the modular main.js backend.
 // Both game entry points keep their own scoring rules; this service owns polling.
 var SensorService = {
-  POLL_EVERY_MS: 75,
+  POLL_EVERY_MS: 100,
   MAX_EVENT_AGE_MS: 1000,
   MAX_POSITION_AGE_MS: 500,
   REQUEST_TIMEOUT_MS: 1200,
