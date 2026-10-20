@@ -89,26 +89,15 @@
     </aside>
       <div id="special-mole-validation" class="performance-metrics">
     <h3>Special Mole Validation</h3>
+     <p>Normal Response: <span id="normal-response-time">--</span> ms</p>
 
-    <p>
-        Normal Response:
-        <span id="normal-response-time">--</span> ms
-    </p>
+    <p>Golden Hits: <span id="golden-hit-count">0/10</span></p>
+    <p>Golden Response: <span id="golden-response-time">--</span> ms</p>
+    <p>Golden Lifetime: <span id="golden-lifetime">--</span> ms</p>
 
-    <p>
-        Frozen Response:
-        <span id="frozen-response-time">--</span> ms
-    </p>
-
-    <p>
-        Freeze Duration:
-        <span id="freeze-duration">--</span> ms
-    </p>
-
-    <p>
-        Golden Lifetime:
-        <span id="golden-lifetime">--</span> ms
-    </p>
+    <p>Frozen Hits: <span id="frozen-hit-count">0/10</span></p>
+    <p>Frozen Response: <span id="frozen-response-time">--</span> ms</p>
+    <p>Freeze Duration: <span id="freeze-duration">--</span> ms</p>
 </div>
     <header class="game-header">
       <h1>Whack-A-Mole</h1>
@@ -131,7 +120,31 @@
           <span id="lives">3</span>
         </div>
       </div>
+       <div id="streak-panel" class="streak-panel" aria-live="polite">
+  <div class="streak-info">
+    <span class="streak-label">HIT STREAK</span>
+    <div class="streak-number">
+      <span id="streak-count">0</span>
+      <span class="streak-hits">HITS</span>
+    </div>
+  </div>
 
+  <div id="combo-badge" class="combo-badge">
+    <span id="combo-multiplier">×1</span>
+    <span class="combo-caption">MULTIPLIER</span>
+  </div>
+
+  <div class="streak-progress">
+    <span id="streak-next">Next: 5 hits → ×2</span>
+    <div class="streak-progress-track">
+      <div id="streak-progress-bar"></div>
+    </div>
+  </div>
+</div>
+
+<div id="combo-announcement" class="combo-announcement"
+     aria-live="assertive" aria-atomic="true"></div>
+     
       <section class="game-meta">
         
         <div class="progress-section">
