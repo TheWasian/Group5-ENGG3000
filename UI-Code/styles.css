@@ -1583,7 +1583,7 @@ body.env-toxic .game-container {
   filter: drop-shadow(0 0 10px rgba(100, 255, 0, 0.2));
 }
 
-/* Player Marker: The hammer goes where player was last seen and only swings when a hit is made
+/* Player Marker: The hammer goes where player was last seen and only swings when a hit is made */
 
 .player-marker .css-hammer {
   position: relative;
@@ -1645,4 +1645,3 @@ body.env-toxic .game-container {
   45% { transform: rotate(38deg); }
   100% { transform: rotate(0deg); }
 }
-
