@@ -182,9 +182,6 @@ function tick() {
 function clearMole() {
   if (activeHole) {
     activeHole.classList.remove("active");
-    
-    const moleWrapper = activeHole.querySelector(".mole");
-    if (moleWrapper) moleWrapper.classList.remove("has-bomb", "has-golden", "has-frozen");
   }
   activeHole = null;
   activeMoleType = "normal";

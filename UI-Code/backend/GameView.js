@@ -1,16 +1,5 @@
 //handles the overall process now
 var GameView = {
-  //Each has - mole has its own colour, level variants and special mole value.
-  MOLE_CLASSES: [
-    "has-bomb",
-    "has-golden",
-    "has-frozen",
-    "has-normal-ice",
-    "has-bomb-ice",
-    "has-normal-fire",
-    "has-bomb-fire",
-  ],
-
   init: function () {
     this.holes = Array.from(document.querySelectorAll(".hole"));
     this.score = document.getElementById("score");
@@ -46,13 +35,6 @@ var GameView = {
   hideAllMoles: function () {
     for (var i = 0; i < this.holes.length; i++) {
       this.holes[i].classList.remove("active");
-      //stupid mole that is stale (not moving) is killed
-      var mole = this.moles && this.moles[i];
-      if (mole && mole.classList) {
-        for (var c = 0; c < this.MOLE_CLASSES.length; c++) {
-          mole.classList.remove(this.MOLE_CLASSES[c]);
-        }
-      }
     }
   },
 
