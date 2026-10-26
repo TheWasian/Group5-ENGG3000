@@ -1,13 +1,14 @@
 // Shared sensor API adapter for gameLogic.js and the modular main.js backend.
-// Both game entry points keep their own scoring rules; this service owns polling.
+// Fetches the sensor data for both versions of the game
 var SensorService = {
-  POLL_EVERY_MS: 75,
+  RETRY_AFTER_MS: 250,
   MAX_EVENT_AGE_MS: 1000,
   MAX_POSITION_AGE_MS: 500,
   REQUEST_TIMEOUT_MS: 1200,
   baseUrl: "http://192.168.4.1",
   lastEventId: null, lastBootId: null, lastFrame: null,
   timer: null, busy: false, onHit: null,
+  running: false, loopGeneration: 0, staleTimer: null,
   lastData: null, receivedAt: 0,
   lastPlayerPosition: null, lastPlayerAt: 0,
   init: function () {
@@ -15,14 +16,38 @@ var SensorService = {
     this.holes = Array.from(document.querySelectorAll(".hole"));
     this.sensorStatus = document.getElementById("sensor-status");
     this.playerMarker = document.getElementById("player-marker");
+    this.gameArea = document.getElementById("game-area");
+    this.markerGeometry = null;
+    window.addEventListener("resize", () => {
+      this.markerGeometry = null;
+      if (this.lastPlayerPosition) this.positionPlayerMarker(this.lastPlayerPosition);
+    });
     this.debugSensorLabels = [document.getElementById("debug-label-1"), document.getElementById("debug-label-2")];
     this.debugSensorDisplays = [document.getElementById("debug-sensor-1"), document.getElementById("debug-sensor-2")];
     this.debugLastEvent = document.getElementById("debug-last-event");
   },
   start: function () {
-    clearInterval(this.timer);
-    this.pollSensors();
-    this.timer = setInterval(() => { this.expireStaleMarker(); this.pollSensors(); }, this.POLL_EVERY_MS);
+    if (this.running) return;
+    this.running = true;
+    const generation = ++this.loopGeneration;
+    // Still dim the hammer if the next response gets stuck
+    this.staleTimer = setInterval(() => this.expireStaleMarker(), 50);
+    this.runSensorLoop(generation);
+  },
+  stop: function () {
+    this.running = false;
+    ++this.loopGeneration;
+    clearTimeout(this.timer);
+    clearInterval(this.staleTimer);
+    this.timer = this.staleTimer = null;
+    this.lastData = null;
+    this.renderSensorStatus(false);
+  },
+  runSensorLoop: async function (generation) {
+    const success = await this.pollSensors(generation);
+    if (!this.running || generation !== this.loopGeneration) return;
+    // Fetch again once the last request finishes
+    this.timer = setTimeout(() => this.runSensorLoop(generation), success ? 0 : this.RETRY_AFTER_MS);
   },
   fetchSensorJson: async function (path, method) {
     method = method || "GET";
@@ -34,11 +59,13 @@ var SensorService = {
       return method === "GET" ? await response.json() : null;
     } finally { clearTimeout(timeout); }
   },
-  // Retain the frame cursor: a restart must not replay the last measurement.
+
+  //Retains the sensor data and resets are no longer just replaying the last measurement
   armSensorsForGameStart: function () {
     return this.fetchSensorJson("/api/game/start", "POST").catch(() => null);
   },
-  // Dim the marker when the last fix goes stale.
+
+  //Dimed the marker if fix goes stale/dead
   expireStaleMarker: function () {
     const data = this.lastData, p = data?.position;
     if (data?.source === "access_point" && p?.valid &&
@@ -47,11 +74,12 @@ var SensorService = {
       this.renderSensorStatus(true, {...data, position: {...p, valid: false, reason: "stale"}});
     }
   },
-  pollSensors: async function () {
-    if (this.busy) return;
+  pollSensors: async function (generation = this.loopGeneration) {
+    if (this.busy) return false;
     this.busy = true;
     try {
       const data = await this.fetchSensorJson("/api/hits");
+      if (generation !== this.loopGeneration) return false;
       if (!data || !Number.isSafeInteger(data.event_id) || data.event_id < 0)
         throw new Error("Invalid /api/hits response");
       if (data.source === "access_point" && data.frame_id !== undefined &&
@@ -71,23 +99,25 @@ var SensorService = {
             if (player && data.position.held !== true && this.onHit) this.onHit(player.holeIndex, "occupancy");
           }
           this.lastEventId = data.event_id;
-          return;
+          return true;
         }
       }
-      // MVP / older event-only AP firmware. Never coerce null into hole zero.
+      // Just did a minor change to ensure it doesn't think null and zero are the same
       const oldEvent = this.lastEventId; this.lastEventId = data.event_id;
-      if (oldEvent === null || data.event_id === oldEvent) return;
+      if (oldEvent === null || data.event_id === oldEvent) return true;
       if (typeof data.event_age_ms === "number" && Number.isFinite(data.event_age_ms) &&
           data.event_age_ms >= 0 && data.event_age_ms <= this.MAX_EVENT_AGE_MS &&
           Number.isInteger(data.hole) && data.hole >= 0 && data.hole < this.holes.length &&
           (data.source !== "access_point" || (this.hasValidAccessPointFix(data) &&
            data.position.held !== true && data.current_hole === data.hole)) && this.onHit)
         this.onHit(data.hole, "event");
+      return true;
     } catch (error) {
+      if (generation !== this.loopGeneration) return false;
       this.lastData = null;
+      //just added to ensure no repeated frame/even is duplicated ensuring boot_id is different to boot
       this.renderSensorStatus(false);
-      // Keep cursors across a transient HTTP error: a repeated frame/event is
-      // still a duplicate. AP reboot is identified separately by boot_id.
+      return false;
     } finally { this.busy = false; }
   },
   // A fix we can score from.
@@ -100,7 +130,62 @@ var SensorService = {
       typeof p.age_ms === "number" && p.age_ms >= 0 && p.age_ms <= this.MAX_POSITION_AGE_MS;
   },
 
-  // Payload -> hole, or null.
+  // Moves the hammer between holes but only confirmed holes can score
+  resolvePlayerPosition: function (data) {
+    if (data?.source !== "access_point") return this.resolvePlayerHole(data);
+    const p = data.position, g = data.game_area;
+    if (p?.valid !== true ||
+        ![p.x_m, p.y_m, p.age_ms].every(Number.isFinite) ||
+        p.age_ms < 0 || p.age_ms > this.MAX_POSITION_AGE_MS ||
+        !Number.isInteger(p.sensors_used) || p.sensors_used < 2 || p.sensors_used > 3 ||
+        !g || ![g.x_min_m, g.x_max_m, g.start_y_m, g.end_y_m,
+          g.x_max_m - g.x_min_m, g.end_y_m - g.start_y_m].every(Number.isFinite) ||
+        g.x_max_m <= g.x_min_m || g.end_y_m <= g.start_y_m) return null;
+    return {
+      holeIndex: this.resolvePlayerHole(data)?.holeIndex ?? null,
+      xM: p.x_m, yM: p.y_m, gameArea: {...g},
+      dimmed: p.held === true || !!p.warning || p.in_game_area === false || p.in_play_area === false,
+    };
+  },
+
+  positionPlayerMarker: function (position) {
+    if (!this.markerGeometry) {
+      const board = this.gameArea.getBoundingClientRect();
+      const centres = this.holes.map(hole => {
+        const r = hole.getBoundingClientRect();
+        return {holeIndex: Number(hole.dataset.hole),
+          x: r.left - board.left + r.width / 2, y: r.top - board.top + r.height / 2};
+      });
+      if (!(board.width > 0 && board.height > 0) ||
+          !centres.every(c => Number.isFinite(c.x) && Number.isFinite(c.y))) return;
+      this.markerGeometry = {width: board.width, height: board.height, centres};
+    }
+    const {width, height, centres} = this.markerGeometry;
+    let x, y;
+    if (position.gameArea) {
+      const g = position.gameArea;
+      const first = centres.find(c => c.holeIndex === 0);
+      const right = centres.find(c => c.holeIndex === 1);
+      const below = centres.find(c => c.holeIndex === 2);
+      if (!first || !right || !below) return;
+      // Match the player's position to the holes on screen
+      const column = (position.xM - g.x_min_m) / (g.x_max_m - g.x_min_m) * 2 - 0.5;
+      const row = (position.yM - g.start_y_m) / (g.end_y_m - g.start_y_m) * 3 - 0.5;
+      x = Math.max(0, Math.min(width, first.x + column * (right.x - first.x)));
+      y = Math.max(0, Math.min(height, first.y + row * (below.y - first.y)));
+    } else {
+      const centre = centres.find(c => c.holeIndex === position.holeIndex);
+      if (!centre) return;
+      x = centre.x; y = centre.y;
+    }
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const left = `${x}px`, top = `${y}px`;
+    // Same position so don't restart the movement
+    if (this.playerMarker.style.left !== left) this.playerMarker.style.left = left;
+    if (this.playerMarker.style.top !== top) this.playerMarker.style.top = top;
+  },
+
+  // Minor changes: Payload -> hole, or  it is null
   resolvePlayerHole: function (data) {
     const accessPointHole = data?.current_hole;
     if (
@@ -156,10 +241,9 @@ var SensorService = {
     };
   },
 
-  // Park the marker on the last known hole; dim it when stale.
-  //changed because the marker vanished on a bad fix - alley
+  //Fixed marker disappearing, now it just dims when stale (no one is moving)
   renderPlayerMarker: function (data) {
-    const position = this.resolvePlayerHole(data);
+    const position = this.resolvePlayerPosition(data);
     if (position) {
       this.lastPlayerPosition = position;
       this.lastPlayerAt = performance.now();
@@ -172,15 +256,12 @@ var SensorService = {
       return null;
     }
 
-    const targetHole = this.holes.find(
-      (hole) => Number(hole.dataset.hole) === shown.holeIndex,
-    );
-    if (targetHole) targetHole.appendChild(this.playerMarker);
+    this.positionPlayerMarker(shown);
     this.playerMarker.classList.remove("hidden");
     // Dim it when there is no fresh fix.
-    this.playerMarker.classList.toggle("stale", !position);
+    this.playerMarker.classList.toggle("stale", !position || !!position.dimmed);
     this.playerMarker.title = Number.isFinite(shown.xM)
-      ? `Player: hole ${shown.holeIndex + 1} (${shown.xM.toFixed(2)}, ${shown.yM.toFixed(2)} m)`
+      ? `Player: ${Number.isInteger(shown.holeIndex) ? `hole ${shown.holeIndex + 1}` : "tracking"} (${shown.xM.toFixed(2)}, ${shown.yM.toFixed(2)} m)`
       : `Player: hole ${shown.holeIndex + 1}, sensor ${shown.sensorIndex + 1}`;
     return position;
   },
@@ -192,7 +273,7 @@ var SensorService = {
 
       const xM = Number(data.position?.x_m);
       const yM = Number(data.position?.y_m);
-      const currentHole = Number(data.current_hole);
+      const currentHole = Number.isInteger(data.current_hole) ? data.current_hole : -1;
       const positionValid = data.position?.valid &&
         data.position.x_m !== null && data.position.y_m !== null &&
         Number.isFinite(xM) && Number.isFinite(yM);
@@ -267,7 +348,7 @@ var SensorService = {
 
     if (!connected) {
       this.renderSensorDebug();
-      // Keep the marker parked when disconnected.
+      // Keep the marker parked when disconnected
       this.renderPlayerMarker(null);
       this.sensorStatus.textContent =
         "Sensor controller: disconnected (mouse testing is available)";
@@ -292,7 +373,7 @@ var SensorService = {
       const yM = Number(position?.y_m);
       const warning = position?.warning ? "WARNING: too close to screen — " : "";
       this.sensorStatus.textContent = position?.valid && position.x_m !== null && position.y_m !== null
-        ? `${warning}Access point: tracking ${playerPosition ? `hole ${playerPosition.holeIndex + 1}` : "position"} at ${xM.toFixed(2)}, ${yM.toFixed(2)} m`
+        ? `${warning}Access point: tracking ${Number.isInteger(playerPosition?.holeIndex) ? `hole ${playerPosition.holeIndex + 1}` : "position"} at ${xM.toFixed(2)}, ${yM.toFixed(2)} m`
         : `${warning}Access point: connected — ${position?.reason || "waiting for a valid player position"}`;
       if (position?.held) this.sensorStatus.textContent += " | Position held; waiting for confirmation before scoring";
       else if (position?.valid) this.sensorStatus.textContent += ` | ${position.sensors_used}-sensor tracking`;

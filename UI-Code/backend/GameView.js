@@ -1,5 +1,6 @@
 //handles the overall process now
 var GameView = {
+  pendingSwings: 0,
   init: function () {
     this.holes = Array.from(document.querySelectorAll(".hole"));
     this.score = document.getElementById("score");
@@ -17,6 +18,22 @@ var GameView = {
     this.moles = this.holes.map(function (hole) {
       return hole.querySelector(".mole");
     });
+    var marker = document.getElementById("player-marker");
+    if (marker) {
+      var self = this;
+      var finishSwing = function (event) {
+        if (event.animationName !== "hammerSwing") return;
+        marker.classList.remove("swinging");
+        if (event.type === "animationend" && self.pendingSwings > 0) {
+          self.pendingSwings -= 1;
+          self.swingHammer();
+        } else {
+          self.pendingSwings = 0;
+        }
+      };
+      marker.addEventListener("animationend", finishSwing);
+      marker.addEventListener("animationcancel", finishSwing);
+    }
   },
 
 //Fixed a bit of the glow not working
@@ -51,8 +68,12 @@ var GameView = {
   swingHammer: function () {
     var marker = document.getElementById("player-marker");
     if (!marker || !marker.classList || marker.classList.contains("hidden")) return;
-    marker.classList.remove("swinging");
-    void marker.offsetWidth; // restart the animation
+    // If another hit comes in, finish this swing then do the next one
+    if (marker.classList.contains("swinging")) {
+      this.pendingSwings += 1;
+      return;
+    }
+    void marker.offsetWidth; // Lets the next swing start properly
     marker.classList.add("swinging");
   },
 

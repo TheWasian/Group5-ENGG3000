@@ -456,7 +456,7 @@ h1 {
 }
 
 #game-area {
-
+  position: relative;
   display: grid;
 
   grid-template-columns: repeat(2, 1fr);
@@ -532,7 +532,6 @@ h1 {
   z-index: 2;
 }
 
-/* A foreground crescent puts the mole behind the near edge of the opening. */
 .hole::after {
   content: '';
   position: absolute;
@@ -946,27 +945,19 @@ h1 {
 
 .player-marker {
   position: absolute;
-  top: -30px; 
-  left: 67%;
+  top: 0;
+  left: 0;
   z-index: 6; 
   pointer-events: none;
-  transform: translateX(0);
+  transform: translate(-50%, -50%);
   filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.4));
-  animation: playerBob 0.8s ease-in-out infinite alternate;
+  transition: left 60ms linear, top 60ms linear;
 }
 
 .player-marker.hidden {
   display: none;
 }
 
-@keyframes playerBob {
-  from {
-    transform: translateX(0) translateY(0);
-  }
-  to {
-    transform: translateX(0) translateY(-6px);
-  }
-}
 
 
 @keyframes sensorHit {
@@ -1682,4 +1673,13 @@ body.env-toxic .game-container {
   0% { transform: rotate(0deg); }
   45% { transform: rotate(38deg); }
   100% { transform: rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-marker {
+    transition: none;
+  }
+  .player-marker.swinging .css-hammer {
+    animation-duration: 1ms;
+  }
 }
