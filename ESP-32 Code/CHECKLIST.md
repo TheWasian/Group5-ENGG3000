@@ -143,12 +143,17 @@ The previous three-reading average has been replaced by:
    Invalid data clears range history.
 2. Position confirmation: a move over 14 cm must be followed by another fix
    within 8 cm of that new position. An isolated jump leaves the marker still.
-3. Time-based exponential smoothing: a 0.35 s time constant near stationary
-   and 0.12 s for smaller ongoing movement. Confirmed large movement updates
-   directly instead of being slowly dragged through intermediate holes.
-   Two-sensor fixes use at least a 0.50 s time constant to reduce their greater
-   sideways noise. This trades some response speed for stability; confirmed
-   large movements still update directly.
+3. A grouped position mode replaces exponential averaging. The latest five
+   valid positions vote in 5 cm x/y cells (rounded to the nearest cell centre).
+   The most frequent cell wins; ties favour the most recently observed cell.
+   The actual position nearest the winning cell's centre represents that cell,
+   with ties favouring its newest reading. With no repeated cell, use the latest
+   position. No coordinates are averaged or snapped to an artificial point.
+   Two- and three-sensor fixes use the same filter. Votes expire after 1000 ms;
+   invalid fixes, track resets and confirmed large movements clear the history.
+   A five-sample window may delay smaller movements by several frames. Larger
+   windows increase that delay; cell boundaries can also cause mode switching.
+   Nodes still report raw ranges, and the older standalone MVP sketch is unchanged.
 4. A display-only hold for at most 350 ms after a bad frame. Held fixes retain
    their original timestamp, appear amber, and **cannot score**. Position
    smoothing also cannot score the old cell when the latest fix maps elsewhere.
@@ -161,9 +166,9 @@ Relevant editable constants in the AP sketch:
 | `RANGE_CONFIRM_TOLERANCE_M` | 0.10 | Agreement between changed ranges |
 | `POSITION_JUMP_LIMIT_M` | 0.14 | Position change requiring confirmation |
 | `POSITION_CONFIRM_RADIUS_M` | 0.08 | Agreement between changed fixes |
-| `POSITION_STATIONARY_TAU_S` | 0.35 | Raise for more stationary smoothing/lag |
-| `POSITION_MOVING_TAU_S` | 0.12 | Smoothing during smaller movements |
-| `POSITION_TWO_SENSOR_TAU_S` | 0.50 | Minimum smoothing time constant with two sensors |
+| `POSITION_MODE_WINDOW` | 5 | Number of recent positions voting, from 1 to 9 |
+| `POSITION_MODE_BIN_M` | 0.05 | Width of each x/y cell in metres |
+| `POSITION_MODE_HISTORY_MS` | 1000 | Maximum age of a position vote |
 | `PAIR_AGREEMENT_M` | 0.10 | Distance within which pair candidates agree |
 | `PAIR_PREVIOUS_RADIUS_M` | 0.25 | Maximum distance from recent track to resolve competing pairs |
 | `POSITION_HOLD_MS` | 350 | Maximum visual hold; never a fresh hit |

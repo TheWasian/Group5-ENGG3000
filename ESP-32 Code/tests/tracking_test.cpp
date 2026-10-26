@@ -44,6 +44,41 @@ int main() {
   assert(gate.update(.5f,1300,.16f,.1f,500)==.5f); // No old range after loss.
 
   wam::TrackingOptions options;
+  // A mode keeps a repeated cluster instead of averaging it towards an outlier.
+  wam::PositionMode mode;
+  mode.update(fixAt(.601f,1.201f),100,options);
+  mode.update(fixAt(.603f,1.204f),200,options);
+  auto modal=mode.update(fixAt(.69f,1.2f),300,options);
+  assert(modal.x==.601f && modal.y==1.201f);
+  // Equal frequency goes to the newest cell; its representative is a real fix.
+  modal=mode.update(fixAt(.691f,1.201f),400,options);
+  assert(modal.x==.691f && modal.y==1.201f);
+  auto pair=fixAt(.602f,1.202f);pair.count=2;pair.usedMask=5;
+  modal=mode.update(pair,500,options);
+  assert(modal.x==.601f && modal.count==2 && modal.usedMask==5);
+  // Evict the oldest vote when the window fills; sustained smaller moves follow.
+  modal=mode.update(fixAt(.692f,1.202f),600,options);
+  assert(modal.x==.692f && mode.size==5);
+  // Never fabricate a coordinate by mixing independent x and y modes.
+  mode.clear();
+  mode.update(fixAt(.6f,1.2f),100,options);
+  mode.update(fixAt(.6f,1.3f),200,options);
+  mode.update(fixAt(.7f,1.4f),300,options);
+  modal=mode.update(fixAt(.8f,1.4f),400,options);
+  assert(modal.x==.8f && modal.y==1.4f); // No repeated cell: newest real pair.
+  modal=mode.update(fixAt(.9f,1.5f),1401,options);
+  assert(modal.x==.9f && mode.size==1); // Old votes expire.
+  mode.clear();
+  mode.update(fixAt(.6f,1.2f),UINT32_MAX-100,options);
+  mode.update(fixAt(.6f,1.2f),100,options);
+  modal=mode.update(fixAt(.7f,1.3f),200,options);
+  assert(modal.x==.6f); // History ages correctly across millis wrap.
+  modal=mode.update(fixAt(.8f,1.4f),1201,options);
+  assert(modal.x==.8f && mode.size==1);
+  options.modeWindow=1;
+  modal=mode.update(fixAt(.9f,1.5f),1300,options);
+  assert(modal.x==.9f && mode.size==1);
+  options=wam::TrackingOptions{};
   wam::PositionTracker tracker;
   auto p=tracker.update(fixAt(.6f,1.2f),100,options);assert(p.valid && !p.held);
   p=tracker.update(fixAt(.95f,1.6f),300,options);
@@ -53,14 +88,24 @@ int main() {
   p=tracker.update(fixAt(.95f,1.6f),700,options);assert(p.held);
   p=tracker.update(fixAt(.96f,1.61f),900,options);
   assert(!p.held && p.x==.96f); // Sustained movement follows on second frame.
+  assert(tracker.mode.size==1); // Confirmed motion discards the old cluster.
   wam::Fix missing;
   p=tracker.update(missing,1100,options);assert(p.valid && p.held);
+  assert(tracker.mode.size==0);
   p=tracker.update(missing,1251,options);assert(!p.valid); // 350 ms visual hold.
   p=tracker.update(fixAt(.6f,1.2f),1501,options);assert(p.valid && !p.held && p.x==.6f);
   tracker=wam::PositionTracker{};
   tracker.update(fixAt(.6f,1.2f),UINT32_MAX-100,options);
   p=tracker.update(missing,100,options);assert(p.valid && p.held);
   p=tracker.update(missing,300,options);assert(!p.valid); // millis wrap.
+
+  // Short dropouts clear votes even before the tracker reset timeout elapses.
+  tracker=wam::PositionTracker{};
+  tracker.update(fixAt(.6f,1.2f),100,options);
+  tracker.update(fixAt(.6f,1.2f),200,options);
+  tracker.update(missing,250,options);
+  p=tracker.update(fixAt(.7f,1.2f),300,options);
+  assert(!p.held && p.x==.7f);
 
   // Reproducible stationary simulation, 200 ms frames and 1.2 cm range sigma.
   // Compare actual tracker output with the same solver without tracking.
@@ -88,5 +133,5 @@ int main() {
   assert(count>500 && rejections>=15);
   const double rawRms=sqrt(unfilteredError/count),filteredRms=sqrt(trackedError/count);
   assert(filteredRms<rawRms*.75 && filteredRms<.03);
-  printf("PASS: six reachable targets, partial fixes, spike/motion/dropout/wrap checks; stationary simulation RMS %.2f -> %.2f cm (%d samples, %d spikes rejected).\n",rawRms*100,filteredRms*100,count,rejections);
+  printf("PASS: mode voting/ties/window/expiry, six targets, partial fixes, spike/motion/dropout/wrap checks; stationary simulation RMS %.2f -> %.2f cm (%d samples, %d spikes rejected).\n",rawRms*100,filteredRms*100,count,rejections);
 }
