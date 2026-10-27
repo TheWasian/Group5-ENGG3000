@@ -10,6 +10,8 @@ from pathlib import Path
 from time import sleep
 from typing import Callable
 
+from calibration_mode import SensorMode, parse_multi_master_distance, select_sensor_mode
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PLATFORMIO_CONFIG = PROJECT_ROOT / "platformio.ini"
@@ -85,10 +87,16 @@ def request_room_test(
     sample_count: int,
     delay_ms: int,
     progress_text: str,
+    sensor_mode: SensorMode,
 ) -> list[int]:
-    """Request one room test burst and return raw echo durations in microseconds."""
+    """Request one test burst and return values for the selected sensor mode."""
     connection.reset_input_buffer()
-    connection.write(f"ROOM_TEST {sample_count} {delay_ms}\n".encode("ascii"))
+    command = (
+        f"ROOM_TEST {sample_count} {delay_ms}"
+        if sensor_mode == "single"
+        else f"MULTI_TEST {sample_count} {delay_ms}"
+    )
+    connection.write(f"{command}\n".encode("ascii"))
     durations: list[int] = []
 
     while True:
@@ -101,12 +109,19 @@ def request_room_test(
         line = raw_line.decode("utf-8", errors="replace").strip()
         print(f"\r\033[2KReceived: {line}")
         print(progress_text, end="", flush=True)
-        if line == "ROOM_TEST_DONE":
+        if line == "ROOM_TEST_DONE" or (
+            sensor_mode == "multi" and len(durations) == sample_count
+        ):
             if len(durations) != sample_count:
                 raise ValueError(
                     f"Received {len(durations)} readings; expected {sample_count}"
                 )
             return durations
+        if sensor_mode == "multi":
+            master_distance = parse_multi_master_distance(line)
+            if master_distance is not None:
+                durations.append(round(master_distance * 100))
+            continue
         if not line.startswith("ROOM_TEST,"):
             continue
 
@@ -285,7 +300,7 @@ def plot_results(
 
 
 def run_room_sweep(
-    connection: object, sample_count: int, delays: list[int]
+    connection: object, sample_count: int, delays: list[int], sensor_mode: SensorMode
 ) -> dict[int, list[int]]:
     """Run the configured room-test sweep on an open serial connection."""
     results: dict[int, list[int]] = {}
@@ -308,7 +323,7 @@ def run_room_sweep(
             progress_text,
         )
         results[delay_ms] = request_room_test(
-            connection, sample_count, delay_ms, progress_text
+            connection, sample_count, delay_ms, progress_text, sensor_mode
         )
         remaining_estimate = sum(burst_estimates[burst_number + 1:])
         remaining_estimate += BURST_SETTLE_TIME_S * (
@@ -345,6 +360,9 @@ def main() -> None:
         raise SystemExit(error) from error
 
     sample_count = prompt_positive_int("Readings per burst: ", 100)
+    sensor_mode = select_sensor_mode()
+    if sensor_mode == "multi":
+        print("Multi-sensor room test graphs the master range in centimetres.")
     delays = prompt_delay_bounds()
     serial_timeout = max(5.0, max(delays) / 1000 + 5)
 
@@ -359,14 +377,16 @@ def main() -> None:
         with serial.Serial(port, baud_rate, timeout=serial_timeout) as connection:
             print(f"Connected to {port} at {baud_rate} baud.")
             sleep(2)
-            results = run_room_sweep(connection, sample_count, delays)
+            results = run_room_sweep(connection, sample_count, delays, sensor_mode)
             args.csv.parent.mkdir(parents=True, exist_ok=True)
             args.output.parent.mkdir(parents=True, exist_ok=True)
             save_results(results, args.csv)
             print(f"Saved raw room test readings to {args.csv}")
 
             def rerun() -> dict[int, list[int]]:
-                updated_results = run_room_sweep(connection, sample_count, delays)
+                updated_results = run_room_sweep(
+                    connection, sample_count, delays, sensor_mode
+                )
                 save_results(updated_results, args.csv)
                 print(f"Saved raw room test readings to {args.csv}")
                 return updated_results

@@ -32,8 +32,8 @@ entry points accept fresh two- or three-sensor positions, process each frame
 once, and reject held/stale/single-sensor positions for scoring. Game rules and
 the current website's visual effects remain in their existing implementations.
 
-The PlatformIO target is classic `esp32dev`; select a different board definition
-if your hardware requires it. The sketches use only ESP32 Arduino core libraries.
+The PlatformIO target is `esp32-s3-devkitc-1`. The sketches use only ESP32
+Arduino core libraries.
 The older two-sensor `MVP.ino` and its event API remain supported by the game UI.
 
 ## Sensor spacing and aiming: edit one file

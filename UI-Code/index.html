@@ -151,37 +151,44 @@
           <div class="progress-container" aria-label="Level progress">
             <div id="progress-bar"></div>
           </div>
-          <p id="progress-text">0 / 500 (Level 2)</p>
+          <div class="progress-legend">
+            <p id="progress-text">0 / 500 (Level 2)</p>
+            <p id="progress-pct">0%</p>
+          </div>
         </div>
 
         <div id="mole-legend" aria-label="Mole types">
           <div class="legend-item">
             <span class="mini-mole normal-mini"></span>
-            <span class="legend-text"><strong>Normal</strong><small>+10</small></span>
+            <span class="legend-text"><strong>Normal</strong><small>+50</small></span>
           </div>
           <div class="legend-item">
-            <span class="mini-mole speedy-mini"></span>
-            <span class="legend-text"><strong>Fast</strong><small>+20</small></span>
+            <span class="mini-mole ice-mini"></span>
+            <span class="legend-text"><strong>Freeze</strong><small>+50 + 5 Second Timer Freeze</small></span>
           </div>
           <div class="legend-item">
-            <span class="mini-mole dark-mini"></span>
-            <span class="legend-text"><strong>Dark</strong><small>-15</small></span>
+            <span class="mini-mole bomb-mini"></span>
+            <span class="legend-text"><strong>Bomb</strong><small>-1 Life</small></span>
           </div>
+         <!--
           <div class="legend-item">
             <span class="mini-mole toxic-mini"></span>
             <span class="legend-text"><strong>Toxic</strong><small>+30</small></span>
-          </div>
+          </div> 
+          -->
           <div class="legend-item">
             <span class="mini-mole golden-mini"></span>
-            <span class="legend-text"><strong>Golden</strong><small>+50</small></span>
+            <span class="legend-text"><strong>Golden</strong><small>+200</small></span>
           </div>
         </div>
 
+        <!----
         <div id="rewards">
           <div id="bronze-reward" class="reward locked"><span>Bronze</span></div>
           <div id="silver-reward" class="reward locked"><span>Silver</span></div>
           <div id="gold-reward" class="reward locked"><span>Gold</span></div>
         </div>
+        -->
 
       </section>
 
@@ -306,15 +313,16 @@
         <button class="restart-button" type="button">RESTART GAME</button>
       </div>
     </main>
-    
-    <div id="hammer-cursor">
-  <div class="hammer-head">
-    <div class="hammer-face"></div>
-  </div>
-  <div class="hammer-handle"></div>
-</div>
+   <!-- changed because the services are now the live game -->
+   <script src="./backend/services/LevelingService.js"></script>
+   <script src="./backend/services/MoleService.js"></script>
+   <script src="./backend/services/EnvironmentService.js"></script>
+   <script src="./backend/services/GameConditionService.js"></script>
+   <script src="./backend/services/HighScoreService.js"></script>
+   <script src="./backend/services/GameService.js"></script>
    <script src="./backend/GameView.js"></script>
    <script src="./backend/SensorService.js"></script>
-   <script src="./backend/gameLogic.js"></script>
+   <script src="./backend/FrontendMetrics.js"></script>
+   <script src="./backend/main.js"></script>
   </body>
 </html>

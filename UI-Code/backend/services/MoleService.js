@@ -1,23 +1,20 @@
-//Main Mole Logic (Like a Mole class)
+// Mole types, points, spawn odds and skins.
 var MoleService = {
-  POINTS: { normal: 10, speedy: 20, dark: -15, toxic: 30, golden: 50 },
+  MOLE_POINTS: { normal: 50, bomb: 0, golden: 200, frozen: 50 },
+  GOLDEN_LIFETIME_FACTOR: 0.75, // golden mole lifespan
+  FREEZE_SECONDS: 5, // frozen mole duration
 
-  SPEEDY_UPTIME: 0.6, // speedy stays up 60% longer for them to hit it
-  TOXIC_TIME_COST: 5, // toxic hit costs 5 seconds of clock
-
-  // Spawn odds per level, progresses as it goes
+  // Spawn odds; roll order is bomb, golden, frozen, normal
   SPAWN_CHANCES: {
-    1: { normal: 1 },
-    2: { normal: 0.7, speedy: 0.2, dark: 0.1 },
-    3: { normal: 0.55, speedy: 0.2, dark: 0.15, toxic: 0.1 },
-    4: { normal: 0.45, speedy: 0.2, dark: 0.15, toxic: 0.15, golden: 0.05 },
-    5: { normal: 0.35, speedy: 0.2, dark: 0.2, toxic: 0.15, golden: 0.1 },
+    1: { bomb: 0.1, golden: 0.15, frozen: 0.08, normal: 0.67 },
+    2: { bomb: 0.25, golden: 0.15, frozen: 0.08, normal: 0.52 },
+    3: { bomb: 0.4, golden: 0.15, frozen: 0.08, normal: 0.37 },
   },
 
-  //Picking mole type logic based on the spawn chances
-  pickType: function (level, rng) {
+  // Pick a mole type for this level using the level's spawn odds.
+  pickMoleType: function (level, rng) {
     var rand = rng || Math.random;
-    var chances = this.SPAWN_CHANCES[level] || this.SPAWN_CHANCES[1];
+    var chances = LevelingService.levelingChance(level);
     var roll = rand();
     var edge = 0;
     for (var type in chances) {
@@ -26,5 +23,22 @@ var MoleService = {
       if (roll < edge) return type;
     }
     return "normal";
+  },
+
+  // Level skin: golden/frozen keep their look, otherwise ice at L2, fire at L3
+  moleVariant: function (type, level) {
+    if (type === "golden") return "has-golden";
+    if (type === "frozen") return "has-frozen";
+    if (level === 2 && type === "normal") return "has-normal-ice";
+    if (level === 2 && type === "bomb") return "has-bomb-ice";
+    if (level === 3 && type === "normal") return "has-normal-fire";
+    if (level === 3 && type === "bomb") return "has-bomb-fire";
+    return "";
+  },
+
+  // How long this mole stays up (golden lives 25% less)
+  moleLifetime: function (type, staysUp) {
+    if (type === "golden") return Math.round(staysUp * this.GOLDEN_LIFETIME_FACTOR);
+    return staysUp;
   },
 };

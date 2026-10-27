@@ -8,12 +8,8 @@ const frontendMetrics = {
 
     normalWhackResponseTimes: [],
     frozenWhackResponseTimes: [],
-    goldenWhackResponseTimes: [],
     freezeDurations: [],
-    goldenLifetimeSamples: [],
-
-    goldenHits: 0,
-    frozenHits: 0
+    goldenLifetimeSamples: []
 };
 
 let lastFrameTime = performance.now();
@@ -76,23 +72,14 @@ const progressBar = document.getElementById("progress-bar");
 const progressText = document.getElementById("progress-text");
 const livesDisplay = document.getElementById("lives");
 const damageIndicator = document.getElementById("damage-indicator"); //changed to show the damage (red screen)
-const streakPanel = document.getElementById("streak-panel");
-const streakCountDisplay = document.getElementById("streak-count");
-const comboBadge = document.getElementById("combo-badge");
-const comboMultiplierDisplay = document.getElementById("combo-multiplier");
-const streakNextDisplay = document.getElementById("streak-next");
-const streakProgressBar = document.getElementById("streak-progress-bar");
-const comboAnnouncement = document.getElementById("combo-announcement");
-
-
 
 const POINTS_PER_MOLE = 50;
 const GOLDEN_POINTS = 200;
 const GOLDEN_CHANCE = 0.15;
-const FROZEN_CHANCE = 0.15;
+const FROZEN_CHANCE = 0.08;
 const FREEZE_SECONDS = 5;
 const GOLDEN_LIFETIME_FACTOR = 0.75;
-let SPAWN_INTERVAL = 3500;
+let SPAWN_INTERVAL = 500;
 let MOLE_LIFETIME = 3200; 
 const ROUND_TIME = 300;
 const LEVEL_2_AT = 500;
@@ -113,176 +100,8 @@ let lastHole = null;
 let activeMoleType = "normal"; 
 let freezeTicksLeft = 0;
 let moleSpawnTime = null;
-let comboAnnouncementTimer = null;
-let hitStreak = 0;
-let streakMultiplier = 1;
 startBtn.addEventListener("click", startGame);
 restartButtons.forEach((button) => button.addEventListener("click", startGame));
-
-function getStreakMultiplier(streak){
-  if(streak >= 15) return 4;
-  if(streak >= 10) return 3;
-  if(streak >= 5) return 2;
-  return 1;
-}
-
-function updateStreakDisplay(){
-  streakCountDisplay.textContent = hitStreak;
-  comboMultiplierDisplay.textContent = `×${streakMultiplier}`;
-
-  streakPanel.classList.toggle("combo-active", hitStreak >= 3);
-  streakPanel.classList.toggle("combo-fire", hitStreak >= 5);
-
-  comboBadge.classList.remove(
-    "combo-tier-2",
-    "combo-tier-3",
-    "combo-tier-4"
-  );
-
-  if(streakMultiplier >= 2){
-    comboBadge.classList.add(`combo-tier-${streakMultiplier}`);
-  }
-
-  const milestones = [5, 10, 15, 20];
-  const nextMilestone = milestones.find((milestone) => milestone > hitStreak);
-
-  if(nextMilestone != undefined){
-    const previousMilestone = milestones
-      .filter((milestone) => milestone <= hitStreak)
-      .pop() ?? 0;
-
-    const progress =
-      ((hitStreak - previousMilestone) /
-        (nextMilestone - previousMilestone)) * 100;
-
-    streakProgressBar.style.width = `${progress}%`;
-
-    const nextMultiplier = getStreakMultiplier(nextMilestone);
-
-    streakNextDisplay.textContent =
-      `Next: ${nextMilestone} hits → ×${nextMultiplier}`;
-  } else {
-    streakProgressBar.style.width = "100%";
-    streakNextDisplay.textContent = "20 hits! You're unstoppable!";
-  }
-  }function showComboAnnouncement(message, lost = false) {
-  clearTimeout(comboAnnouncementTimer);
-
-  comboAnnouncement.classList.remove("show", "streak-lost");
-  void comboAnnouncement.offsetWidth;
-
-  comboAnnouncement.textContent = message;
-
-  if (lost) {
-    comboAnnouncement.classList.add("streak-lost");
-  }
-
-  comboAnnouncement.classList.add("show");
-
-  comboAnnouncementTimer = setTimeout(() => {
-    comboAnnouncement.classList.remove("show", "streak-lost");
-  }, 1200);
-}
-
-function registerSuccessfulHit(basePoints) {
-  const previousMultiplier = streakMultiplier;
-
-  hitStreak++;
-  streakMultiplier = getStreakMultiplier(hitStreak);
-
-  updateStreakDisplay();
-
-  if (hitStreak === 20) {
-    showComboAnnouncement("UNSTOPPABLE!");
-  } else if (streakMultiplier > previousMultiplier) {
-    showComboAnnouncement(`×${streakMultiplier} COMBO!`);
-
-    streakPanel.classList.remove("combo-tier-up");
-    comboBadge.classList.remove("combo-pulse");
-
-    void streakPanel.offsetWidth;
-    void comboBadge.offsetWidth;
-
-    streakPanel.classList.add("combo-tier-up");
-    comboBadge.classList.add("combo-pulse");
-  } else if (hitStreak === 3) {
-    showComboAnnouncement("3 HIT STREAK!");
-  }
-  
-  if (STREAK_MILESTONES.includes(hitStreak)) {
-    playStreakFill();
-  }
-  const awardedPoints = basePoints * streakMultiplier;
-
-  addScore(awardedPoints);
-
-  return awardedPoints;
-}
-
-function resetStreak() {
-  clearStreakFill();
-  hitStreak = 0;
-  streakMultiplier = 1;
-
-  streakPanel.classList.remove(
-    "combo-active",
-    "combo-tier-up",
-    "streak-break"
-  );
-
-  comboBadge.classList.remove("combo-pulse");
-
-  clearTimeout(comboAnnouncementTimer);
-  comboAnnouncement.classList.remove("show", "streak-lost");
-
-  updateStreakDisplay();
-}
-
-function breakStreak() {
-  if (hitStreak === 0) return;
-  clearStreakFill();
-
-  hitStreak = 0;
-  streakMultiplier = 1;
-
-  updateStreakDisplay();
-
-  streakPanel.classList.remove("combo-tier-up");
-  streakPanel.classList.remove("streak-break");
-  void streakPanel.offsetWidth;
-  streakPanel.classList.add("streak-break");
-
-  showComboAnnouncement("STREAK LOST!", true);
-
-  setTimeout(() => {
-    streakPanel.classList.remove("streak-break");
-  }, 400);
-}
-
-const streakTrack = document.querySelector(".streak-progress-track");
-const STREAK_MILESTONES = [5, 10, 15, 20];
-let streakFillTimer = null;
-
-function clearStreakFill() {
-  clearTimeout(streakFillTimer);
-  streakProgressBar.classList.remove("bar-fire");
-  streakTrack.classList.remove("track-fire");
-  streakPanel.classList.remove("streak-burst");
-}
-
-function playStreakFill() {
-  clearStreakFill();
-  streakProgressBar.style.width = "100%";
-  void streakPanel.offsetWidth;
-  streakProgressBar.classList.add("bar-fire");
-  streakTrack.classList.add("track-fire");
-  streakPanel.classList.add("streak-burst");
-
-  streakFillTimer = setTimeout(() => {
-    clearStreakFill();
-    updateStreakDisplay();
-  }, 800);
-}
 
 function startGame() {
   score = 0;
@@ -294,7 +113,6 @@ function startGame() {
   
   clearFreeze();
   clearGameTimers();
-  resetStreak();
   clearMole();
   resetRewards();
   updateScore();
@@ -311,7 +129,6 @@ function startGame() {
   SensorService.notifyGameStart();
 
   countdownTimer = setInterval(tick, 1000);
-  moleTimer = setInterval(spawnMole, SPAWN_INTERVAL);
   spawnMole();
 }
 
@@ -475,7 +292,6 @@ moleLifetimeTimer = setTimeout(() => {
   clearMole();
 
   if (expiredType === "normal") {
-    breakStreak();
     loseLife("Too slow! You missed the mole!");
   }
 
@@ -508,32 +324,16 @@ function whackHole(holeIndex, source = "mouse") {
   clearMole();
   
   if (hitType === "bomb") {
-  breakStreak();
   loseLife("Boom! You hit a bomb!");
 
 } else if (hitType === "golden") {
-    if (moleSpawnTime !== null) {
-    const lifetime = performance.now() - moleSpawnTime;
-
-    frontendMetrics.goldenLifetimeSamples.push(lifetime);
-
-    const lifetimeDisplay =
-      document.getElementById("golden-lifetime");
-
-    if (lifetimeDisplay) {
-      lifetimeDisplay.textContent =
-        lifetime.toFixed(2);
-    }
-  }
-  
-   const pts = registerSuccessfulHit(GOLDEN_POINTS);
+  addScore(GOLDEN_POINTS);
 
   statusMessage.textContent =
-    `Golden Mole! +${GOLDEN_POINTS} points!`;
+    `Golden Mole! +${GOLDEN_POINTS} points! `;
 
 } else if (hitType === "frozen") {
-
-  const pts = registerSuccessfulHit(POINTS_PER_MOLE);
+  addScore(POINTS_PER_MOLE);
 
   freezeTimer(FREEZE_SECONDS);
 
@@ -541,25 +341,17 @@ function whackHole(holeIndex, source = "mouse") {
     `Frozen Mole! +${POINTS_PER_MOLE} points! Timer frozen for ${FREEZE_SECONDS}s! `;
 
 } else {
-  const pts = registerSuccessfulHit(POINTS_PER_MOLE);
+  addScore(POINTS_PER_MOLE);
 
-   statusMessage.textContent =
-    `Whack! +${pts} points`;
+  statusMessage.textContent =
+    `Whack! +${POINTS_PER_MOLE} points`;
 }
   
   const responseTime = performance.now() - whackStart;
 
   frontendMetrics.whackResponseTimes.push(responseTime);
-  const whackDisplay =
-  document.getElementById("whack-response-time");
-
-if (whackDisplay) {
-  whackDisplay.textContent = responseTime.toFixed(2);
-}
- if (hitType === "frozen") {
-
+  if (hitType === "frozen") {
   frontendMetrics.frozenWhackResponseTimes.push(responseTime);
-  frontendMetrics.frozenHits++;
 
   const display =
     document.getElementById("frozen-response-time");
@@ -568,36 +360,7 @@ if (whackDisplay) {
     display.textContent = responseTime.toFixed(2);
   }
 
-  const countDisplay =
-    document.getElementById("frozen-hit-count");
-
-  if (countDisplay) {
-    countDisplay.textContent =
-      `${frontendMetrics.frozenHits}/10`;
-  }
-
-} else if (hitType === "golden") {
-
-  frontendMetrics.goldenWhackResponseTimes.push(responseTime);
-  frontendMetrics.goldenHits++;
-
-  const display =
-    document.getElementById("golden-response-time");
-
-  if (display) {
-    display.textContent = responseTime.toFixed(2);
-  }
-
-  const countDisplay =
-    document.getElementById("golden-hit-count");
-
-  if (countDisplay) {
-    countDisplay.textContent =
-      `${frontendMetrics.goldenHits}/10`;
-  }
-
 } else if (hitType === "normal") {
-
   frontendMetrics.normalWhackResponseTimes.push(responseTime);
 
   const display =
@@ -607,7 +370,16 @@ if (whackDisplay) {
     display.textContent = responseTime.toFixed(2);
   }
 }
+
+  const display = document.getElementById("whack-response-time");
+
+  if (display) {
+    display.textContent = responseTime.toFixed(2);
+  }
+
+  return true;
 }
+
 function addScore(points) {
   score += points;
   updateScore();
@@ -626,20 +398,20 @@ function updateLevel() {
   levelDisplay.textContent = level;
   const transitionStart = performance.now();
     if(level === 1){
-      SPAWN_INTERVAL = 3500;
-      MOLE_LIFETIME = 3200;
+      SPAWN_INTERVAL = 3800;
+      MOLE_LIFETIME = 3800;
       GameView.setEnvironment("grassland");
     }
 
     if (level === 2){
-      SPAWN_INTERVAL = 2200;
-      MOLE_LIFETIME = 1800;
+      SPAWN_INTERVAL = 3500;
+      MOLE_LIFETIME = 3500;
       GameView.setEnvironment("freezing");
   }
 
     if (level === 3){
-      SPAWN_INTERVAL = 1400;
-      MOLE_LIFETIME = 1100;
+      SPAWN_INTERVAL = 3100;
+      MOLE_LIFETIME = 3100;
       GameView.setEnvironment("fire");
   }
   requestAnimationFrame(() => {
@@ -701,37 +473,48 @@ function updateProgress() {
     Math.min(score - progressStart, progressEnd - progressStart),
   );
   const levelRange = progressEnd - progressStart;
-  progressBar.style.width = `${(levelProgress / levelRange) * 100}%`;
+  const percent = (levelProgress / levelRange) * 100;
+  progressBar.style.width = `${percent}%`;
   progressText.textContent = `${levelProgress} / ${levelRange} (${levelLabel})`;
+
+  const progressPct = document.getElementById("progress-pct");
+  if (progressPct) {
+    progressPct.textContent = `${Math.round(percent * 10) / 10}%`;
+  }
 }
 
 function checkLevel() {
-  unlockReward("bronze-reward", 50);
-  unlockReward("silver-reward", 250);
-  unlockReward("gold-reward", 500);
+  try {
+    unlockReward("bronze-reward", 50);
+    unlockReward("silver-reward", 250);
+    unlockReward("gold-reward", 500);
 
-  if (score >= WIN_AT) {
-    endGame(true);
-    return;
+    if (score >= WIN_AT) {
+      endGame(true);
+      return;
+    }
+
+    var previousLevel = level;
+
+    if (score >= LEVEL_3_AT) level = 3;
+    else if (score >= LEVEL_2_AT) level = 2;
+    else level = 1;
+
+    if(level !== previousLevel){
+    updateLevel();
+    }
+  } finally {
+    updateProgress();
   }
-  
-  var previousLevel = level;
-
-  if (score >= LEVEL_3_AT) level = 3;
-  else if (score >= LEVEL_2_AT) level = 2;
-  else level = 1;
-  
-  if(level !== previousLevel){
-  updateLevel();
-  }
-
-  updateProgress();
 }
 
 
 function unlockReward(id, threshold) {
   if (score < threshold) return;
   const reward = document.getElementById(id);
+  // Optional UI: the rewards block can be removed from the page, and a missing
+  // element must not stop the score, the level, or the progress bar.
+  if (!reward) return;
   if (!reward.classList.contains("unlocked")) {
     reward.classList.remove("locked");
     reward.classList.add("unlocked");

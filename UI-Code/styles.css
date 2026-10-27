@@ -216,9 +216,9 @@ h1 {
 .progress-container {
   width: 100%;
   height: 14px; 
-  background: #fff8e6;
+  background: #6b3f1d;
   border-radius: 8px;
-  border: 2px solid #6b3f1d;
+  border: 2px solid #40230f;
   overflow: hidden;
 }
 
@@ -229,12 +229,25 @@ h1 {
   transition: width 0.4s ease;
 }
 
-#progress-text {
+.progress-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+}
+
+#progress-text,
+#progress-pct {
   font-size: 13px;
   font-weight: 700;
   color: #fff;
   margin: 0;
   text-shadow: 1px 1px 2px #000;
+}
+
+#progress-pct {
+  color: #ffd23f;
 }
 
 #rewards {
@@ -305,6 +318,8 @@ h1 {
 }
 
 .normal-mini { background: #5c4033; }
+.ice-mini { background: #4c91c7; }
+.bomb-mini { background: #222; }
 .speedy-mini { background: #3b82f6; }
 .dark-mini { background: #1f2937; }
 .toxic-mini { background: #10b981; }
@@ -535,6 +550,68 @@ h1 {
 }
 
 .mole.has-bomb .mole-bomb {
+  display: block;
+}
+
+.mole.has-normal-ice .css-mole,
+.mole.has-bomb-ice .css-mole {
+  background: #4c91c7;
+  box-shadow: inset -5px -5px 10px rgba(0, 40, 80, 0.4);
+}
+
+.mole.has-normal-ice .mole-nose,
+.mole.has-bomb-ice .mole-nose {
+  background: #a8ddf0;
+}
+
+.mole.has-normal-ice .css-mole::before,
+.mole.has-normal-ice .css-mole::after,
+.mole.has-bomb-ice .css-mole::before,
+.mole.has-bomb-ice .css-mole::after {
+  background: #0f273d; 
+}
+
+
+.mole.has-normal-ice .mole-whiskers::before,
+.mole.has-normal-ice .mole-whiskers::after,
+.mole.has-bomb-ice .mole-whiskers::before,
+.mole.has-bomb-ice .mole-whiskers::after {
+  background: #e9fbff;
+  box-shadow: 0 6px 0 #e9fbff;
+}
+
+.mole.has-bomb-ice .mole-bomb{
+  display: block;
+}
+
+
+.mole.has-normal-fire .css-mole,
+.mole.has-bomb-fire .css-mole {
+  background: #e30f0f;
+  box-shadow: inset -5px -5px 10px rgba(60, 10, 0, 0.5);
+}
+
+.mole.has-normal-fire .mole-nose,
+.mole.has-bomb-fire .mole-nose {
+  background: #ff7a18;
+}
+
+.mole.has-normal-fire .css-mole::before,
+.mole.has-normal-fire .css-mole::after,
+.mole.has-bomb-fire .css-mole::before,
+.mole.has-bomb-fire .css-mole::after {
+  background: #250706;
+}
+
+.mole.has-normal-fire .mole-whiskers::before,
+.mole.has-normal-fire .mole-whiskers::after,
+.mole.has-bomb-fire .mole-whiskers::before,
+.mole.has-bomb-fire .mole-whiskers::after {
+  background: #ffd84a;
+  box-shadow: 0 6px 0 #ffd84a;
+}
+
+.mole.has-bomb-fire .mole-bomb{
   display: block;
 }
 
@@ -849,9 +926,6 @@ h1 {
   animation: timerSweep 2s linear infinite;
 }
 
-/* =========================
-   FROZEN MOLE
-   ========================= */
 
 .mole.has-frozen .css-mole {
   background:
@@ -1507,6 +1581,7 @@ body.env-toxic .game-container {
 }
 
 
+
 /* =========================
    ARCADE STREAK / COMBO UI
    ========================= */
@@ -1944,4 +2019,67 @@ body.env-toxic .game-container {
     .streak-panel.streak-burst {
         animation: none;
     }
+}
+
+/* Player Marker: The hammer goes where player was last seen and only swings when a hit is made */
+
+.player-marker .css-hammer {
+  position: relative;
+  width: 85px;
+  height: 105px;
+  transform-origin: 45% 88%;
+}
+
+.player-marker .hammer-handle {
+  position: absolute;
+  width: 17px;
+  height: 82px;
+  left: 35px;
+  top: 20px;
+  background: linear-gradient(90deg, #6f3518 0%, #a95727 22%, #d27a3d 48%, #a95727 75%, #683016 100%);
+  border: 3px solid #4b2413;
+  border-radius: 10px 10px 14px 14px;
+  transform: rotate(-6deg);
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+.player-marker .hammer-head {
+  position: absolute;
+  width: 67px;
+  height: 34px;
+  left: 6px;
+  top: 6px;
+  background: linear-gradient(to bottom, #9b9b9b 0%, #777 42%, #5a5a5a 100%);
+  border: 3px solid #353535;
+  border-radius: 15px 13px 13px 15px;
+  box-shadow: 2px 4px 0 rgba(0, 0, 0, 0.28), inset 0 3px 0 rgba(255, 255, 255, 0.22);
+}
+
+.player-marker .hammer-head::before {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 6px;
+  left: 10px;
+  top: 5px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  transform: rotate(-2deg);
+}
+
+/* didn't change much just dimmed the hammer when parked */
+.player-marker.stale {
+  opacity: 0.4;
+  filter: grayscale(0.35) drop-shadow(0 4px 3px rgba(0, 0, 0, 0.3));
+}
+
+/*Swing animation and only once per hit*/
+.player-marker.swinging .css-hammer {
+  animation: hammerSwing 0.22s ease-out;
+}
+
+@keyframes hammerSwing {
+  0% { transform: rotate(0deg); }
+  45% { transform: rotate(38deg); }
+  100% { transform: rotate(0deg); }
 }
