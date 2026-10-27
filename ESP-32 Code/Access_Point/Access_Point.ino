@@ -16,7 +16,7 @@
 constexpr int TRIG_PIN = 10;
 constexpr int ECHO_PIN = 3;
 constexpr int BUZZER_PIN = 18;       // Active buzzer; -1 disables output.
-//constexpr int WARNING_LED_PIN = 7; // -1 disables output.
+constexpr int WARNING_LED_PIN = 7; // -1 disables output.
 
 constexpr float PLAY_AREA_WIDTH_M = 1.50f;
 constexpr float PLAY_AREA_DEPTH_M = 1.40f;
@@ -52,9 +52,12 @@ constexpr float RANGE_SPIKE_LIMIT_M = 0.16f;
 constexpr float RANGE_CONFIRM_TOLERANCE_M = 0.10f;
 constexpr float POSITION_JUMP_LIMIT_M = 0.14f;
 constexpr float POSITION_CONFIRM_RADIUS_M = 0.08f;
-constexpr float POSITION_STATIONARY_TAU_S = 0.35f;
-constexpr float POSITION_MOVING_TAU_S = 0.12f;
-constexpr float POSITION_TWO_SENSOR_TAU_S = 0.50f;
+constexpr uint8_t POSITION_MODE_WINDOW = 5; // Latest valid positions, from 1 to 9.
+constexpr float POSITION_MODE_BIN_M = 0.05f; // 5 cm cells for mode voting.
+constexpr uint32_t POSITION_MODE_HISTORY_MS = 1000; // Expire older votes.
+static_assert(POSITION_MODE_WINDOW >= 1 && POSITION_MODE_WINDOW <= wam::PositionMode::CAPACITY,
+  "Position mode window must be between 1 and 9.");
+static_assert(POSITION_MODE_BIN_M > 0, "Position mode cell size must be positive.");
 constexpr uint32_t POSITION_HOLD_MS = 350; // Display only; held fixes cannot score.
 constexpr uint32_t RANGE_STALE_MS = 500;
 constexpr uint32_t MAX_FRAME_SPAN_MS = 300;
@@ -370,9 +373,9 @@ void setup() {
   Serial.begin(115200); delay(300);
   trackingOptions.jumpLimit = POSITION_JUMP_LIMIT_M;
   trackingOptions.confirmationRadius = POSITION_CONFIRM_RADIUS_M;
-  trackingOptions.stationaryTau = POSITION_STATIONARY_TAU_S;
-  trackingOptions.movingTau = POSITION_MOVING_TAU_S;
-  trackingOptions.twoRangeTau = POSITION_TWO_SENSOR_TAU_S;
+  trackingOptions.modeWindow = POSITION_MODE_WINDOW;
+  trackingOptions.modeBinM = POSITION_MODE_BIN_M;
+  trackingOptions.modeHistoryMs = POSITION_MODE_HISTORY_MS;
   trackingOptions.holdMs = POSITION_HOLD_MS;
   trackingOptions.resetMs = RANGE_STALE_MS;
   if (TRIG_PIN < 0 || ECHO_PIN < 0 || TRIG_PIN == ECHO_PIN ||

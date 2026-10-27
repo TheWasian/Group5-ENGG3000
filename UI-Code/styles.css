@@ -1612,6 +1612,447 @@ body.env-toxic .game-container {
   filter: drop-shadow(0 0 10px rgba(100, 255, 0, 0.2));
 }
 
+
+
+/* =========================
+   ARCADE STREAK / COMBO UI
+   ========================= */
+
+.streak-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 14px 0;
+    padding: 12px 18px;
+    border: 2px solid #e6bd54;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fff9df, #ffe8a3);
+    box-shadow: 0 4px 0 #c99b35, 0 6px 14px #00000018;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+
+.streak-info,
+.streak-number,
+.combo-badge {
+    display: flex;
+    align-items: center;
+}
+
+.streak-info {
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 90px;
+}
+
+.streak-label,
+.combo-caption {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.streak-label {
+    color: #79551c;
+}
+
+.streak-number {
+    gap: 6px;
+    line-height: 1;
+}
+
+#streak-count {
+    color: #8c5810;
+    font-size: 2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.streak-hits {
+    color: #8c5810;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.combo-badge {
+    flex-shrink: 0;
+    flex-direction: column;
+    justify-content: center;
+    width: 76px;
+    height: 66px;
+    border: 2px solid #c99b35;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #fff, #ffe49a);
+    box-shadow: 0 3px 0 #c99b35;
+    transition: transform 0.2s, background 0.2s;
+}
+
+#combo-multiplier {
+    color: #98600b;
+    font-size: 1.65rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.combo-caption {
+    color: #79551c;
+    font-size: 0.5rem;
+    letter-spacing: 0.8px;
+}
+
+.combo-tier-2 {
+    border-color: #e6a817;
+    background: linear-gradient(145deg, #fff4b0, #ffc83d);
+    box-shadow: 0 3px 0 #c47d08, 0 0 12px #ffc83d80;
+}
+
+.combo-tier-2 #combo-multiplier {
+    color: #a45c00;
+}
+
+.combo-tier-3 {
+    border-color: #f07832;
+    background: linear-gradient(145deg, #ffe0b5, #ff8b36);
+    box-shadow: 0 3px 0 #c94e19, 0 0 15px #ff853b99;
+}
+
+.combo-tier-3 #combo-multiplier {
+    color: #9c3512;
+}
+
+.combo-tier-4 {
+    border-color: #a66af0;
+    background: linear-gradient(145deg, #efd8ff, #b77aff);
+    box-shadow: 0 3px 0 #7540bd, 0 0 18px #b77affaa;
+}
+
+.combo-tier-4 #combo-multiplier {
+    color: #59269b;
+}
+
+.streak-progress {
+    flex: 1;
+    min-width: 80px;
+}
+
+#streak-next {
+    display: block;
+    margin-bottom: 7px;
+    color: #79551c;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+.streak-progress-track {
+    height: 9px;
+    overflow: hidden;
+    border: 1px solid #d5ae53;
+    border-radius: 10px;
+    background: #fff0c2;
+}
+
+#streak-progress-bar {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ffbd36, #ff8a24);
+    box-shadow: 0 0 8px #ffb52e80;
+    transition: width 0.3s ease;
+}
+
+/* Active streak and multiplier changes */
+
+.streak-panel.combo-active {
+    border-color: #ffb72e;
+    box-shadow: 0 4px 0 #c99b35, 0 0 16px #ffc83d55;
+}
+
+.streak-panel.combo-tier-up {
+    animation: comboTierUp 0.45s ease;
+}
+
+.combo-badge.combo-pulse {
+    animation: comboBadgePulse 0.5s ease;
+}
+
+@keyframes comboTierUp {
+    50% {
+        transform: scale(1.025);
+        box-shadow: 0 4px 0 #c99b35, 0 0 24px #ffc83d99;
+    }
+}
+
+@keyframes comboBadgePulse {
+    35% { transform: scale(1.2) rotate(-5deg); }
+    70% { transform: scale(0.95) rotate(3deg); }
+    100% { transform: scale(1); }
+}
+
+/* Large on-screen combo announcements */
+
+.combo-announcement {
+    position: fixed;
+    z-index: 1000;
+    top: 30%;
+    left: 50%;
+    width: max-content;
+    max-width: 90vw;
+    padding: 12px 24px;
+    border: 3px solid #fff0a0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #ffcf43, #ff8b25);
+    box-shadow: 0 6px 0 #c65a19, 0 0 28px #ffb52e99;
+    color: #71330b;
+    font-size: clamp(1.3rem, 4vw, 2.5rem);
+    font-weight: 800;
+    text-align: center;
+    text-shadow: 0 1px #ffffff80;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 20px) scale(0.65);
+}
+
+.combo-announcement.show {
+    animation: comboAnnouncement 1.2s ease forwards;
+}
+
+.combo-announcement.streak-lost {
+    border-color: #ffaaaa;
+    background: linear-gradient(135deg, #ff7777, #c92336);
+    box-shadow: 0 6px 0 #851b29, 0 0 24px #ff444477;
+    color: white;
+}
+
+@keyframes comboAnnouncement {
+    0%   { opacity: 0; transform: translate(-50%, 20px) scale(0.65); }
+    18%  { opacity: 1; transform: translate(-50%, 0) scale(1.1); }
+    30%  { transform: translate(-50%, 0) scale(1); }
+    78%  { opacity: 1; transform: translate(-50%, -8px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -25px) scale(0.9); }
+}
+
+/* Visual feedback when a streak breaks */
+
+.streak-panel.streak-break {
+    animation: streakBreak 0.4s ease;
+}
+
+@keyframes streakBreak {
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+/* Smaller screens */
+
+@media (max-width: 600px) {
+    .streak-panel {
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .streak-info {
+        min-width: 65px;
+    }
+
+    #streak-count {
+        font-size: 1.6rem;
+    }
+
+    .combo-badge {
+        width: 60px;
+        height: 56px;
+    }
+
+    #combo-multiplier {
+        font-size: 1.4rem;
+    }
+
+    #streak-next {
+        font-size: 0.65rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .streak-panel,
+    .combo-badge,
+    #streak-progress-bar {
+        transition: none;
+    }
+
+    .streak-panel.combo-tier-up,
+    .combo-badge.combo-pulse,
+    .combo-announcement.show,
+    .streak-panel.streak-break {
+        animation-duration: 0.01ms;
+    }
+}
+
+
+.streak-panel {
+    position: relative;
+    isolation: isolate;
+}
+
+.streak-panel.combo-fire::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 5%;
+    right: 5%;
+    bottom: -9px;
+    height: 30px;
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            ellipse at 15% 100%,
+            #ffcf43 0%,
+            #ff7828 35%,
+            transparent 72%
+        ),
+        radial-gradient(
+            ellipse at 45% 100%,
+            #fff09a 0%,
+            #ff8a24 40%,
+            transparent 72%
+        ),
+        radial-gradient(
+            ellipse at 75% 100%,
+            #ffd23f 0%,
+            #ff512f 40%,
+            transparent 72%
+        );
+
+    filter: blur(7px);
+    opacity: 0.9;
+    transform-origin: center bottom;
+    animation: streakFire 0.55s ease-in-out infinite alternate;
+}
+
+
+.streak-panel.combo-fire {
+    border-color: #ff8a24;
+    box-shadow:
+        0 4px 0 #c99b35,
+        0 0 12px rgba(255, 138, 36, 0.45),
+        0 0 24px rgba(255, 81, 47, 0.2);
+}
+
+@keyframes streakFire {
+    0% {
+        transform: scaleX(0.94) scaleY(0.85);
+        opacity: 0.65;
+        filter: blur(8px);
+    }
+
+    50% {
+        opacity: 0.95;
+    }
+
+    100% {
+        transform: scaleX(1.04) scaleY(1.15);
+        opacity: 1;
+        filter: blur(5px);
+    }
+}
+
+.streak-panel.combo-fire.combo-tier-up {
+    animation: comboTierUp 0.45s ease;
+}
+
+.streak-panel.combo-fire #streak-count {
+    text-shadow: 0 0 10px rgba(255, 138, 36, 0.65);
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+    .streak-panel.combo-fire::before {
+        animation: none;
+        opacity: 0.75;
+    }
+}
+
+/* Fire effect when the streak bar fills */
+.streak-progress-track {
+    position: relative;
+    overflow: visible;
+}
+
+/* Bar becomes a white-hot flame core */
+#streak-progress-bar.bar-fire {
+    background: linear-gradient(to top, #c81d00 0%, #ff5a14 35%, #ffb52e 70%, #fff6b0 100%);
+    box-shadow: 0 0 10px #ff8a24, 0 0 22px #ff3d00, 0 -4px 14px #ffcf43;
+    animation: barFlicker 0.12s steps(2) infinite alternate;
+}
+
+@keyframes barFlicker {
+    from { filter: brightness(1) saturate(1); }
+    to   { filter: brightness(1.35) saturate(1.2); }
+}
+
+/* Two layers of flame tongues licking up off the bar */
+.streak-progress-track.track-fire::before,
+.streak-progress-track.track-fire::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 60%;
+    pointer-events: none;
+    background-repeat: repeat-x;
+    transform-origin: center bottom;
+}
+
+.streak-progress-track.track-fire::before {
+    height: 34px;
+    background-image: radial-gradient(
+        ellipse 7px 30px at 50% 100%,
+        #fff6b0 0%, #ffb52e 35%, #ff5a14 60%, transparent 75%
+    );
+    background-size: 17px 100%;
+    filter: blur(1px);
+    animation: flameLick 0.25s ease-in-out infinite alternate;
+}
+
+.streak-progress-track.track-fire::after {
+    height: 26px;
+    background-image: radial-gradient(
+        ellipse 9px 22px at 50% 100%,
+        #ffd23f 0%, #ff7a18 45%, #c81d00 65%, transparent 78%
+    );
+    background-size: 23px 100%;
+    background-position: 8px 0;
+    filter: blur(1.5px);
+    animation: flameLick 0.19s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes flameLick {
+    0%   { transform: scaleY(0.75) skewX(-6deg); opacity: 0.85; }
+    100% { transform: scaleY(1.2)  skewX(6deg);  opacity: 1; }
+}
+
+.streak-panel.streak-burst {
+    animation: streakBurst 0.7s ease-out;
+}
+
+@keyframes streakBurst {
+    0%   { box-shadow: 0 4px 0 #c99b35, 0 0 0 #ff512f; }
+    40%  {
+        transform: scale(1.03);
+        box-shadow: 0 4px 0 #c99b35, 0 0 36px #ff8a24, 0 0 70px #ff512f99;
+    }
+    100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #streak-progress-bar.bar-fire,
+    .streak-progress-track.track-fire::after,
+    .streak-panel.streak-burst {
+        animation: none;
+    }
+}
+
 /* Player Marker: The hammer goes where player was last seen and only swings when a hit is made */
 
 .player-marker .css-hammer {
