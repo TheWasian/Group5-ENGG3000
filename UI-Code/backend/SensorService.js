@@ -267,6 +267,7 @@ var SensorService = {
   },
 
   renderSensorDebug: function (data = null) {
+    if (!this.debugLastEvent || !this.debugSensorLabels.every(Boolean) || !this.debugSensorDisplays.every(Boolean)) return;
     if (data?.source === "access_point") {
       this.debugSensorLabels[0].textContent = "Position";
       this.debugSensorLabels[1].textContent = "Network";

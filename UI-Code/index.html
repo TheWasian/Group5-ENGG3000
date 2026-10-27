@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Whack-A-Mole</title>
+    <script>document.documentElement.classList.add("scene-loading");</script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
 
@@ -18,7 +19,8 @@
     <link rel="stylesheet" href="environments-fx.css" />
   </head>
 
-  <body class="level-1">
+  <body class="level-1 game-page">
+    <div id="scene-loading" role="status">Preparing the garden…</div>
     <div id="game-environment" aria-hidden="true">
       <div class="sky"></div>
 
@@ -56,49 +58,6 @@
       aria-hidden="true"
     ></div>
 
-    <aside
-      id="sensor-debug"
-      class="sensor-debug"
-      aria-label="Ultrasonic sensor debug data"
-    >
-      <strong>Controller Debug</strong>
-
-      <div class="debug-row">
-        <span id="debug-label-1">Sensor 1</span>
-        <code id="debug-sensor-1"> Waiting... </code>
-      </div>
-      <div id="performance-metrics" class="performance-metrics">
-    <h3>Frontend Performance</h3>
-
-    <p>Page Load: <span id="load-time">--</span> ms</p>
-    <p>Mole Render: <span id="mole-render-time">--</span> ms</p>
-    <p>Whack Response: <span id="whack-response-time">--</span> ms</p>
-    <p>Level Transition: <span id="level-transition-time">--</span> ms</p>
-    <p>FPS: <span id="fps">--</span></p>
-</div>
-
-      <div class="debug-row">
-        <span id="debug-label-2">Sensor 2</span>
-        <code id="debug-sensor-2"> Waiting... </code>
-      </div>
-
-      <div class="debug-row debug-event-row">
-        <span>Last event</span>
-        <code id="debug-last-event"> None </code>
-      </div>
-    </aside>
-      <div id="special-mole-validation" class="performance-metrics">
-    <h3>Special Mole Validation</h3>
-     <p>Normal Response: <span id="normal-response-time">--</span> ms</p>
-
-    <p>Golden Hits: <span id="golden-hit-count">0/10</span></p>
-    <p>Golden Response: <span id="golden-response-time">--</span> ms</p>
-    <p>Golden Lifetime: <span id="golden-lifetime">--</span> ms</p>
-
-    <p>Frozen Hits: <span id="frozen-hit-count">0/10</span></p>
-    <p>Frozen Response: <span id="frozen-response-time">--</span> ms</p>
-    <p>Freeze Duration: <span id="freeze-duration">--</span> ms</p>
-</div>
     <header class="game-header">
       <h1>Whack-A-Mole</h1>
     </header>
@@ -164,7 +123,7 @@
           </div>
           <div class="legend-item">
             <span class="mini-mole ice-mini"></span>
-            <span class="legend-text"><strong>Freeze</strong><small>+50 + 5 Second Timer Freeze</small></span>
+            <span class="legend-text"><strong>Freeze</strong><small>+50 · Pause 5s</small></span>
           </div>
           <div class="legend-item">
             <span class="mini-mole bomb-mini"></span>
@@ -324,5 +283,15 @@
    <script src="./backend/SensorService.js"></script>
    <script src="./backend/FrontendMetrics.js"></script>
    <script src="./backend/main.js"></script>
+   <script>
+     import("./backend/three/ThreeBoard.mjs")
+       .catch(function (error) {
+         document.getElementById("game-area").dataset.renderer = "css";
+         console.warn("3D scene could not load; using the CSS game.", error);
+       })
+       .finally(function () {
+         document.documentElement.classList.remove("scene-loading");
+       });
+   </script>
   </body>
 </html>

@@ -47,11 +47,17 @@ var GameView = {
     var bombClass = moleType === "bomb" ? " has-bomb" : "";
     mole.className =
       "mole mole-" + moleType + bombClass + (variantClass ? " " + variantClass : "");
+    if (typeof window !== "undefined" && window.MoleBoard3D) {
+      window.MoleBoard3D.show(holeIndex, moleType, variantClass || "");
+    }
   },
 
   hideAllMoles: function () {
     for (var i = 0; i < this.holes.length; i++) {
       this.holes[i].classList.remove("active");
+    }
+    if (typeof window !== "undefined" && window.MoleBoard3D) {
+      window.MoleBoard3D.hideAll();
     }
   },
 
@@ -62,6 +68,9 @@ var GameView = {
     hole.classList.remove("sensor-hit");
     hole.offsetWidth;
     hole.classList.add("sensor-hit");
+    if (typeof window !== "undefined" && window.MoleBoard3D) {
+      window.MoleBoard3D.flash(holeIndex);
+    }
   },
 
   // One short swing on a hit (hammer swing)
@@ -120,6 +129,9 @@ var GameView = {
     );
     if (envName && envName !== "grassland") {
       document.body.classList.add("env-" + envName);
+    }
+    if (typeof window !== "undefined" && window.MoleBoard3D) {
+      window.MoleBoard3D.setEnvironment(envName || "grassland");
     }
   },
 

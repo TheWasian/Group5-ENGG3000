@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3D mole preview</title>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    body { min-height:100vh; background:radial-gradient(ellipse at top,#e7efce,#afca86); color:#31432a; padding:24px; box-sizing:border-box; }
+    main { max-width:980px; margin:auto; text-align:center; }
+    h1 { font:800 32px system-ui; margin:12px 0; }
+    p, label, output { font:14px system-ui; }
+    nav { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:20px 0; }
+    button { font:600 13px system-ui; background:#fff9; color:#31432a; padding:10px 14px; border:1px solid #7e9b59; border-radius:12px; box-shadow:none; }
+    #game-area { max-width:720px; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px 4px; margin:28px auto; }
+    .hole { height:170px; }
+    .model-label { position:absolute; inset:auto 0 -14px; font:600 13px system-ui; }
+    #report { display:block; margin:16px; white-space:pre-line; line-height:1.6; }
+    @media(max-width:600px) { #game-area { grid-template-columns:repeat(2,minmax(0,1fr)); } body { padding:12px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>3D mole preview</h1>
+    <p>Holes cut into the terrain · larger bombs · distinct scenery for each environment.</p>
+    <nav aria-label="Model controls">
+      <button id="show">Show collection</button>
+      <button id="hide">Retreat</button>
+      <button id="bombs">Ice / fire bombs</button>
+      <button id="replace">Replace gold with ice</button>
+      <button id="hit">Hit gold</button>
+    </nav>
+    <nav aria-label="Environment controls">
+      <button data-theme="grassland">Garden</button>
+      <button data-theme="freezing">Snow</button>
+      <button data-theme="fire">Fire</button>
+      <button data-theme="toxic">Toxic</button>
+      <button data-theme="void">Void</button>
+      <button id="lose-context">Test graphics loss</button>
+      <button id="restore-context">Restore graphics</button>
+      <button id="narrow">Narrow board</button>
+    </nav>
+    <section id="game-area" aria-label="Model gallery"></section>
+    <output id="report" aria-live="polite">Loading models…</output>
+  </main>
+  <script>
+    if (new URLSearchParams(location.search).has("no-webgl")) {
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
+        return kind.startsWith("webgl") ? null : getContext.call(this, kind, ...args);
+      };
+    }
+    const area = document.getElementById("game-area");
+    const names = ["Normal", "Golden", "Freeze", "Bomb", "Ice", "Fire"];
+    names.forEach((name, index) => {
+      const hole = document.createElement("div");
+      hole.className = "hole";
+      hole.dataset.hole = index;
+      hole.innerHTML = '<div class="mound"></div><div class="dirt"></div><div class="mole"><div class="css-mole"><div class="mole-whiskers"></div><div class="mole-nose"></div><div class="mole-bomb"></div></div></div><span class="model-label"></span>';
+      hole.querySelector(".model-label").textContent = name;
+      area.appendChild(hole);
+    });
+  </script>
+  <script src="../backend/GameView.js"></script>
+  <script type="module">
+    import "../backend/three/ThreeBoard.mjs";
+    GameView.init();
+    const board = window.MoleBoard3D;
+    const holes = GameView.holes;
+    const report = document.getElementById("report");
+    const specs = [["normal", ""], ["golden", "has-golden"], ["frozen", "has-frozen"], ["bomb", ""], ["normal", "has-normal-ice"], ["normal", "has-normal-fire"]];
+    let bombs = false;
+    function show() {
+      holes.forEach((hole, index) => {
+        const [type, variant] = specs[index];
+        hole.classList.add("active");
+        hole.querySelector(".mole").className = "mole mole-" + type + " " + variant + (type === "bomb" ? " has-bomb" : "");
+        board?.show(index, type, variant);
+      });
+    }
+    document.getElementById("show").onclick = show;
+    document.getElementById("hide").onclick = () => GameView.hideAllMoles();
+    document.getElementById("bombs").onclick = () => {
+      bombs = !bombs;
+      specs[4] = [bombs ? "bomb" : "normal", "has-" + (bombs ? "bomb" : "normal") + "-ice"];
+      specs[5] = [bombs ? "bomb" : "normal", "has-" + (bombs ? "bomb" : "normal") + "-fire"];
+      holes[4].querySelector(".model-label").textContent = bombs ? "Ice bomb" : "Ice";
+      holes[5].querySelector(".model-label").textContent = bombs ? "Fire bomb" : "Fire";
+      show();
+    };
+    document.getElementById("replace").onclick = () => GameView.showMole(1, "normal", "has-normal-ice");
+    document.getElementById("hit").onclick = () => {
+      holes[1].classList.remove("active");
+      board?.entries[1].motion.hide();
+      GameView.flashSensorHit(1);
+    };
+    document.querySelectorAll("[data-theme]").forEach((button) => {
+      button.onclick = () => GameView.setEnvironment(button.dataset.theme);
+    });
+    document.getElementById("lose-context").onclick = () => board?.renderer.forceContextLoss();
+    document.getElementById("restore-context").onclick = () => board?.renderer.forceContextRestore();
+    document.getElementById("narrow").onclick = () => {
+      const narrow = area.style.maxWidth !== "320px";
+      area.style.maxWidth = narrow ? "320px" : "";
+      area.style.gridTemplateColumns = narrow ? "repeat(2,minmax(0,1fr))" : "";
+    };
+    setInterval(() => {
+      report.textContent = "Renderer: " + area.dataset.renderer + (board ? " · Draw calls: " + board.renderer.info.render.calls + "\n" +
+        board.entries.map((entry, index) => names[index] + ": " + entry.plot.mole.rig.userData.variant + " " + entry.motion.progress.toFixed(2)).join(" · ") : "");
+    }, 150);
+    show();
+  </script>
+</body>
+</html>
