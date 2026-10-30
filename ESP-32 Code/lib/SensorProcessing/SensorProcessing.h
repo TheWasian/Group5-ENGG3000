@@ -11,9 +11,12 @@ extern const uint8_t ECHO_PIN;
 extern const float SOUND_CONST_CM;
 extern const uint32_t PULSEIN_TIMEOUT;
 
+extern uint32_t duration_us;
+extern float distance_cm;
 
 // 3. Function Prototypes / Declarations
 void initialiseSensor();
+void updateSensorData();
 uint32_t readSensorRaw();
 float readSensorCM();
-void updateSensorData();
+
