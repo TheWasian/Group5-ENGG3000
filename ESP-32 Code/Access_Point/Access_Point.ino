@@ -22,8 +22,8 @@ constexpr int WARNING_LED_PIN = 7; // -1 disables output.
 constexpr float PLAY_AREA_WIDTH_M = 1.50f;
 constexpr float PLAY_AREA_DEPTH_M = 1.40f;
 constexpr float DEAD_ZONE_M = 0.60f; // y=0 is the screen; play ends at y=2 m.
-constexpr float SENSOR_GAP_LEFT_M = 0.80f;
-constexpr float SENSOR_GAP_RIGHT_M = 0.80f;
+constexpr float SENSOR_GAP_LEFT_M = 0.30f;
+constexpr float SENSOR_GAP_RIGHT_M = 0.30f;
 constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
 constexpr float AP_X_M = PLAY_AREA_WIDTH_M / 2;
 // Order: Node 1, centre AP, Node 2. If gaps/screen distance are measured at the

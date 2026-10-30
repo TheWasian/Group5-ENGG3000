@@ -1,0 +1,90 @@
+2026-10-30T15:45:37.874 TX STOP
+2026-10-30T15:45:37.874 TX HELLO
+2026-10-30T15:45:37.902 RX MODE:IDLE
+2026-10-30T15:45:37.904 RX LOGGER_READY,2,Wacker5,4286703620,1
+2026-10-30T15:45:37.904 TX STOP
+2026-10-30T15:45:37.933 RX MODE:IDLE
+2026-10-30T15:45:37.933 TX CONFIG_TIMING 100
+2026-10-30T15:45:37.935 RX TIMING,100
+2026-10-30T15:45:37.935 TX POSITION OFF
+2026-10-30T15:45:37.935 RX POSITION,OFF
+2026-10-30T15:45:37.935 TX MULTI_TEST 10 0
+2026-10-30T15:45:37.964 RX MULTI_TEST_READY
+2026-10-30T15:45:38.501 RX DATA,2,4286703620,1,45595,46009,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,45626,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:39.014 RX DATA,2,4286703620,2,46110,46522,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,46141,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:39.532 RX DATA,2,4286703620,3,46623,47035,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,46654,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:39.761 RX [ 47269][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:39.951 RX [ 47459][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:40.043 RX DATA,2,4286703620,4,47136,47548,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,47167,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:40.273 RX [ 47782][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:40.464 RX [ 47972][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:40.556 RX DATA,2,4286703620,5,47649,48061,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,47680,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:40.782 RX [ 48292][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:40.974 RX [ 48482][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:41.066 RX DATA,2,4286703620,6,48162,48571,100,0,nan,452.245,nan,no_ready,out_of_range,no_ready,0,48191,0,26370,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:41.272 RX [ 48780][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:41.462 RX [ 48970][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:41.554 RX DATA,2,4286703620,7,48672,49059,100,0,nan,53.011,nan,no_ready,ok,no_ready,0,48678,0,3091,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:41.785 RX [ 49293][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:41.975 RX [ 49483][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:42.067 RX DATA,2,4286703620,8,49160,49572,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,49191,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:42.275 RX [ 49783][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:42.465 RX [ 49973][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:42.558 RX DATA,2,4286703620,9,49673,50062,100,0,nan,110.137,nan,no_ready,ok,no_ready,0,49682,0,6422,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:43.072 RX DATA,2,4286703620,10,50163,50577,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,50194,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:43.095 RX MULTI_DONE,4286703620,10
+2026-10-30T15:45:43.107 TX MULTI_TEST 10 0
+2026-10-30T15:45:43.137 RX MULTI_TEST_READY
+2026-10-30T15:45:44.138 RX DATA,2,4286703620,11,50719,51131,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,50750,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:44.143 RX DATA,2,4286703620,12,51232,51644,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,51263,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:44.370 RX [ 51878][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:44.559 RX [ 52068][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:44.651 RX DATA,2,4286703620,13,51745,52157,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,51776,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:44.868 RX [ 52375][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:45.057 RX [ 52565][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:45.152 RX DATA,2,4286703620,14,52258,52654,100,0,nan,202.113,nan,no_ready,ok,no_ready,0,52273,0,11785,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:45.381 RX [ 52888][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:45.570 RX [ 53078][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:45.663 RX DATA,2,4286703620,15,52755,53167,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,52786,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:45.892 RX [ 53401][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:46.083 RX [ 53591][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:46.175 RX DATA,2,4286703620,16,53268,53680,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,53299,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:46.406 RX [ 53914][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:46.596 RX [ 54104][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:46.688 RX DATA,2,4286703620,17,53781,54193,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,53812,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:46.919 RX [ 54427][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:47.109 RX [ 54617][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:47.200 RX DATA,2,4286703620,18,54294,54706,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,54325,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:47.432 RX [ 54940][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:47.622 RX [ 55130][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:47.714 RX DATA,2,4286703620,19,54807,55219,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,54838,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:48.229 RX DATA,2,4286703620,20,55320,55734,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,55351,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:48.252 RX MULTI_DONE,4286703620,20
+2026-10-30T15:45:48.264 TX MULTI_TEST 10 0
+2026-10-30T15:45:48.296 RX MULTI_TEST_READY
+2026-10-30T15:45:48.766 RX DATA,2,4286703620,21,55878,56270,100,0,nan,137.217,nan,no_ready,ok,no_ready,0,55889,0,8001,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:49.276 RX DATA,2,4286703620,22,56371,56780,100,0,nan,457.219,nan,no_ready,out_of_range,no_ready,0,56400,0,26660,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:49.503 RX [ 57011][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:49.693 RX [ 57201][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:49.787 RX DATA,2,4286703620,23,56881,57290,100,0,nan,454.887,nan,no_ready,out_of_range,no_ready,0,56910,0,26524,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:50.018 RX [ 57524][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:50.206 RX [ 57714][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:50.299 RX DATA,2,4286703620,24,57391,57803,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,57422,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:50.527 RX [ 58035][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:50.717 RX [ 58225][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:50.809 RX DATA,2,4286703620,25,57904,58314,100,0,nan,475.312,nan,no_ready,out_of_range,no_ready,0,57934,0,27715,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:51.023 RX [ 58531][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:51.213 RX [ 58721][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:51.305 RX DATA,2,4286703620,26,58415,58810,100,0,nan,215.816,nan,no_ready,ok,no_ready,0,58430,0,12584,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:51.536 RX [ 59044][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:51.726 RX [ 59234][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:52.052 RX [ 59557][E][WiFiUdp.cpp:185] endPacket(): could not send data: 1DATA,2,4286703620,27,58911,59323,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,58942,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:52.053 RX 2
+2026-10-30T15:45:52.239 RX [ 59747][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:52.331 RX DATA,2,4286703620,28,59424,59836,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,59455,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:52.563 RX [ 60070][E][WiFiUdp.cpp:185] endPacket(): could not send data: 12
+2026-10-30T15:45:52.845 RX DATA,2,4286703620,29,59937,60350,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,59968,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:53.359 RX DATA,2,4286703620,30,60451,60864,100,0,nan,nan,nan,no_ready,no_echo,no_ready,0,60482,0,0,POS,0,-1.000,-1.000,-1.000,0,disabled
+2026-10-30T15:45:53.382 RX MULTI_DONE,4286703620,30
+2026-10-30T15:45:53.382 FAIL Master ended the burst after only 9/10 records arrived. Partial CSV retained; check the serial log for missing records. Last complete line: 'MULTI_DONE,4286703620,30'; unfinished serial bytes: 0.
+2026-10-30T15:45:53.382 TX STOP
