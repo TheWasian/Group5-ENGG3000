@@ -6,50 +6,51 @@
 */
 
 #include <Arduino.h>
-#include <WebServer.h>
-#include <WiFi.h>
-#include <math.h>
 
-#define TRIG_PINS {32, 25}
-#define ECHO_PINS {35, 33}
-#define uint32_t ECHO_TIMEOUT_US = 30000;
-#define float MIN_RANGE_M = 0.02f;
-#define float MAX_RANGE_M = 4.50f;
+const uint8_t TRIG_PIN = 10;
+const uint8_t ECHO_PIN = 3;
+const float SOUND_CONST_CM = 0.017f;
+const uint32_t PULSEIN_TIMEOUT = 30000; // 30 ms, about 5 m maximum range
 
-#define char *AP_SSID = "Wacker5";
-#define char *AP_PASSWORD = "PasswordWacker123456!";
 
-WebServer server(80);
+//const char *AP_SSID = "Wacker5";
+//const char *AP_PASSWORD = "PasswordWacker123456!";
 
-float duration_us, distance_cm;
+//WebServer server(80);
+
+uint32_t duration_us;
+float distance_cm;
 
 void setup() {
   // begin serial port
-  Serial.begin (9600);
+  Serial.begin(115200);
+  delay(500);
+  Serial.println("CentreBox starting");
 
   // configure the trigger pin to output mode
-  pinMode(TRIG_PINS[0], OUTPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  digitalWrite(TRIG_PIN, LOW);
   // configure the echo pin to input mode
-  pinMode(ECHO_PINS[0], INPUT);
+  pinMode(ECHO_PIN, INPUT);
 }
 
 void loop() {
   // generate 10-microsecond pulse to TRIG pin
-  digitalWrite(TRIG_PINS[0], HIGH);
+  digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
-  digitalWrite(TRIG_PINS[0], LOW);
+  digitalWrite(TRIG_PIN, LOW);
 
   // measure duration of pulse from ECHO pin
-  duration_us = pulseIn(ECHO_PINS[0], HIGH);
+  duration_us = pulseIn(ECHO_PIN, HIGH);
 
   // calculate the distance
-  distance_cm = 0.017 * duration_us;
+  distance_cm = SOUND_CONST_CM * duration_us;
 
   // print the value to Serial Monitor
   Serial.print("distance: ");
   Serial.print(distance_cm);
-  Serial.println(" cm");
-
-  delay(500);
+  Serial.print(" cm (echo: ");
+  Serial.print(duration_us);
+  Serial.println(" us)");
+  delay(100);
 }
-
