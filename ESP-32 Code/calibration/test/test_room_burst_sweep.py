@@ -15,6 +15,40 @@ from multi_capture import parse_frame
 
 
 class RoomBurstTests(unittest.TestCase):
+    def test_thirty_bursts_survive_fragmented_usb_after_second_burst(self):
+        class FragmentedMaster(EmulatedMaster):
+            def __init__(self):
+                super().__init__();self.bursts = 0;self.chunks = []
+            def write(self, data):
+                super().write(data)
+                if data.startswith(b'MULTI_TEST'):
+                    self.bursts += 1
+            def readline(self):
+                if self.chunks:
+                    return self.chunks.pop(0)
+                data = super().readline()
+                if self.bursts >= 3 and data:
+                    # Split the DATA prefix and completion marker, with serial
+                    # timeout reads between chunks. Previously this lost DATA
+                    # and produced "No fresh measurement frame" in Burst 2.
+                    self.chunks = [b'', data[2:18], b'', data[18:]]
+                    return data[:2]
+                return data
+        fake = FragmentedMaster()
+        serial = types.SimpleNamespace(Serial=lambda *a, **kw: fake, SerialException=OSError)
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as folder:
+            path = Path(folder) / 'fragmented.csv'
+            with patch.dict(sys.modules, serial=serial), patch.object(room.time, 'sleep'), patch('sys.stdout', io.StringIO()):
+                rows = room.run('FAKE', 115200, 10, 100, 3, list(range(10, 101, 10)), csv_path=path, no_plot=True)
+            self.assertEqual(fake.bursts, 31)
+            self.assertEqual(len(rows), 310)
+            self.assertEqual(len([r for r in rows if r['phase'] == 'test']), 300)
+            self.assertEqual(rows[-1]['burst_number'], 30)
+            self.assertEqual(fake.written[-1], b'STOP\n')
+            trace = path.with_suffix('.serial.log').read_text(encoding='utf-8')
+            self.assertEqual(trace.count(' RX DATA,'), 310)
+            self.assertIn(' RX MULTI_DONE,42,310', trace)
+
     def test_bounds_include_upper_and_validate(self):
         self.assertEqual(room.delay_values(0, 250, 100), [0, 100, 200, 250])
         self.assertEqual(room.delay_values(10, 10, 100), [10])

@@ -98,6 +98,10 @@ def collect(session, writer, stream, rows, pulses, pulse_delay, repeats, pauses)
             writer.writerow(frame)
             stream.flush()
             rows.append(frame)
+            if pulse == 1 or pulse == pulses or pulse % 10 == 0:
+                states = " | ".join(f"{name}: {frame[sensor + '_status']}"
+                                    for sensor, name in zip(SENSORS, LABELS))
+                print(f"  {phase} burst {burst_number}: pulse {pulse}/{pulses} — {states}", flush=True)
 
     # Give the very first swept pause a real preceding burst, too.
     print("Recording one conditioning burst (saved in CSV, excluded from graph).")
@@ -125,23 +129,32 @@ def run(port, baud, pulses, pulse_delay, repeats, pauses, csv_path=None, output=
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     csv_path = Path(csv_path) if csv_path else OUTPUT / f"room_echo_test_{stamp}.csv"
     output = Path(output) if output else csv_path.with_suffix(".png")
+    trace_path = csv_path.with_suffix(".serial.log")
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     rows = []
     print("All three sensors use Wacker5. Each cycle fires centre → Node 1 → Node 2.")
     print(f"Fixed quiet time: {pulse_delay} ms after each sensor; no extra pause within a burst.")
     print("Nodes report reconstructed echo times; centre reports measured echo width.")
     print(f"Raw CSV: {csv_path}")
+    print(f"Serial diagnostics: {trace_path}")
     try:
         # Exclusive creation protects previous runs, even when a name is supplied.
         with csv_path.open("x", newline="", encoding="utf-8") as stream:
             writer = csv.DictWriter(stream, fieldnames=FIELDS + EXPERIMENT_FIELDS)
             writer.writeheader()
             stream.flush()
-            with serial.Serial(port, baud, timeout=.1, write_timeout=2) as connection:
-                session = Session(connection)
+            with trace_path.open("x", encoding="utf-8") as trace_file, \
+                    serial.Serial(port, baud, timeout=.1, write_timeout=2) as connection:
+                def trace(direction, line):
+                    trace_file.write(f"{datetime.now().isoformat(timespec='milliseconds')} {direction} {line}\n")
+                    trace_file.flush()
+                session = Session(connection, trace=trace)
                 try:
                     session.ready()
                     collect(session, writer, stream, rows, pulses, pulse_delay, repeats, pauses)
+                except (OSError, RuntimeError, ValueError, TimeoutError) as error:
+                    trace("FAIL", str(error)+" "+session.diagnostic_context())
+                    raise
                 finally:
                     try:
                         session.send("STOP")

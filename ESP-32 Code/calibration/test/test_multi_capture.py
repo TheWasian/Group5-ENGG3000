@@ -43,6 +43,36 @@ class EmulatedMaster(FakeSerial):
 
 
 class CaptureTests(unittest.TestCase):
+    def test_early_completion_reports_missing_records(self):
+        session=m.Session(FakeSerial([wire(), 'MULTI_DONE,42,2']));session.boot=42
+        with self.assertRaisesRegex(RuntimeError, 'only 1/2 records'):
+            list(session.frames(2))
+
+    def test_unterminated_serial_garbage_is_bounded(self):
+        class Garbage:
+            def readline(self):return b'x'*4097
+        with self.assertRaisesRegex(RuntimeError, 'without a newline'):
+            m.Session(Garbage()).read_line()
+
+    def test_serial_timeout_does_not_split_a_measurement_or_done_marker(self):
+        class ChunkSerial(FakeSerial):
+            def readline(self):
+                return self.lines.pop(0) if self.lines else b''
+        frame = (wire() + '\r\n').encode()
+        con = ChunkSerial([frame[:30], b'', frame[30:], b'MULTI_DO', b'', b'NE,42,1\r\n'])
+        session = m.Session(con);session.boot = 42
+        self.assertEqual([r['frame_id'] for r in session.frames(1)], [1])
+
+    def test_serial_reader_returns_only_complete_lines(self):
+        class ChunkSerial(FakeSerial):
+            def readline(self):
+                return self.lines.pop(0) if self.lines else b''
+        session = m.Session(ChunkSerial([b'TIM', b'', b'ING,100\r\nPOSITION,OFF\n']))
+        self.assertEqual(session.read_line(), '')
+        self.assertEqual(session.read_line(), '')
+        self.assertEqual(session.read_line(), 'TIMING,100')
+        self.assertEqual(session.read_line(), 'POSITION,OFF')
+
     def test_parser_preserves_three_channels_and_failures(self):
         row=m.parse_frame(wire())
         self.assertEqual(row['left_cm'],100.123)

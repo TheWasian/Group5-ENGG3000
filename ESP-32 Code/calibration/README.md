@@ -149,6 +149,15 @@ burst/repetition/pulse numbers, requested pauses, echo sources and
 AP-clock time from the previous cycle's end to this cycle's start (not a synchronized
 node trigger timestamp). Interrupting retains completed CSV rows.
 
+The room test also saves a matching `.serial.log` containing timestamped commands,
+complete responses and any capture error. Pulse progress is printed within each
+burst. USB reads that time out halfway through a line are buffered until the
+newline arrives; they are not treated as complete measurements or acknowledgements.
+If a test still stops, retain both files and the terminal error. Timeout messages
+include how many records arrived in the current burst, the last complete response,
+and the number of unfinished serial bytes. A real disconnect/restart still stops
+the experiment rather than silently repeating a burst and changing the dataset.
+
 ## Timing settings
 
 Default ordering:

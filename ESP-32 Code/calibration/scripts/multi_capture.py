@@ -95,20 +95,44 @@ class CsvLog:
 
 
 class Session:
-    def __init__(self, connection):
+    def __init__(self, connection, trace=None):
         self.connection = connection
+        self.trace = trace
+        self.pending_bytes = bytearray()
+        self.last_line = ""
         self.boot = None
         self.last_frame = None
         self.quiet_ms, self.pause_ms = 100, 0
 
     def send(self, command):
+        if self.trace:self.trace("TX", command)
         self.connection.write((command+"\n").encode("ascii"))
 
     def read_line(self):
-        line = self.connection.readline().decode("ascii", errors="replace").strip()
+        # pyserial.readline() can return a prefix when its timeout expires.
+        # Preserve that prefix across reads; neither DATA nor MULTI_DONE is
+        # meaningful until the terminating newline has arrived.
+        if b'\n' not in self.pending_bytes:
+            chunk = self.connection.readline()
+            self.pending_bytes.extend(chunk)
+        newline = self.pending_bytes.find(b'\n')
+        if newline < 0:
+            if len(self.pending_bytes) > 4096:
+                raise RuntimeError("Serial record exceeds 4096 bytes without a newline; check firmware/baud.")
+            return ""
+        if newline > 4096:
+            raise RuntimeError("Serial record exceeds 4096 bytes; check firmware/baud.")
+        line = bytes(self.pending_bytes[:newline]).decode("ascii", errors="replace").strip()
+        del self.pending_bytes[:newline+1]
+        if line:
+            self.last_line = line
+            if self.trace:self.trace("RX", line)
         if line.startswith("ERROR:"):
             raise RuntimeError(line)
         return line
+
+    def diagnostic_context(self):
+        return f"Last complete line: {self.last_line[:180]!r}; unfinished serial bytes: {len(self.pending_bytes)}."
 
     def ready(self):
         # Supports boards that reset on USB open and boards that remain running.
@@ -132,7 +156,7 @@ class Session:
         deadline=time.monotonic()+4
         while time.monotonic()<deadline:
             if self.read_line()==expected:return
-        raise TimeoutError("No acknowledgement for "+expected)
+        raise TimeoutError("No acknowledgement for "+expected+". "+self.diagnostic_context())
 
     def configure(self, quiet_ms, pause_ms, position=False):
         if not 60<=quiet_ms<=60000 or not 0<=pause_ms<=60000:
@@ -154,6 +178,9 @@ class Session:
             line=self.read_line()
             if line.startswith("LOGGER_READY,"):
                 raise RuntimeError("Master restarted during capture. Partial CSV has been retained; start a new run.")
+            if line.startswith("MULTI_DONE,"):
+                raise RuntimeError(f"Master ended the burst after only {received}/{count} records arrived. "
+                                   "Partial CSV retained; check the serial log for missing records.")
             frame=parse_frame(line)
             if frame:
                 if frame["boot_id"]!=self.boot:
@@ -170,7 +197,9 @@ class Session:
                 received+=1;deadline=time.monotonic()+timeout
                 yield frame
             if time.monotonic()>deadline:
-                raise TimeoutError("No fresh measurement frame. Partial CSV retained; check USB and the master.")
+                raise TimeoutError(f"No fresh measurement frame for {timeout:.1f} seconds "
+                                   f"({received}/{count or 'continuous'} records received in this burst). "
+                                   "Partial CSV retained. "+self.diagnostic_context())
         # Wait for explicit completion before issuing another burst/configuration.
         self.expect(f"MULTI_DONE,{self.boot},{self.last_frame}")
 
