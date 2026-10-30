@@ -88,17 +88,66 @@ works in every mode. Use `--baud` to override baud rate.
 
 ## Existing script menus
 
-Select **multi** in these scripts to use the shared new three-sensor collector:
+Select **multi** in the plotting/calibration menus to use the shared three-sensor collector:
 
 - `plot_echo_times.py`: continuous three-range graph and CSV.
-- `room_echo_test.py`: sweep quiet time for all three sensors.
+- `room_echo_test.py`: defaults to the three-sensor repeated-burst experiment below.
 - `calibrate_ultrasonic.py`: labelled samples with separate true distances.
 
-Their single-sensor paths remain available. The legacy single-sensor calibration
+Their single-sensor paths remain available (`room_echo_test.py --mode single`). The legacy single-sensor calibration
 still fits its earlier exponential equation; this is not applied to multi capture.
 Multi menu runs use timestamped output filenames; use `multi_capture.py` for
 explicit multi output paths. `serial_receiver.py` is a passive serial monitor
 which recognises the new structured DATA records.
+
+## Room echo test: repeated bursts
+
+Run `python scripts/room_echo_test.py COM4`. It asks for:
+
+1. Pulses **per sensor** per burst (1–100).
+2. Fixed quiet time between sensor readings within a burst (60–60000 ms).
+3. Number of repeated bursts at **each** pause setting (1–1000).
+4. Lower and upper bounds for the additional pause **between bursts** (0–60000 ms).
+5. Pause increment (1–60000 ms). The upper bound is included even when the final step is shorter.
+
+For example, 10 pulses, 100 ms fixed quiet time, 3 repeats, and pause bounds
+0–1000 ms in steps of 200 gives six settings and 18 test bursts. Each burst
+contains 10 cycles: centre → Node 1 → Node 2, so each sensor fires 10 times.
+The quiet time is after each completed measurement/reply/timeout, not an exact
+start-to-start pulse period; each sensor's own readings also span the other sensors.
+
+```powershell
+python scripts/room_echo_test.py COM4 --pulses 10 --pulse-delay-ms 100 --repeats 3 --lower-ms 0 --upper-ms 1000 --step-ms 200
+```
+
+Only the additional pause between complete bursts is swept. The fixed quiet
+time remains unchanged and there is no additional cycle pause within a burst.
+The computer waits the selected burst pause after receiving completion; firmware
+quiet time and USB/network overhead add to it. Even a zero selected pause retains
+the firmware's quiet-time guard. This is not a precision hardware burst scheduler.
+One initial conditioning burst gives the first tested pause a preceding burst;
+it is saved with `phase=conditioning` and excluded from the graph.
+
+**One graph** overlays all three sensors: echo return time in microseconds versus
+additional burst pause in milliseconds. Each point is the mean of **all valid
+pulses across all repeats** at that setting; error bars are sample standard
+deviation across those pulses, not uncertainty of the mean. Failures remain in
+CSV and are excluded from the mean. Entirely failed settings leave gaps.
+
+The centre reports measured ECHO pulse width. Existing nodes transmit rounded
+millimetre distances, so their plotted echo times are **reconstructed**, using
+`time_us = 2 * distance_cm / 0.0343`, reversing the conversion in their firmware.
+Rounding alone introduces roughly ±2.9 µs uncertainty. These are not raw node
+pulse durations, and first-reflection identity cannot be determined from these
+readings. Legend and CSV source columns distinguish measured/reconstructed values.
+No new firmware needs flashing for this script update.
+
+Timestamped CSV/PNG files go into `output/`. `--csv PATH`, `--output PATH` and
+`--no-plot` are supported. CSV includes every pulse cycle, sensor failure statuses,
+burst/repetition/pulse numbers, requested pauses, echo sources and
+`ap_observed_burst_gap_ms`. The latter is populated on each burst's first cycle:
+AP-clock time from the previous cycle's end to this cycle's start (not a synchronized
+node trigger timestamp). Interrupting retains completed CSV rows.
 
 ## Timing settings
 
@@ -115,7 +164,8 @@ Echo durations, network handshakes and timeouts add to the time shown above.
 - `--quiet-ms 100`: quiet after every measurement/reply/timeout, including between
   cycles. Allowed 60–60000 ms, respecting the existing node firmware's timing.
 - `--frame-pause-ms 0`: additional pause after each complete cycle, 0–60000 ms.
-- Sweep values change **quiet time**, not the extra cycle pause.
+- `multi_capture.py --mode sweep` changes **quiet time**, not the extra cycle pause.
+  `room_echo_test.py` instead sweeps the additional pause between repeated bursts.
 - Starting a run waits for quiet time. STOP also guards against a previously sent
   FIRE packet completing late. Late, duplicate and unrelated replies cannot keep
   a measurement slot alive indefinitely.

@@ -1,4 +1,4 @@
-"""Measure ultrasonic echo-time stability at several inter-reading delays."""
+"""Compare all three sensors' echo times while sweeping the pause between bursts."""
 
 from __future__ import annotations
 
@@ -339,16 +339,25 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("port", nargs="?", help="Override the serial port from platformio.ini")
     parser.add_argument("--baud", type=int, help="Override the baud rate from platformio.ini")
+    parser.add_argument("--mode", choices=["multi", "single"], default="multi",
+                        help="Three-sensor burst experiment (default), or legacy single-sensor sweep")
+    parser.add_argument("--pulses", type=int, help="Pulses per sensor per burst (1–100)")
+    parser.add_argument("--pulse-delay-ms", type=int, help="Fixed quiet time after each sensor (60–60000 ms)")
+    parser.add_argument("--repeats", type=int, help="Bursts per pause setting (1–1000)")
+    parser.add_argument("--lower-ms", type=int, help="Lower extra pause between bursts (0–60000 ms)")
+    parser.add_argument("--upper-ms", type=int, help="Upper extra pause between bursts (0–60000 ms)")
+    parser.add_argument("--step-ms", type=int, help="Pause increment (1–60000 ms)")
+    parser.add_argument("--no-plot", action="store_true", help="Save CSV without displaying a graph")
     parser.add_argument(
         "--csv",
         type=Path,
-        default=OUTPUT_DIR / "room_echo_test.csv",
+        default=None,
         help="Path for raw room test readings",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=OUTPUT_DIR / "room_echo_test.png",
+        default=None,
         help="Path for the room echo graph",
     )
     args = parser.parse_args()
@@ -359,12 +368,24 @@ def main() -> None:
     except ValueError as error:
         raise SystemExit(error) from error
 
-    sample_count = prompt_positive_int("Readings per burst: ", 100)
-    sensor_mode = select_sensor_mode()
-    if sensor_mode == "multi":
-        from multi_capture import interactive
-        interactive(port, baud_rate, "sweep", sample_count)
+    if args.mode == "multi":
+        from room_burst_sweep import interactive
+        try:
+            sample_count = args.pulses if args.pulses is not None else prompt_positive_int("Pulses per sensor per burst (1–100): ", 100)
+            interactive(args, port, baud_rate, sample_count)
+        except (KeyboardInterrupt, EOFError):
+            print("\nRoom echo test cancelled.")
+        except (OSError, RuntimeError, ValueError, TimeoutError, ImportError) as error:
+            raise SystemExit(str(error)) from error
         return
+    if any(value is not None for value in (args.pulse_delay_ms, args.repeats, args.lower_ms, args.upper_ms, args.step_ms)):
+        parser.error("Burst timing/repetition options apply to --mode multi only.")
+    args.csv = args.csv or OUTPUT_DIR / "room_echo_test.csv"
+    args.output = args.output or OUTPUT_DIR / "room_echo_test.png"
+    sample_count = args.pulses if args.pulses is not None else prompt_positive_int("Readings per burst: ", 100)
+    if not 1 <= sample_count <= 100:
+        parser.error("Pulses must be 1–100.")
+    sensor_mode = "single"
     delays = prompt_delay_bounds()
     serial_timeout = max(5.0, max(delays) / 1000 + 5)
 
@@ -393,7 +414,8 @@ def main() -> None:
                 print(f"Saved raw room test readings to {args.csv}")
                 return updated_results
 
-            plot_results(results, args.output, rerun)
+            if not args.no_plot:
+                plot_results(results, args.output, rerun)
     except serial.SerialException as error:
         raise SystemExit(f"Could not open or read serial port {port!r}: {error}") from error
     except (KeyboardInterrupt, EOFError):
