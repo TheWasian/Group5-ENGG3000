@@ -25,12 +25,32 @@ label,select{font:14px system-ui}select{padding:8px;border-radius:6px;background
 .targets{grid-column:1/-1;padding:18px}.targets h2{font-size:16px;margin:0 0 8px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:5px 4px;border-bottom:1px solid #293d55}
 #fix{font:500 21px ui-monospace,monospace;line-height:1.5}#warning{color:#ffb4ac;margin-top:8px;font-weight:600}
 footer{margin-top:18px;max-width:1000px;font-size:14px;color:#9fafc3;line-height:1.6}
+.calibration{grid-column:1/-1;padding:20px}.calibration h2{margin:0;font-size:20px}.calibration .intro{max-width:940px}
+.cal-head,.cal-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}.cal-controls{justify-content:flex-start;margin-top:16px}
+.cal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.cal-card{padding:14px;border:1px solid #3b526d;border-radius:9px;background:#0e1928}.cal-card.active{border-color:#c5adff;background:#28233f}.cal-card.matched{border-color:#45d9bb;background:#12372f}
+.cal-card h3{font-size:16px;margin:0 0 8px}.cal-card p{font-size:13px;min-height:40px}.cal-card button{width:100%}
+button{font:600 14px system-ui;color:#edf3ff;background:#294768;border:1px solid #6283a7;border-radius:6px;padding:9px 13px;cursor:pointer}button:hover:not(:disabled){background:#375b82}button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,select:focus-visible{outline:3px solid #c5adff;outline-offset:3px}
+#cal-preview{font-size:20px;color:#8be8cf;font-weight:600;margin-top:14px}#cal-message{min-height:24px;color:#d6c8fa}#cal-storage{font-size:13px}.calibration progress{width:100%;height:12px;accent-color:#a88bec}
+@media(max-width:850px){.cal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.cal-grid{grid-template-columns:1fr}}
 @media(max-width:850px){body{padding:14px}.layout{grid-template-columns:1fr}.sidebar{grid-template-columns:repeat(3,minmax(0,1fr))}.position{grid-column:1/-1}#map{height:520px}.range{font-size:24px}}
 @media(max-width:560px){header{align-items:flex-start;flex-direction:column}.sidebar{grid-template-columns:1fr}.position{grid-column:auto}.toolbar{align-items:flex-start;flex-direction:column}#map{height:470px}}
 </style>
 </head><body>
 <header><div><h1>Whack-a-Mole controller</h1><p>Live sensor cones, player tracking and game targets</p></div><span id="connection" class="badge" role="status">Connecting to controller…</span></header>
 <main class="layout">
+<section class="panel calibration" aria-labelledby="cal-heading">
+<div class="cal-head"><h2 id="cal-heading">Stand here to calibrate a hole</h2><span class="badge">Cone-page test only</span></div>
+<p class="intro">Choose where each hole should be on the floor. Stand there, press its Calibrate button, then stay still through the 3-second countdown and capture. We collect at least 15 fresh positions, usually in another 3–5 seconds. Ask someone to press the button if needed.</p>
+<p class="detail">Use six distinct spots outside the red dead zone. Saved centres are sensor estimates, not surveyed floor coordinates. This preview does not change the game, sensor settings or ESP32 hit events.</p>
+<div id="cal-holes" class="cal-grid"></div>
+<progress id="cal-progress" max="15" value="0" aria-label="Fresh calibration positions collected"></progress>
+<p id="cal-message" role="status" aria-live="polite">Waiting for the controller.</p>
+<div class="cal-controls"><label>Test hit radius <select id="cal-radius"><option value="0.10">10 cm</option><option value="0.15" selected>15 cm</option><option value="0.20">20 cm</option></select></label><button id="cal-cancel" disabled>Cancel capture</button><button id="cal-clear" disabled>Clear saved holes</button></div>
+<p id="cal-preview" role="status" aria-live="polite">Calibrate a hole to test detection.</p>
+<p id="cal-storage">Saved only in this browser on this page address; nothing is written to the ESP32.</p>
+</section>
 <section class="panel" aria-label="Top-down sensor coverage">
 <div class="toolbar"><strong>Top-down view · metres</strong><label>View <select id="extent"><option value="play">Playing area</option><option value="full">Full sensor range</option></select></label></div>
 <canvas id="map" aria-label="Sensor cones, measured echo arcs and estimated player position"></canvas>
@@ -45,6 +65,80 @@ footer{margin-top:18px;max-width:1000px;font-size:14px;color:#9fafc3;line-height
 </aside>
 </main>
 <footer>The six outlined zones are the game targets; stand near their marked centres. A solid white dot is the smoothed position, a hollow dot is the latest unsmoothed estimate, and an amber dot is a briefly held position that cannot score. Cones model the configured beam: an echo has no measured angle or identity, and may come from a different part of your body or the room. The model uncertainty is not a measured accuracy guarantee. Run the game website on your PC while connected to this same Access Point.</footer>
+<script id="hole-calibration-model">
+// Browser-only experiment. No API writes and no changes to the game's hit map.
+class HoleCalibration {
+ static signature(c) {
+  return JSON.stringify([c.width_m,c.depth_m,c.play_start_y_m,c.game_area,
+   c.sensors.map(s=>[s.x_m,s.y_m,s.bearing_deg,s.half_angle_deg,s.max_range_m,s.face_setback_m??0])]);
+ }
+ constructor(c) {
+  this.config=c;this.signature=HoleCalibration.signature(c);this.holes=Array(6).fill(null);this.radius=.15;
+  this.capture=null;this.sample=null;this.key=null;this.frameAt=-Infinity;this.receivedAt=-Infinity;
+  this.message='Stand at a chosen floor spot, then calibrate its hole.';this.revision=0;
+ }
+ inArea(x,y) {return Number.isFinite(x)&&Number.isFinite(y)&&x>=0&&x<=this.config.width_m&&y>this.config.play_start_y_m&&y<=this.config.play_start_y_m+this.config.depth_m;}
+ restore(saved) {
+  if(!saved||saved.version!==1||saved.signature!==this.signature) return false;
+  if(!Array.isArray(saved.holes)||saved.holes.length!==6||![.10,.15,.20].includes(saved.radius)) return false;
+  if(!saved.holes.every(h=>h===null||(h&&this.inArea(h.x,h.y)&&Number.isInteger(h.count)&&h.count>=15&&Number.isFinite(h.spread)&&h.spread>=0&&h.spread<=.10))) return false;
+  for(let i=0;i<6;i++)for(let j=i+1;j<6;j++)if(saved.holes[i]&&saved.holes[j]&&Math.hypot(saved.holes[i].x-saved.holes[j].x,saved.holes[i].y-saved.holes[j].y)<.15)return false;
+  this.holes=saved.holes.map(h=>h?{x:h.x,y:h.y,count:h.count,spread:h.spread}:null);this.radius=saved.radius;return true;
+ }
+ snapshot(){return {version:1,signature:this.signature,radius:this.radius,holes:this.holes};}
+ point(now) {
+  const p=this.sample,stale=this.config.stale_ms||500;
+  if(!p||p.valid!==true||p.held||p.warning||![2,3].includes(p.sensors_used)||
+   !Number.isInteger(p.boot_id)||!Number.isInteger(p.frame_id)||!Number.isFinite(p.age_ms)||p.age_ms<0||
+   p.age_ms+now-this.receivedAt>stale||now-this.frameAt>stale||!this.inArea(p.raw_x_m,p.raw_y_m))return null;
+  return {x:p.raw_x_m,y:p.raw_y_m};
+ }
+ disconnect(){this.sample=null;}
+ start(index,now) {
+  if(this.capture||!Number.isInteger(index)||index<0||index>5)return;
+  if(!this.point(now)){this.message='No fresh usable position. Check the sensor diagnostics below before capturing.';return;}
+  this.capture={index,start:now+3000,deadline:now+23000,points:[],firstAt:null,boot:this.sample.boot_id};
+ }
+ cancel(message='Capture cancelled. Previously saved holes are unchanged.') {this.capture=null;this.message=message;}
+ clear(){this.capture=null;this.holes=Array(6).fill(null);this.revision++;this.message='Saved holes cleared. Choose new floor positions to calibrate.';}
+ tick(now){if(this.capture&&now>=this.capture.deadline)this.cancel('Capture timed out: not enough fresh, usable positions. Previous calibration kept. Check coverage and try again.');}
+ observe(p,now) {
+  this.tick(now);
+  if(this.capture&&p.boot_id!==this.capture.boot)this.cancel('Controller restarted. Capture cancelled; previous calibration kept.');
+  this.sample=p;this.receivedAt=now;
+  const key=String(p.boot_id)+':'+String(p.frame_id),changed=key!==this.key;
+  if(changed){this.key=key;this.frameAt=now;}
+  const cap=this.capture,point=this.point(now);
+  if(!cap||now<cap.start||!changed||!point)return;
+  if(cap.firstAt===null)cap.firstAt=now;
+  cap.points.push(point);
+  if(cap.points.length>=15&&now-cap.firstAt>=2500)this.finish();
+ }
+ finish() {
+  const cap=this.capture,points=cap.points;
+  // Coordinate medians resist occasional outliers; no historical mode/held points are captured.
+  const median=values=>{values.sort((a,b)=>a-b);const m=Math.floor(values.length/2);return values.length%2?values[m]:(values[m-1]+values[m])/2;};
+  const x=median(points.map(p=>p.x)),y=median(points.map(p=>p.y));
+  const distances=points.map(p=>Math.hypot(p.x-x,p.y-y)).sort((a,b)=>a-b);
+  const spread=distances[Math.ceil(points.length*.9)-1];
+  if(spread>.10){this.cancel('Position moved too much (90% spread '+Math.round(spread*100)+' cm; maximum 10 cm). Stay still and retry. Previous calibration kept.');return;}
+  const other=this.holes.findIndex((h,i)=>i!==cap.index&&h&&Math.hypot(h.x-x,h.y-y)<.15);
+  if(other>=0){this.cancel('Too close to saved hole '+(other+1)+'. Choose a different floor spot (centres must be at least 15 cm apart). Previous calibration kept.');return;}
+  this.holes[cap.index]={x,y,count:points.length,spread};this.revision++;
+  this.cancel('Hole '+(cap.index+1)+' captured. Walk away and return to test it below.');
+ }
+ match(now) {
+  if(this.capture)return {index:-1,text:'Capture in progress · test paused'};
+  if(!this.holes.some(Boolean))return {index:-1,text:'Calibrate a hole to test detection.'};
+  const p=this.point(now);
+  if(!p)return {index:-1,text:'No fresh usable position · no test hit'};
+  const candidates=this.holes.map((h,index)=>h?{index,d:Math.hypot(h.x-p.x,h.y-p.y)}:null).filter(Boolean).sort((a,b)=>a.d-b.d);
+  if(candidates[0].d>this.radius)return {index:-1,text:'Outside saved targets · no test hit'};
+  if(candidates[1]&&(candidates[1].d<=this.radius||candidates[1].d-candidates[0].d<.04))return {index:-1,text:'Between saved targets · ambiguous, no test hit'};
+  return {index:candidates[0].index,text:'🔨 Test hole '+(candidates[0].index+1)+' · '+Math.round(candidates[0].d*100)+' cm from saved centre'};
+ }
+}
+</script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -52,6 +146,42 @@ const API = location.hostname === '192.168.4.1' ? '' : 'http://192.168.4.1';
 const colours = ['#579ce8','#45d9bb','#eca85a'];
 const canvas = $('map'), ctx = canvas.getContext('2d');
 let config = null, sample = null, receivedAt = 0, connected = false, lastBoot = null;
+let calibration=null, savedRevision=0, storageNotice='';
+const CAL_STORAGE_KEY='wam-cone-hole-calibration-v1:'+API;
+function initCalibration(){
+ calibration=new HoleCalibration(config);savedRevision=0;
+ try{const text=localStorage.getItem(CAL_STORAGE_KEY);if(text&&!calibration.restore(JSON.parse(text)))calibration.message='Saved calibration does not match this geometry or is invalid. Calibrate the holes again.';}
+ catch(e){storageNotice='Browser storage unavailable or unreadable. Captures work for this page session; they may not survive a reload.';}
+ $('cal-radius').value=String(calibration.radius);$('cal-holes').replaceChildren();
+ const names=['Near left','Near right','Middle left','Middle right','Far left','Far right'];
+ names.forEach((name,i)=>{const card=document.createElement('div');card.className='cal-card';card.id='cal-card'+i;
+  const title=document.createElement('h3');title.textContent='Hole '+(i+1)+' · '+name;
+  const detail=document.createElement('p');detail.id='cal-detail'+i;
+  const button=document.createElement('button');button.id='cal-start'+i;button.textContent='Calibrate hole '+(i+1);
+  button.addEventListener('click',()=>{calibration.start(i,performance.now());render();});card.append(title,detail,button);$('cal-holes').append(card);
+ });
+}
+function saveCalibration(){
+ if(!calibration||savedRevision===calibration.revision)return;
+ savedRevision=calibration.revision;
+ try{localStorage.setItem(CAL_STORAGE_KEY,JSON.stringify(calibration.snapshot()));storageNotice='';}
+ catch(e){storageNotice='Could not save in this browser. Captures are available only until this page closes.';}
+}
+function renderCalibration(){
+ if(!calibration)return;
+ const now=performance.now();calibration.tick(now);saveCalibration();
+ const cap=calibration.capture,match=calibration.match(now),ready=!!calibration.point(now);
+ for(let i=0;i<6;i++){
+  const h=calibration.holes[i];$('cal-card'+i).className='cal-card'+(cap?.index===i?' active':'')+(match.index===i?' matched':'');
+  $('cal-detail'+i).textContent=h?`Saved estimate: x ${(h.x*100).toFixed(1)} cm, y ${(h.y*100).toFixed(1)} cm · spread ${(h.spread*100).toFixed(1)} cm`:'Not calibrated · choose this hole’s floor spot.';
+  $('cal-start'+i).disabled=!!cap||!ready;$('cal-start'+i).textContent=(h?'Recalibrate':'Calibrate')+' hole '+(i+1);
+ }
+ $('cal-progress').value=cap?Math.min(15,cap.points.length):0;
+ $('cal-message').textContent=cap?(now<cap.start?`Hole ${cap.index+1}: stay still · starting in ${Math.ceil((cap.start-now)/1000)}…`:`Hole ${cap.index+1}: ${cap.points.length}/15 fresh positions · ${ready?'keep still':'waiting for a usable position'} · ${Math.max(0,Math.ceil((cap.deadline-now)/1000))} s remaining`):calibration.message;
+ $('cal-cancel').disabled=!cap;$('cal-clear').disabled=!!cap||!calibration.holes.some(Boolean);$('cal-radius').disabled=!!cap;
+ $('cal-preview').textContent=match.text;
+ $('cal-storage').textContent=storageNotice||`${calibration.holes.filter(Boolean).length}/6 holes saved in this browser on this page address. Nothing is written to the ESP32 or game. Recalibrate after moving sensors or changing range settings.`;
+}
 function metric(v){return typeof v === 'number' && Number.isFinite(v);}
 function live(){return connected && sample && performance.now()-receivedAt <= (config?.stale_ms || 500);}
 function pointInCone(x,y,s){const dx=x-s.x_m,dy=y-s.y_m,r=Math.hypot(dx,dy),a=s.bearing_deg*Math.PI/180;return r>=.02&&r<=s.max_range_m&&(dx*Math.sin(a)+dy*Math.cos(a))/r>=Math.cos(s.half_angle_deg*Math.PI/180);}
@@ -107,6 +237,14 @@ function draw(){
   ctx.beginPath();ctx.arc(x,y,9,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.textAlign='center';ctx.font='bold 14px system-ui';ctx.fillText(sample.held?'Held · no hit':'Player',x,y-18);
  }
  ctx.textAlign='center';ctx.fillStyle='#aabace';ctx.font='13px system-ui';ctx.fillText('Player’s left ← x → Player’s right',w/2,h-13);
+ if(calibration){
+  const match=calibration.match(performance.now());
+  calibration.holes.forEach((p,i)=>{if(!p)return;const x=X(p.x),y=Y(p.y);
+   ctx.strokeStyle=match.index===i?'#45d9bb':'#c5adff';ctx.fillStyle=match.index===i?'#45d9bb25':'#c5adff10';ctx.lineWidth=2;ctx.setLineDash([5,3]);
+   ctx.beginPath();ctx.arc(x,y,calibration.radius*scale,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.setLineDash([]);
+   ctx.fillStyle=ctx.strokeStyle;ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText('Test '+(i+1),x,y+20);
+  });
+ }
 }
 function render(){
  const current=live();$('connection').textContent=current?'Receiving live measurements':connected?'Waiting for fresh measurements':'Controller disconnected';
@@ -124,7 +262,7 @@ function render(){
  if(current&&sample.valid&&!sample.held&&sample.reason==='two_ranges_timing')$('quality').textContent='Two-sensor tracking · older third reading excluded';
  if(current&&sample.valid&&Number.isInteger(sample.sensors_used_mask))$('quality').textContent+=' · '+config.sensors.filter((s,i)=>sample.sensors_used_mask&(1<<i)).map(s=>s.name).join(' + ');
  if(current&&sample.valid&&metric(sample.uncertainty_m))$('quality').textContent+=` · model uncertainty ${(sample.uncertainty_m*100).toFixed(1)} cm`;
- $('warning').textContent=current&&sample.warning?'Move away from the screen.':'';draw();
+ $('warning').textContent=current&&sample.warning?'Move away from the screen.':'';renderCalibration();draw();
 }
 async function getJson(path){const c=new AbortController(),t=setTimeout(()=>c.abort(),1200);try{const r=await fetch(API+path,{cache:'no-store',signal:c.signal});if(!r.ok)throw Error('HTTP '+r.status);return await r.json();}finally{clearTimeout(t);}}
 function showTargets(){
@@ -137,11 +275,14 @@ function showTargets(){
  }
 }
 async function update(){try{
- if(!config){config=await getJson('/api/config');if(!Array.isArray(config.sensors)||config.sensors.length!==3||!config.game_area){config=null;throw Error('Invalid geometry');}showTargets();}
+ if(!config){config=await getJson('/api/config');if(!Array.isArray(config.sensors)||config.sensors.length!==3||!config.game_area){config=null;throw Error('Invalid geometry');}showTargets();initCalibration();}
  const p=await getJson('/api/position');if(!Array.isArray(p.sensor_status)||p.sensor_status.length!==3||typeof p.valid!=='boolean')throw Error('Invalid position data');
- if(lastBoot!==null&&p.boot_id!==lastBoot){lastBoot=null;config=null;sample=null;connected=false;return;}
- lastBoot=p.boot_id;sample=p;receivedAt=performance.now();connected=true;
-}catch(e){connected=false;sample=null;}finally{render();setTimeout(update,150);}}
+ if(lastBoot!==null&&p.boot_id!==lastBoot){calibration?.cancel('Controller restarted. Capture cancelled; geometry will be reloaded.');calibration?.disconnect();lastBoot=null;config=null;sample=null;connected=false;return;}
+ lastBoot=p.boot_id;sample=p;receivedAt=performance.now();connected=true;calibration.observe(p,receivedAt);
+}catch(e){connected=false;sample=null;calibration?.disconnect();}finally{render();setTimeout(update,150);}}
+$('cal-cancel').addEventListener('click',()=>{calibration?.cancel();render();});
+$('cal-clear').addEventListener('click',()=>{calibration?.clear();render();});
+$('cal-radius').addEventListener('change',()=>{if(calibration){calibration.radius=Number($('cal-radius').value);calibration.revision++;render();}});
 $('extent').addEventListener('change',draw);window.addEventListener('resize',draw);setInterval(render,200);draw();update();
 </script></body></html>
 

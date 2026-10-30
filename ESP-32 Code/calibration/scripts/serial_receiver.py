@@ -61,6 +61,14 @@ def receive_serial_data(port: str, baud_rate: int) -> None:
                 if not line:
                     continue
 
+                if line.startswith("DATA,"):
+                    from multi_capture import parse_frame
+                    try:
+                        print(parse_frame(line))
+                    except ValueError as error:
+                        print(f"Invalid measurement record: {error}")
+                    continue
+
                 try:
                     values = parse_serial_line(line)
                 except ValueError:

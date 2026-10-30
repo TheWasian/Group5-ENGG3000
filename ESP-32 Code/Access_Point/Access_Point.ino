@@ -7,6 +7,7 @@
 #include <WebServer.h>
 #include <esp_system.h>
 #include "Positioning.h"
+#include "SensorMounting.h"
 #include "RangeProtocol.h"
 #include "Tracking.h"
 #include "Dashboard.h"
@@ -21,10 +22,19 @@ constexpr int WARNING_LED_PIN = 7; // -1 disables output.
 constexpr float PLAY_AREA_WIDTH_M = 1.50f;
 constexpr float PLAY_AREA_DEPTH_M = 1.40f;
 constexpr float DEAD_ZONE_M = 0.60f; // y=0 is the screen; play ends at y=2 m.
-constexpr float SENSOR_GAP_LEFT_M = 0.35f;
-constexpr float SENSOR_GAP_RIGHT_M = 0.35f;
+constexpr float SENSOR_GAP_LEFT_M = 0.80f;
+constexpr float SENSOR_GAP_RIGHT_M = 0.80f;
 constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
 constexpr float AP_X_M = PLAY_AREA_WIDTH_M / 2;
+// Order: Node 1, centre AP, Node 2. If gaps/screen distance are measured at the
+// horn mouths, enter the actual axial recess of the fitted metal sensor faces.
+// Leave zero when those measurements already refer to the metal sensor faces.
+// The CAD reference planes are 70 mm apart; that is NOT a verified fitted recess.
+constexpr float SENSOR_FACE_SETBACK_M[3] = {0.055f, 0.055f, 0.055f};
+// Add measured mounting yaw to the nominal inward aim, positive towards +x.
+constexpr float SENSOR_BEARING_TRIM_DEG[3] = {0.0f, 0.0f, 0.0f};
+static_assert(SENSOR_FACE_SETBACK_M[0] >= 0 && SENSOR_FACE_SETBACK_M[1] >= 0 &&
+  SENSOR_FACE_SETBACK_M[2] >= 0, "Sensor face setbacks must be non-negative.");
 // Six hit zones inside the overlapping beams. x is from the left edge;
 // y is from the screen. Change these independently of sensor spacing.
 constexpr float GAME_AREA_X_MIN_M = AP_X_M - 0.30f;
@@ -34,7 +44,7 @@ constexpr float GAME_AREA_END_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M;
 // Aim both side sensors at this point. Physically rotate them to match.
 constexpr float AIM_X_M = AP_X_M;
 constexpr float AIM_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M / 2;
-// Estimated beam half-width, NOT an angle measured by the sensor.
+// Estimated beam half-width, NOT an angle measured by the sensor or CAD flare.
 constexpr float CONE_HALF_ANGLE_DEG = 15.0f;
 constexpr float MIN_RANGE_M = 0.02f;
 constexpr float MAX_RANGE_M = 4.50f; // Slant range, not playing-area depth.
@@ -81,11 +91,17 @@ float aimBearing(float x) {
 }
 // Order throughout the API: Node 1 (player's left), AP (centre), Node 2.
 const wam::Sensor SENSORS[3] = {
-  {AP_X_M - SENSOR_GAP_LEFT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
-   aimBearing(AP_X_M - SENSOR_GAP_LEFT_M), CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
-  {AP_X_M, SENSOR_DISTANCE_FROM_SCREEN_M, 0, CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
-  {AP_X_M + SENSOR_GAP_RIGHT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
-   aimBearing(AP_X_M + SENSOR_GAP_RIGHT_M), CONE_HALF_ANGLE_DEG, MAX_RANGE_M}
+  wam::sensorBehindReference(
+    {AP_X_M - SENSOR_GAP_LEFT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
+     aimBearing(AP_X_M - SENSOR_GAP_LEFT_M) + SENSOR_BEARING_TRIM_DEG[0], CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
+    SENSOR_FACE_SETBACK_M[0]),
+  wam::sensorBehindReference(
+    {AP_X_M, SENSOR_DISTANCE_FROM_SCREEN_M, SENSOR_BEARING_TRIM_DEG[1], CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
+    SENSOR_FACE_SETBACK_M[1]),
+  wam::sensorBehindReference(
+    {AP_X_M + SENSOR_GAP_RIGHT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
+     aimBearing(AP_X_M + SENSOR_GAP_RIGHT_M) + SENSOR_BEARING_TRIM_DEG[2], CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
+    SENSOR_FACE_SETBACK_M[2])
 };
 
 WiFiUDP udp;
@@ -359,6 +375,7 @@ void handleConfigJson() {
     if (i) s += ',';
     s += "{\"name\":\"" + String(names[i]) + "\",\"x_m\":" + number(SENSORS[i].x);
     s += ",\"y_m\":" + number(SENSORS[i].y) + ",\"bearing_deg\":" + number(SENSORS[i].bearingDeg);
+    s += ",\"face_setback_m\":" + number(SENSOR_FACE_SETBACK_M[i]);
     s += ",\"half_angle_deg\":" + number(SENSORS[i].halfAngleDeg) + ",\"max_range_m\":" + number(SENSORS[i].maxRange) + "}";
   }
   addCorsHeaders(); server.send(200, "application/json", s + "]}");

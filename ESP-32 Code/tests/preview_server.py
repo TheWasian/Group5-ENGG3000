@@ -2,6 +2,8 @@
 
 python tests/preview_server.py; open http://127.0.0.1:8766/
 Use ?mode=partial, ?mode=fallback, ?mode=held, ?mode=invalid, ?mode=warning or ?mode=offline.
+Use ?mode=calibration&hole=1 (through 6) for distinct stationary calibration targets.
+Use ?mode=stalled to keep returning the same frame and verify stale-frame rejection.
 The /game/ route serves the current game UI with this same synthetic sensor API.
 """
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,20 +33,23 @@ class Handler(BaseHTTPRequestHandler):
             if mode == 'offline':
                 self.send_error(503)
                 return
-            y = .5 if mode == 'warning' else 1.3
-            ranges = [math.hypot(.75-s['x_m'], y-.3) for s in sensors]
+            x, y = .75, .5 if mode == 'warning' else 1.3
+            if mode == 'calibration':
+                hole = max(0, min(5, int(parse_qs(url.query).get('hole', ['1'])[0])-1))
+                x, y = .6 + .3*(hole % 2), 1.2 + .3*(hole // 2)
+            ranges = [math.hypot(x-s['x_m'], y-.3) for s in sensors]
             if mode == 'partial': ranges[1] = None
             if mode == 'fallback': ranges[0] = 3
             valid = mode not in ('invalid', 'warning')
             used = 5 if mode=='partial' else 6 if mode=='fallback' else 7
-            position = dict(valid=valid,x_m=.75 if valid else None,y_m=y if valid else None,
+            position = dict(valid=valid,x_m=x if valid else None,y_m=y if valid else None,
                 rms_error_m=.004 if valid else None,sensors_used=2 if mode in ('partial','fallback') else 3,
                 sensors_used_mask=used if valid else 0,available_mask=5 if mode=='partial' else 7,
                 in_play_area=valid,in_game_area=valid,age_ms=15,
-                held=mode=='held',raw_x_m=None if mode=='held' else .76 if valid else None,
+                held=mode=='held',raw_x_m=None if mode=='held' else x+.01 if valid else None,
                 raw_y_m=y if valid and mode!='held' else None,uncertainty_m=.05 if valid else None,
                 warning=mode=='warning',reason='range_spike' if mode=='held' else 'two_ranges_fallback' if mode=='fallback' else 'two_ranges' if mode=='partial' else 'three_ranges' if valid else 'outside_cones_or_area')
-            diagnostics = dict(boot_id=1,frame_id=int(time.monotonic()*5),ranges_m=ranges,node_online=[True,True],
+            diagnostics = dict(boot_id=1,frame_id=1 if mode=='stalled' else int(time.monotonic()*5),ranges_m=ranges,node_online=[True,True],
                 sensor_status=[dict(online=True,echo=r is not None,range_m=None if mode=='held' and i==0 else r,
                     raw_m=r+.4 if mode=='held' and i==0 else r,rejected=mode=='held' and i==0,
                     used_for_position=valid and mode!='held' and bool(used & (1<<i)),

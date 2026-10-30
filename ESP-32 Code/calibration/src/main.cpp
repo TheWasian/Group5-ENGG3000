@@ -28,6 +28,7 @@ constexpr uint8_t RGB_BLUE_PIN = 16;
 constexpr uint8_t BUZZER_PIN = 17;
 constexpr bool BUZZER_ENABLED = false;
 constexpr bool RGB_LED_COMMON_ANODE = false;
+constexpr bool RGB_ENABLED = false; // Enable only after checking RGB pins for your board/wiring.
 constexpr unsigned long RGB_UPDATE_INTERVAL_MS = 10;
 constexpr unsigned long RGB_CYCLE_PERIOD_MS = 6000;
 constexpr unsigned long BATTERY_DISPLAY_DURATION_MS = 5000;
@@ -103,6 +104,10 @@ void configureArea(const String &command);
 struct MultiMeasurement
 {
   float ranges[3] = {NAN, NAN, NAN};
+  float raw[3] = {NAN, NAN, NAN};
+  const char *status[3] = {"no_ready", "no_echo", "no_ready"};
+  uint32_t sampleMs[3] = {};
+  uint32_t startedMs = 0, localEchoUs = 0;
   uint32_t ages[3] = {};
   uint8_t activeNode = 0;
   uint32_t sequence = 0;
@@ -116,6 +121,7 @@ struct MultiTest
   uint16_t remaining = 0;
   uint32_t delayMs = 0;
   uint32_t nextStart = 0;
+  bool continuous = false;
 };
 
 MultiMeasurement multiMeasurement;
@@ -134,14 +140,45 @@ float solverRangeNoise = 0.025f;
 float solverMaxUncertainty = 0.20f;
 wam::Area multiArea = {1.5f, 0.0f, 3.0f};
 uint32_t frameSequence = 0;
+uint32_t quietMs = 100; // Quiet after every sensor, including last node -> next AP.
+uint32_t acousticGuardUntil = 0;
+bool positionEnabled = false; // Data collection never depends on a position fix.
+bool networkReady = false;
+
+String readCommand()
+{
+  static String buffer;
+  static bool overflow = false;
+  while (Serial.available()) {
+    const char ch = Serial.read();
+    if (ch == '\n') {
+      String result = overflow ? "INVALID" : buffer;
+      buffer = ""; overflow = false; result.trim(); return result;
+    }
+    if (ch != '\r' && !overflow) {
+      if (buffer.length() < 180) buffer += ch;
+      else { buffer = ""; overflow = true; }
+    }
+  }
+  return "";
+}
+
+void loggerReady()
+{
+  Serial.printf("LOGGER_READY,2,%s,%lu,%u\n", AP_SSID,
+    static_cast<unsigned long>(masterSession), networkReady ? 1 : 0);
+}
 
 void setup()
 {
+  Serial.begin(115200);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-  pinMode(RGB_RED_PIN, OUTPUT);
-  pinMode(RGB_GREEN_PIN, OUTPUT);
-  pinMode(RGB_BLUE_PIN, OUTPUT);
+  if (RGB_ENABLED) {
+    pinMode(RGB_RED_PIN, OUTPUT);
+    pinMode(RGB_GREEN_PIN, OUTPUT);
+    pinMode(RGB_BLUE_PIN, OUTPUT);
+  }
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   digitalWrite(TRIG_PIN, LOW);
@@ -158,11 +195,12 @@ void setup()
   updateLedForMode();
   startSound(startupJingle, sizeof(startupJingle) / sizeof(startupJingle[0]));
 
-  Serial.begin(115200);
   delay(500);
   masterSession = esp_random();
+  if (!masterSession) masterSession = 1;
   startDemoAccessPoint();
-  udp.begin(wam::AP_UDP_PORT);
+  networkReady = networkReady && udp.begin(wam::AP_UDP_PORT);
+  loggerReady();
 }
 
 void loop()
@@ -173,15 +211,30 @@ void loop()
   updateMultiMeasurement();
 
   if (multiTest.active && multiMeasurement.phase == MultiMeasurement::IDLE &&
-      static_cast<int32_t>(millis() - multiTest.nextStart) >= 0)
+      wam::deadlineReached(millis(), multiTest.nextStart) &&
+      wam::deadlineReached(millis(), acousticGuardUntil))
   {
     startMultiMeasurement();
   }
 
-  if (Serial.available() > 0)
+  String command = readCommand();
+  if (command.length() > 0)
   {
-    String command = Serial.readStringUntil('\n');
-    command.trim();
+    if (command == "HELLO") { loggerReady(); return; }
+    if (multiTest.active && !command.equalsIgnoreCase("STOP")) {
+      Serial.println("ERROR:BUSY send STOP before changing settings or starting another run"); return;
+    }
+    if (command == "POSITION ON" || command == "POSITION OFF") {
+      positionEnabled = command == "POSITION ON";
+      Serial.println(positionEnabled ? "POSITION,ON" : "POSITION,OFF"); return;
+    }
+    if (command.startsWith("CONFIG_TIMING ")) {
+      unsigned long value = 0; char extra;
+      if (sscanf(command.c_str(), "CONFIG_TIMING %lu %c", &value, &extra) != 1 || value < 60 || value > 60000) {
+        Serial.println("ERROR:CONFIG_TIMING quiet_ms must be 60-60000"); return;
+      }
+      quietMs = value; Serial.printf("TIMING,%lu\n", value); return;
+    }
 
     if (command.startsWith("CONFIG_SENSOR "))
     {
@@ -225,6 +278,8 @@ void loop()
       sensorMode = SensorMode::IDLE;
         multiTest.active = false;
         multiMeasurement.phase = MultiMeasurement::IDLE;
+      // A FIRE packet already on the network may still trigger its armed node.
+      acousticGuardUntil = millis() + wam::ARM_LIFETIME_MS + (wam::ECHO_TIMEOUT_US / 1000) + quietMs;
       updateLedForMode();
       updateDisplay();
       playModeSound();
@@ -251,18 +306,22 @@ void loop()
       return;
     }
 
-    if (sscanf(command.c_str(), "MULTI_TEST %d %lu", &requestedSamples, &requestedDelayMs) == 2 ||
+    const bool stream = command.startsWith("MULTI_STREAM ");
+    if ((stream && sscanf(command.c_str(), "MULTI_STREAM %lu", &requestedDelayMs) == 1) ||
+        sscanf(command.c_str(), "MULTI_TEST %d %lu", &requestedSamples, &requestedDelayMs) == 2 ||
         sscanf(command.c_str(), "MULTI_CALIBRATE %d %lu", &requestedSamples, &requestedDelayMs) == 2)
     {
-      if (requestedSamples < 1 || requestedSamples > 100 || requestedDelayMs > 60000)
+      if ((!stream && (requestedSamples < 1 || requestedSamples > 100)) || requestedDelayMs > 60000)
       {
         Serial.println("ERROR:MULTI_TEST arguments must be 1-100 samples and 0-60000 ms delay");
         return;
       }
+      if (!networkReady) { Serial.println("ERROR:Wi-Fi AP or UDP unavailable"); return; }
       multiTest.active = true;
+      multiTest.continuous = stream;
       multiTest.remaining = static_cast<uint16_t>(requestedSamples);
       multiTest.delayMs = requestedDelayMs;
-      multiTest.nextStart = millis();
+      multiTest.nextStart = millis() + quietMs;
       sensorMode = SensorMode::MULTI_TEST;
       updateLedForMode();
       updateDisplay();
@@ -305,6 +364,7 @@ void loop()
   }
 
   updateBuzzer();
+  delay(1);
 }
 
 void startDemoAccessPoint()
@@ -321,13 +381,14 @@ void startDemoAccessPoint()
     const String page =
         "<!doctype html><html><head><meta name=viewport content='width=device-width,initial-scale=1'>"
         "<title>Ultrasonic Calibration</title></head><body>"
-        "<h1>Ultrasonic Calibration</h1><p>Demo Wi-Fi network is active.</p>"
+        "<h1>Ultrasonic Calibration</h1><p>Wacker5 data logger is active. Start capture over USB.</p>"
         "<p>Mode: <strong>" + String(sensorModeName()) + "</strong></p>"
         "<p><a href='/api/status'>View status JSON</a></p></body></html>";
     server.send(200, "text/html", page);
   });
   server.on("/api/status", HTTP_GET, handleDemoStatus);
   server.begin();
+  networkReady = true;
 
   Serial.print("Demo Wi-Fi: ");
   Serial.print(AP_SSID);
@@ -379,7 +440,7 @@ void showDistance(float distanceCm)
 void handleDisplayButton()
 {
   const bool buttonState = digitalRead(BUTTON_PIN);
-  if (lastButtonState == HIGH && buttonState == LOW)
+  if (lastButtonState == HIGH && buttonState == LOW && sensorMode == SensorMode::IDLE)
   {
     lastDistanceCm = readDistanceCm();
     showDistance(lastDistanceCm);
@@ -447,13 +508,16 @@ void startMultiMeasurement()
 {
   multiMeasurement = MultiMeasurement{};
   multiMeasurement.sequence = ++frameSequence;
-  multiMeasurement.ranges[1] = readDistanceCm() * 0.01f;
-  if (multiMeasurement.ranges[1] >= 0.0f)
-  {
-    multiMeasurement.ranges[1] = multiMeasurement.ranges[1] * sensorScale[1] + sensorOffset[1];
-  }
+  multiMeasurement.startedMs = millis();
+  multiMeasurement.localEchoUs = readEchoDurationUs();
+  multiMeasurement.sampleMs[1] = millis();
+  const float r = multiMeasurement.localEchoUs ? multiMeasurement.localEchoUs * .000343f / 2 : NAN;
+  multiMeasurement.raw[1] = r;
+  multiMeasurement.status[1] = !isfinite(r) ? "no_echo" : r < .02f || r > 4.5f ? "out_of_range" : "ok";
+  if (strcmp(multiMeasurement.status[1], "ok") == 0)
+    multiMeasurement.ranges[1] = r * sensorScale[1] + sensorOffset[1];
   multiMeasurement.activeNode = 1;
-  multiMeasurement.deadline = millis() + wam::QUIET_MS;
+  multiMeasurement.deadline = millis() + quietMs;
   multiMeasurement.phase = MultiMeasurement::QUIET;
 }
 
@@ -462,7 +526,7 @@ void advanceMultiMeasurement()
   if (multiMeasurement.activeNode == 1)
   {
     multiMeasurement.activeNode = 2;
-    multiMeasurement.deadline = millis() + wam::QUIET_MS;
+    multiMeasurement.deadline = millis() + quietMs;
     multiMeasurement.phase = MultiMeasurement::QUIET;
     return;
   }
@@ -488,14 +552,15 @@ void updateMultiMeasurement()
     return;
   }
 
+  // Expire the slot even if unrelated or delayed packets keep arriving.
+  if (wam::deadlineReached(now, multiMeasurement.deadline)) {
+    multiMeasurement.status[multiMeasurement.activeNode == 1 ? 0 : 2] =
+      multiMeasurement.phase == MultiMeasurement::WAIT_READY ? "no_ready" : "no_reply";
+    advanceMultiMeasurement(); return;
+  }
   const int packetSize = udp.parsePacket();
   if (packetSize <= 0)
   {
-    if (static_cast<int32_t>(now - multiMeasurement.deadline) >= 0)
-    {
-      multiMeasurement.ranges[multiMeasurement.activeNode == 1 ? 0 : 2] = NAN;
-      advanceMultiMeasurement();
-    }
     return;
   }
 
@@ -536,28 +601,40 @@ void updateMultiMeasurement()
         packet.reserved == 0 && packet.crc == wam::packetCrc(packet))
     {
       const int index = multiMeasurement.activeNode == 1 ? 0 : 2;
-      multiMeasurement.ranges[index] = packet.validMask
+      multiMeasurement.raw[index] = packet.validMask ? packet.distanceMm * .001f : NAN;
+      multiMeasurement.status[index] = !packet.validMask ? "invalid_echo" :
+        packet.distanceMm < 20 || packet.distanceMm > 4500 ? "out_of_range" : "ok";
+      multiMeasurement.ranges[index] = strcmp(multiMeasurement.status[index], "ok") == 0
           ? packet.distanceMm * 0.001f * sensorScale[index] + sensorOffset[index]
           : NAN;
-      multiMeasurement.ages[index] = now - multiMeasurement.deadline + wam::REPLY_TIMEOUT_MS;
+      multiMeasurement.sampleMs[index] = now; // AP receive time, not a synchronized node clock.
       advanceMultiMeasurement();
     }
+    return;
   }
+  while (udp.available()) udp.read();
 }
 
 void finishMultiMeasurement()
 {
   const uint32_t now = millis();
-  multiMeasurement.ages[1] = 0;
-  const wam::Fix fix = wam::solveBestAvailable(
+  for (int i=0;i<3;++i) multiMeasurement.ages[i] = now - multiMeasurement.sampleMs[i];
+  wam::Fix fix;
+  fix.reason = "disabled";
+  if (positionEnabled) fix = wam::solveBestAvailable(
       sensors, multiMeasurement.ranges, multiArea, nullptr, solverMaxRms,
       solverMaxResidual, solverHuberLimit, solverRangeNoise, solverMaxUncertainty,
       0.10f, 0.25f, multiMeasurement.ages, 300);
-  Serial.printf("MULTI,%lu,%.3f,%.3f,%.3f,POS,%.3f,%.3f,%.3f,%u,%s\n",
+  Serial.printf("DATA,2,%lu,%lu,%lu,%lu,%lu,%lu,%.3f,%.3f,%.3f,%s,%s,%s,%lu,%lu,%lu,%lu,POS,%u,%.3f,%.3f,%.3f,%u,%s\n",
+                static_cast<unsigned long>(masterSession),
                 static_cast<unsigned long>(multiMeasurement.sequence),
-                multiMeasurement.ranges[0] * 100.0f,
-                multiMeasurement.ranges[1] * 100.0f,
-                multiMeasurement.ranges[2] * 100.0f,
+                static_cast<unsigned long>(multiMeasurement.startedMs), static_cast<unsigned long>(now),
+                static_cast<unsigned long>(quietMs), static_cast<unsigned long>(multiTest.delayMs),
+                multiMeasurement.raw[0] * 100.0f, multiMeasurement.raw[1] * 100.0f, multiMeasurement.raw[2] * 100.0f,
+                multiMeasurement.status[0], multiMeasurement.status[1], multiMeasurement.status[2],
+                static_cast<unsigned long>(multiMeasurement.sampleMs[0]), static_cast<unsigned long>(multiMeasurement.sampleMs[1]),
+                static_cast<unsigned long>(multiMeasurement.sampleMs[2]), static_cast<unsigned long>(multiMeasurement.localEchoUs),
+                fix.valid ? 1 : 0,
                 fix.valid ? fix.x : -1.0f, fix.valid ? fix.y : -1.0f,
                 fix.valid ? fix.rms : -1.0f, fix.count, fix.reason);
   if (fix.valid)
@@ -566,17 +643,19 @@ void finishMultiMeasurement()
     showDistance(lastDistanceCm);
   }
   multiMeasurement.phase = MultiMeasurement::IDLE;
-  if (multiTest.remaining > 0) --multiTest.remaining;
-  if (multiTest.remaining == 0)
+  if (!multiTest.continuous && multiTest.remaining > 0) --multiTest.remaining;
+  acousticGuardUntil = now + quietMs;
+  if (!multiTest.continuous && multiTest.remaining == 0)
   {
     multiTest.active = false;
     sensorMode = SensorMode::IDLE;
     updateLedForMode();
     updateDisplay();
+    Serial.printf("MULTI_DONE,%lu,%lu\n", static_cast<unsigned long>(masterSession), static_cast<unsigned long>(frameSequence));
   }
   else
   {
-    multiTest.nextStart = now + multiTest.delayMs;
+    multiTest.nextStart = now + quietMs + multiTest.delayMs;
   }
 }
 
@@ -699,6 +778,7 @@ void updateIdleLed()
 
 void writeRgb(uint8_t red, uint8_t green, uint8_t blue)
 {
+  if (!RGB_ENABLED) return;
   analogWrite(RGB_RED_PIN, RGB_LED_COMMON_ANODE ? 255 - red : red);
   analogWrite(RGB_GREEN_PIN, RGB_LED_COMMON_ANODE ? 255 - green : green);
   analogWrite(RGB_BLUE_PIN, RGB_LED_COMMON_ANODE ? 255 - blue : blue);
@@ -821,6 +901,7 @@ float readDistanceCm()
 
 unsigned long readEchoDurationUs()
 {
+  while (!wam::deadlineReached(millis(), acousticGuardUntil)) delay(1);
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG_PIN, HIGH);

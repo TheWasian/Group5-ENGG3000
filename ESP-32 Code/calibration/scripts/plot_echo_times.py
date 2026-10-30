@@ -49,6 +49,10 @@ def main() -> None:
         raise SystemExit(error) from error
 
     sensor_mode: SensorMode = select_sensor_mode()
+    if sensor_mode == "multi":
+        from multi_capture import interactive
+        interactive(port, baud_rate, "live")
+        return
 
     try:
         import serial

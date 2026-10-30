@@ -158,7 +158,8 @@ def collect_distances(
         print(f"Requesting {sample_count} samples at {real_distance:g} cm...")
         measurements = request_measurements(connection, sample_count, sensor_mode)
         results[real_distance] = measurements
-        valid_count = sum(measurement >= 0 for measurement in measurements)
+        values = measurements["master"] if isinstance(measurements, dict) else measurements
+        valid_count = sum(math.isfinite(measurement) and measurement > 0 for measurement in values)
         print(f"Received {valid_count}/{sample_count} valid measurements.")
 
 
@@ -413,6 +414,10 @@ def main() -> None:
 
     sample_count = prompt_positive_int("Samples per distance: ")
     sensor_mode = select_sensor_mode()
+    if sensor_mode == "multi":
+        from multi_capture import interactive
+        interactive(port, baud_rate, "calibrate", sample_count)
+        return
 
     try:
         import serial

@@ -7,12 +7,12 @@ firmware. The old separate `Access_Point_Cones` program has been retired.
 
 | Board | Sketch | IP | Trigger / Echo GPIO |
 |---|---|---|---|
-| Centre | `Access_Point/Access_Point.ino` | 192.168.4.1 | 27 / 26 |
-| Player's left | `Sensor_Node_1/Sensor_Node_1.ino` | 192.168.4.101 | 26 / 27 |
-| Player's right | `Sensor_Node_2/Sensor_Node_2.ino` | 192.168.4.102 | 26 / 27 |
+| Centre | `Access_Point/Access_Point.ino` | 192.168.4.1 | 10 / 3 |
+| Player's left | `Sensor_Node_1/Sensor_Node_1.ino` | 192.168.4.101 | 10 / 3 |
+| Player's right | `Sensor_Node_2/Sensor_Node_2.ino` | 192.168.4.102 | 10 / 3 |
 
-Each board has one ultrasonic sensor. The AP keeps buzzer GPIO 4 and warning LED
-GPIO 5; set an optional output to `-1` if absent. These are the pins currently in
+Each board has one ultrasonic sensor. The AP keeps buzzer GPIO 18 and warning LED
+GPIO 7; set an optional output to `-1` if absent. These are the pins currently in
 your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
 
 1. Check the geometry below, select the actual board/port in Arduino IDE and
@@ -47,17 +47,20 @@ constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
 ```
 
 Values are metres. These preserve your updated 35 cm left gap, 35 cm right gap
-and 30 cm screen distance. Measure between sensor centres, not breadboard edges.
+and 30 cm screen distance. Measure between matching centre reference points,
+not breadboard edges. Use metal sensor faces, or horn-mouth centres with the
+setback correction below; do not mix references.
 Only change them in this one sketch, then recompile/upload; both game and cone
 display get their geometry from these settings.
 
 Coordinates use the player's left/right while facing the screen. `x=0` is the
 left edge of the physical 1.5 m-wide area; `y=0` is the screen and +y points
-towards the player. The sensors are at `(0.40,0.30)`, `(0.75,0.30)` and
+towards the player. The reference points are at `(0.40,0.30)`, `(0.75,0.30)` and
 `(1.10,0.30)` m. The AP faces straight along +y. Side sensors aim at
 `AIM_X_M=0.75`, `AIM_Y_M=1.30`, giving about **19.3° inward on both sides**.
 Physically aim them to match, or set measured
-bearings in `SENSORS`. Positive bearing turns towards the player's right.
+angles using `SENSOR_BEARING_TRIM_DEG` (added to the nominal bearings).
+Positive bearing turns towards the player's right.
 
 `CONE_HALF_ANGLE_DEG=15` is an assumed beam half-angle, not a measured bearing.
 Changing it does not widen a real beam. `MAX_RANGE_M=4.50` is slant range from
@@ -65,6 +68,57 @@ the sensor, not the depth of the game. The nominal beam and 50 ms measurement
 cycle are described in the [RCWL-1601 specifications](https://www.adafruit.com/product/4007).
 Use supply/logic levels appropriate to the actual sensor and ESP32; RCWL-1601
 and similar-looking HC-SR04 modules are not electrically interchangeable.
+
+## Sensors mounted behind horns
+
+All three sensors have separate copies of the same housing. Edit these arrays
+near the spacing settings in `Access_Point/Access_Point.ino`, in the order
+**Node 1, centre AP, Node 2**:
+
+```cpp
+constexpr float SENSOR_FACE_SETBACK_M[3] = {0.0f, 0.0f, 0.0f};
+constexpr float SENSOR_BEARING_TRIM_DEG[3] = {0.0f, 0.0f, 0.0f};
+```
+
+The setback is the measured axial distance from the front horn rim to the
+fitted metal transducer faces (use their midpoint as the sensor centre).
+If the spacing and screen distance describe horn-mouth centres, enter that
+recess in metres for each sensor. If they already describe the metal faces,
+leave setback at zero. Identical housings can use equal values once the fitted
+recess is measured. Mixed reference measurements must first be made consistent.
+
+The shared [Onshape model](https://cad.onshape.com/documents/96b2d6f588a1a8ec8a08cacf/w/d37ad5a438624d96a1035ca8/e/80441341eebd373975b8971e)
+has a measured 70 mm separation between its Front and Plane 1 reference planes.
+That does **not** establish where the fitted transducer faces sit. Defaults
+remain zero pending a physical recess measurement and confirmation of the
+spacing/screen-distance reference; no unverified 70 mm correction is enabled.
+
+For actual bearing `theta`, the effective sensor origin becomes:
+
+```text
+sensor_x = reference_x - setback * sin(theta)
+sensor_y = reference_y - setback * cos(theta)
+```
+
+This moves the inward-facing nodes sideways as well as backwards. Two-circle
+intersection and three-range multilateration both use these corrected origins.
+The cone dashboard and proximity calculations use the same origins.
+`/api/config` reports them in the existing `x_m` and `y_m` fields and adds
+`face_setback_m`; the game backend needs no API migration.
+
+Keep range measurements referenced to the transducers: **do not also subtract
+the setback using `SENSOR_OFFSET_M`**. That would apply a second correction.
+This is a 2D point-sensor approximation, not a simulation of sound inside the
+two horn passages. A horn can change directivity ([Murata FAQ](https://www.murata.com/en-us/products/sensor/ultrasonic/support/faqs));
+its CAD wall angle does not establish the usable detection cone or echo bias.
+Keep `CONE_HALF_ANGLE_DEG` as an estimate until you measure actual coverage.
+
+After setting the geometry, test a fixed reflector at several known positions
+with the housings installed. Compare each raw range to its distance from the
+corrected sensor origin before adjusting `SENSOR_SCALE` or `SENSOR_OFFSET_M`.
+Test all six floor targets and the edges of each beam. Housing echoes, different
+body reflection points and intermittent detections cannot be corrected reliably
+by a constant geometric offset alone.
 
 ## Where to stand to hit each hole
 
@@ -101,6 +155,51 @@ to have that coverage. Confirm with the actual mounting and person.
 The physical area remains 1.5 m wide and 1.4 m deep after the 0.6 m dead zone,
 as described in the supplied v2.1 brief. **The warning threshold is still 60 cm**
 from the screen. The region from 60 cm to 1 m is trackable but has no hole.
+
+## Cone-page hole calibration experiment
+
+The **Stand here to calibrate a hole** panel on `/` or `/cones` is a browser-only
+test. It does not alter the ESP32's hit zones, `/api/hits`, or the actual game.
+Upload the updated Access Point sketch (with the regenerated `Dashboard.h`)
+and reload the cone page. The node sketches need no update for this feature.
+
+1. Mark six distinct floor spots where you want the holes to be. Stand at one
+   spot and press **Calibrate hole N**, or have someone press it for you.
+2. Stay still during the 3-second countdown and the capture. The page collects
+   at least 15 distinct fresh frames over at least 2.5 seconds, usually taking
+   another 3–5 seconds. Either two or three contributing sensors can be used.
+3. Repeat for each hole. Purple circles on the map show the saved centres and
+   test radii. Walk away and return: the panel shows **Test hole N** and the
+   matching card/circle turns green. This is a live preview, not a game hit event.
+4. Adjust **Test hit radius** to 10, 15 or 20 cm. Overlapping circles or nearly
+   equal distances to two centres produce no hit. Calibrate well-separated spots.
+
+Captures use raw valid position estimates, not held or mode-filtered positions.
+The centre is the median of each coordinate. Captures with a 90th-percentile
+distance from the centre above 10 cm are rejected; new centres must be at least
+15 cm from the other saved centres. These are trial thresholds, not guarantees
+of physical accuracy. Invalid/held/warning/stale/one-sensor frames are excluded;
+duplicate HTTP responses count only once, and a frozen frame cannot keep a test
+hit alive. A capture times out after 20 seconds of collection. Cancellation,
+failure or an AP restart leaves previously saved centres intact.
+
+Calibration and radius are saved in browser local storage for this page address,
+not in ESP32 flash. Another browser/device or opening the file directly has its
+own storage. Storage failure is shown on the page; in that case captures last
+only for the current page session. Changed sensor geometry invalidates saved
+calibration when configuration is reloaded. Manually recalibrate after moving
+hardware or changing range scale/offsets. **Clear saved holes** resets this
+experiment only. Recalibrating a hole replaces it only after a successful capture.
+
+This feature still needs valid positions from the AP. It cannot recover missing
+echoes or correct incorrect sensor geometry. A disabled capture button means no
+fresh usable position; inspect the sensor diagnostics. Centres are coordinates
+reported by the sensor model, not independent measurements of the floor.
+
+Developers: edit `Access_Point/cones.html`, then run `python tools/embed_dashboard.py`
+from `ESP-32 Code`. Run `node "ESP-32 Code/tests/hole_calibration_test.cjs"` from
+the repository root. The local preview server's `?mode=calibration&hole=1` through
+`hole=6` provide explicitly simulated positions for testing the workflow.
 
 ## Position calculation and jump suppression
 

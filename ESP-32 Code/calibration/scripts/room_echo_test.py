@@ -362,7 +362,9 @@ def main() -> None:
     sample_count = prompt_positive_int("Readings per burst: ", 100)
     sensor_mode = select_sensor_mode()
     if sensor_mode == "multi":
-        print("Multi-sensor room test graphs the master range in centimetres.")
+        from multi_capture import interactive
+        interactive(port, baud_rate, "sweep", sample_count)
+        return
     delays = prompt_delay_bounds()
     serial_timeout = max(5.0, max(delays) / 1000 + 5)
 
