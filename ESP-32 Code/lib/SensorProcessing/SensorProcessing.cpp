@@ -34,4 +34,8 @@ float readSensorCM() {
   return distance_cm;
 }
 
+float convertToCM(uint32_t duration_us) {
+  float distance_cm = SOUND_CONST_CM * duration_us;
+  return distance_cm;
+}
 

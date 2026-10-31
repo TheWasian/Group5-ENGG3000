@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import configparser
 import statistics
 import sys
 import time
@@ -14,26 +13,19 @@ from threading import Event, Thread
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
-from calibration_mode import SensorMode, parse_multi_master_distance, serial_command, select_sensor_mode
+from calibration_mode import (
+    SensorMode,
+    parse_multi_master_distance,
+    read_platformio_value,
+    serial_command,
+    select_sensor_mode,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PLATFORMIO_CONFIG = PROJECT_ROOT / "platformio.ini"
 WINDOW_SECONDS = 10.0
 MIN_Y_AXIS_RANGE_US = 30.0
 MIN_DEVIATION_Y_AXIS_RANGE_US = 2.0
-
-
-def read_platformio_value(option: str, config_path: Path = PLATFORMIO_CONFIG) -> str:
-    """Read an option from the first PlatformIO environment."""
-    config = configparser.ConfigParser()
-    config.read(config_path)
-
-    for section in config.sections():
-        if section.startswith("env:") and config.has_option(section, option):
-            return config.get(section, option).strip()
-
-    raise ValueError(f"No {option} found in {config_path}")
 
 
 def main() -> None:
@@ -43,7 +35,7 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        port = args.port or read_platformio_value("port")
+        port = args.port or read_platformio_value("monitor_port")
         baud_rate = args.baud or int(read_platformio_value("monitor_speed"))
     except ValueError as error:
         raise SystemExit(error) from error

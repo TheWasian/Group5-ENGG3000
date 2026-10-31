@@ -2,10 +2,33 @@
 
 from __future__ import annotations
 
+import configparser
+from pathlib import Path
 from typing import Literal
 
 
 SensorMode = Literal["single", "multi"]
+PLATFORMIO_CONFIG = Path(__file__).resolve().parents[2] / "platformio.ini"
+PLATFORMIO_ENVIRONMENT = "calibration"
+
+
+def read_platformio_value(
+    option: str,
+    config_path: Path = PLATFORMIO_CONFIG,
+    environment: str = PLATFORMIO_ENVIRONMENT,
+) -> str:
+    """Read a calibration environment option from the project PlatformIO file."""
+    config = configparser.ConfigParser()
+    if not config.read(config_path):
+        raise ValueError(f"PlatformIO configuration not found: {config_path}")
+
+    section = f"env:{environment}"
+    if config.has_option(section, option):
+        return config.get(section, option).strip()
+    if config.has_option("common", option):
+        return config.get("common", option).strip()
+
+    raise ValueError(f"No {option} found for [{section}] or [common] in {config_path}")
 
 
 def select_sensor_mode() -> SensorMode:

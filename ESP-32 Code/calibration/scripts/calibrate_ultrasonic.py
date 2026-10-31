@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import configparser
 import csv
 import math
 import statistics
@@ -15,6 +14,7 @@ try:
     from .calibration_mode import (
         SensorMode,
         parse_multi_sensor_distances,
+        read_platformio_value,
         serial_command,
         select_sensor_mode,
     )
@@ -22,28 +22,16 @@ except ImportError:
     from calibration_mode import (
         SensorMode,
         parse_multi_sensor_distances,
+        read_platformio_value,
         serial_command,
         select_sensor_mode,
     )
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PLATFORMIO_CONFIG = PROJECT_ROOT / "platformio.ini"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 SENSOR_NAMES = ("left", "master", "right")
 CalibrationMeasurements = Union[list[float], dict[str, list[float]]]
-
-
-def read_platformio_value(option: str, config_path: Path = PLATFORMIO_CONFIG) -> str:
-    """Read an option from the first PlatformIO environment."""
-    config = configparser.ConfigParser()
-    config.read(config_path)
-
-    for section in config.sections():
-        if section.startswith("env:") and config.has_option(section, option):
-            return config.get(section, option).strip()
-
-    raise ValueError(f"No {option} found in {config_path}")
 
 
 def parse_measurements(line: str) -> list[float]:
@@ -407,7 +395,7 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        port = args.port or read_platformio_value("port")
+        port = args.port or read_platformio_value("monitor_port")
         baud_rate = args.baud or int(read_platformio_value("monitor_speed"))
     except ValueError as error:
         raise SystemExit(error) from error

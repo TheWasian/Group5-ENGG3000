@@ -6,7 +6,8 @@
 enum PacketType : uint8_t
 {
     HEARTBEAT_PACKET = 0,
-    SENSOR_DATA_PACKET = 1
+    SENSOR_DATA_PACKET = 1,
+    SENSOR_BURST_DATA_PACKET = 2
 };
 
 typedef struct __attribute__((packed)) heartbeat_msg
@@ -21,6 +22,13 @@ typedef struct __attribute__((packed)) sensor_msg
     uint8_t boxId;
     uint32_t sensorReadingus;
 } sensor_msg;
+
+typedef struct __attribute__((packed)) sensor_burst_msg
+{
+    PacketType type = SENSOR_BURST_DATA_PACKET;
+    uint8_t boxId;
+    uint32_t sensorReadingus;
+} sensor_burst_msg;
 
 esp_now_peer_info_t peerInfo;
 
@@ -41,7 +49,13 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len) {
             heartbeat_msg heartbeat;
             if (len == sizeof(heartbeat_msg)) {
                 memcpy(&heartbeat, incomingData, sizeof(heartbeat));
-                Serial.printf("Heartbeat structure parsed from Node %d\n", heartbeat.boxId);
+                if (heartbeat.boxId == 1) {
+                    BOX_ID1_heartbeat_LastReceived = 0;
+                } else if (heartbeat.boxId == 2) {
+                    BOX_ID2_heartbeat_LastReceived = 0;
+                } else if (heartbeat.boxId == 3) {
+                    BOX_ID3_heartbeat_LastReceived = 0;
+                }
             }
             break;
         }
@@ -52,6 +66,16 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len) {
                 memcpy(&sensorData, incomingData, sizeof(sensorData));
                 Serial.printf("Sensor structure parsed. Node: %d, Value: %lu\n", 
                               sensorData.boxId, sensorData.sensorReadingus);
+            }
+            break;
+        }
+
+        case SENSOR_BURST_DATA_PACKET: {
+            sensor_burst_msg sensorBurstData;
+            if (len == sizeof(sensor_burst_msg)) {
+                memcpy(&sensorBurstData, incomingData, sizeof(sensorBurstData));
+                Serial.printf("Sensor Burst structure parsed. Node: %d, Value: %lu\n", 
+                              sensorBurstData.boxId, sensorBurstData.sensorReadingus);
             }
             break;
         }

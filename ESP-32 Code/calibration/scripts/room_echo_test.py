@@ -3,34 +3,25 @@
 from __future__ import annotations
 
 import argparse
-import configparser
 import csv
 import statistics
 from pathlib import Path
 from time import sleep
 from typing import Callable
 
-from calibration_mode import SensorMode, parse_multi_master_distance, select_sensor_mode
+from calibration_mode import (
+    SensorMode,
+    parse_multi_master_distance,
+    read_platformio_value,
+    select_sensor_mode,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PLATFORMIO_CONFIG = PROJECT_ROOT / "platformio.ini"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 BURST_SETTLE_TIME_S = 1
 ECHO_TIMEOUT_S = 0.03
 MIN_Y_AXIS_RANGE_US = 200
-
-
-def read_platformio_value(option: str, config_path: Path = PLATFORMIO_CONFIG) -> str:
-    """Read an option from the first PlatformIO environment."""
-    config = configparser.ConfigParser()
-    config.read(config_path)
-
-    for section in config.sections():
-        if section.startswith("env:") and config.has_option(section, option):
-            return config.get(section, option).strip()
-
-    raise ValueError(f"No {option} found in {config_path}")
 
 
 def prompt_positive_int(prompt: str, maximum: int) -> int:
@@ -363,7 +354,7 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        port = args.port or read_platformio_value("port")
+        port = args.port or read_platformio_value("monitor_port")
         baud_rate = args.baud or int(read_platformio_value("monitor_speed"))
     except ValueError as error:
         raise SystemExit(error) from error

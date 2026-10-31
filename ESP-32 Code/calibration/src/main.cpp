@@ -4,12 +4,9 @@
 #include <SPI.h>
 #include <WebServer.h>
 #include <WiFi.h>
-#include <WiFiUdp.h>
 #include <esp_system.h>
 
 #include "my_image.h"
-#include "../../Access_Point/Positioning.h"
-#include "../../Access_Point/RangeProtocol.h"
 
 #define TFT_MOSI 8
 #define TFT_SCLK 9
@@ -39,10 +36,8 @@ const char *AP_SSID = "Wacker5";
 const char *AP_PASSWORD = "PasswordWacker123456!";
 const IPAddress AP_IP(192, 168, 4, 1);
 const IPAddress AP_SUBNET(255, 255, 255, 0);
-const IPAddress NODE_IPS[2] = {IPAddress(192, 168, 4, 101), IPAddress(192, 168, 4, 102)};
 
 WebServer server(80);
-WiFiUDP udp;
 Adafruit_ST7735 display(TFT_CS, TFT_DC, TFT_RST);
 
 struct SoundNote
@@ -63,7 +58,6 @@ enum class SensorMode
   CALIBRATE,
   PULSE_TIME,
   ROOM_TEST,
-  MULTI_TEST,
   IDLE
 };
 
@@ -94,55 +88,7 @@ const char *sensorModeName();
 void updateDisplay();
 void showDistance(float distanceCm);
 void handleDisplayButton();
-void startMultiMeasurement();
-void updateMultiMeasurement();
-void finishMultiMeasurement();
-void configureSensor(const String &command);
-void configureSolver(const String &command);
-void configureArea(const String &command);
-
-struct MultiMeasurement
-{
-  float ranges[3] = {NAN, NAN, NAN};
-  float raw[3] = {NAN, NAN, NAN};
-  const char *status[3] = {"no_ready", "no_echo", "no_ready"};
-  uint32_t sampleMs[3] = {};
-  uint32_t startedMs = 0, localEchoUs = 0;
-  uint32_t ages[3] = {};
-  uint8_t activeNode = 0;
-  uint32_t sequence = 0;
-  uint32_t deadline = 0;
-  enum Phase { IDLE, QUIET, WAIT_READY, WAIT_RANGE } phase = IDLE;
-};
-
-struct MultiTest
-{
-  bool active = false;
-  uint16_t remaining = 0;
-  uint32_t delayMs = 0;
-  uint32_t nextStart = 0;
-  bool continuous = false;
-};
-
-MultiMeasurement multiMeasurement;
-MultiTest multiTest;
 uint32_t masterSession = 1;
-wam::Sensor sensors[3] = {
-    {0.40f, 0.30f, 19.29f, 15.0f, 4.5f},
-    {0.75f, 0.30f, 0.0f, 15.0f, 4.5f},
-    {1.10f, 0.30f, -19.29f, 15.0f, 4.5f}};
-float sensorScale[3] = {1.0f, 1.0f, 1.0f};
-float sensorOffset[3] = {0.0f, 0.0f, 0.0f};
-float solverMaxRms = 0.10f;
-float solverMaxResidual = 0.18f;
-float solverHuberLimit = 0.06f;
-float solverRangeNoise = 0.025f;
-float solverMaxUncertainty = 0.20f;
-wam::Area multiArea = {1.5f, 0.0f, 3.0f};
-uint32_t frameSequence = 0;
-uint32_t quietMs = 100; // Quiet after every sensor, including last node -> next AP.
-uint32_t acousticGuardUntil = 0;
-bool positionEnabled = false; // Data collection never depends on a position fix.
 bool networkReady = false;
 
 String readCommand()
@@ -199,7 +145,6 @@ void setup()
   masterSession = esp_random();
   if (!masterSession) masterSession = 1;
   startDemoAccessPoint();
-  networkReady = networkReady && udp.begin(wam::AP_UDP_PORT);
   loggerReady();
 }
 
@@ -208,55 +153,14 @@ void loop()
   server.handleClient();
   updateBuzzer();
   handleDisplayButton();
-  updateMultiMeasurement();
-
-  if (multiTest.active && multiMeasurement.phase == MultiMeasurement::IDLE &&
-      wam::deadlineReached(millis(), multiTest.nextStart) &&
-      wam::deadlineReached(millis(), acousticGuardUntil))
-  {
-    startMultiMeasurement();
-  }
 
   String command = readCommand();
   if (command.length() > 0)
   {
     if (command == "HELLO") { loggerReady(); return; }
-    if (multiTest.active && !command.equalsIgnoreCase("STOP")) {
-      Serial.println("ERROR:BUSY send STOP before changing settings or starting another run"); return;
-    }
-    if (command == "POSITION ON" || command == "POSITION OFF") {
-      positionEnabled = command == "POSITION ON";
-      Serial.println(positionEnabled ? "POSITION,ON" : "POSITION,OFF"); return;
-    }
-    if (command.startsWith("CONFIG_TIMING ")) {
-      unsigned long value = 0; char extra;
-      if (sscanf(command.c_str(), "CONFIG_TIMING %lu %c", &value, &extra) != 1 || value < 60 || value > 60000) {
-        Serial.println("ERROR:CONFIG_TIMING quiet_ms must be 60-60000"); return;
-      }
-      quietMs = value; Serial.printf("TIMING,%lu\n", value); return;
-    }
-
-    if (command.startsWith("CONFIG_SENSOR "))
-    {
-      configureSensor(command);
-      return;
-    }
-    if (command.startsWith("CONFIG_SOLVER "))
-    {
-      configureSolver(command);
-      return;
-    }
-    if (command.startsWith("CONFIG_AREA "))
-    {
-      configureArea(command);
-      return;
-    }
-
     if (command.equalsIgnoreCase("CALIBRATE"))
     {
       sensorMode = SensorMode::CALIBRATE;
-        multiTest.active = false;
-        multiMeasurement.phase = MultiMeasurement::IDLE;
       updateLedForMode();
       updateDisplay();
       Serial.println("MODE:CALIBRATE");
@@ -265,8 +169,6 @@ void loop()
     if (command.equalsIgnoreCase("PULSE"))
     {
       sensorMode = SensorMode::PULSE_TIME;
-        multiTest.active = false;
-        multiMeasurement.phase = MultiMeasurement::IDLE;
       updateLedForMode();
       updateDisplay();
       playModeSound();
@@ -276,10 +178,6 @@ void loop()
     if (command.equalsIgnoreCase("STOP"))
     {
       sensorMode = SensorMode::IDLE;
-        multiTest.active = false;
-        multiMeasurement.phase = MultiMeasurement::IDLE;
-      // A FIRE packet already on the network may still trigger its armed node.
-      acousticGuardUntil = millis() + wam::ARM_LIFETIME_MS + (wam::ECHO_TIMEOUT_US / 1000) + quietMs;
       updateLedForMode();
       updateDisplay();
       playModeSound();
@@ -303,30 +201,6 @@ void loop()
       updateDisplay();
       playModeSound();
       runRoomTest();
-      return;
-    }
-
-    const bool stream = command.startsWith("MULTI_STREAM ");
-    if ((stream && sscanf(command.c_str(), "MULTI_STREAM %lu", &requestedDelayMs) == 1) ||
-        sscanf(command.c_str(), "MULTI_TEST %d %lu", &requestedSamples, &requestedDelayMs) == 2 ||
-        sscanf(command.c_str(), "MULTI_CALIBRATE %d %lu", &requestedSamples, &requestedDelayMs) == 2)
-    {
-      if ((!stream && (requestedSamples < 1 || requestedSamples > 100)) || requestedDelayMs > 60000)
-      {
-        Serial.println("ERROR:MULTI_TEST arguments must be 1-100 samples and 0-60000 ms delay");
-        return;
-      }
-      if (!networkReady) { Serial.println("ERROR:Wi-Fi AP or UDP unavailable"); return; }
-      multiTest.active = true;
-      multiTest.continuous = stream;
-      multiTest.remaining = static_cast<uint16_t>(requestedSamples);
-      multiTest.delayMs = requestedDelayMs;
-      multiTest.nextStart = millis() + quietMs;
-      sensorMode = SensorMode::MULTI_TEST;
-      updateLedForMode();
-      updateDisplay();
-      playModeSound();
-      Serial.println("MULTI_TEST_READY");
       return;
     }
 
@@ -458,8 +332,6 @@ const char *sensorModeName()
     return "PULSE";
   case SensorMode::ROOM_TEST:
     return "ROOM_TEST";
-  case SensorMode::MULTI_TEST:
-    return "MULTI_TEST";
   case SensorMode::IDLE:
     return "IDLE";
   }
@@ -489,222 +361,6 @@ void runRoomTest()
   updateDisplay();
 }
 
-void sendMasterControl(uint8_t type)
-{
-  wam::ControlPacket packet = {};
-  packet.magic = wam::PACKET_MAGIC;
-  packet.version = wam::PROTOCOL_VERSION;
-  packet.type = type;
-  packet.nodeId = multiMeasurement.activeNode;
-  packet.session = masterSession;
-  packet.sequence = multiMeasurement.sequence;
-  packet.crc = wam::packetCrc(packet);
-  udp.beginPacket(NODE_IPS[multiMeasurement.activeNode - 1], wam::NODE_UDP_PORT);
-  udp.write(reinterpret_cast<const uint8_t *>(&packet), sizeof(packet));
-  udp.endPacket();
-}
-
-void startMultiMeasurement()
-{
-  multiMeasurement = MultiMeasurement{};
-  multiMeasurement.sequence = ++frameSequence;
-  multiMeasurement.startedMs = millis();
-  multiMeasurement.localEchoUs = readEchoDurationUs();
-  multiMeasurement.sampleMs[1] = millis();
-  const float r = multiMeasurement.localEchoUs ? multiMeasurement.localEchoUs * .000343f / 2 : NAN;
-  multiMeasurement.raw[1] = r;
-  multiMeasurement.status[1] = !isfinite(r) ? "no_echo" : r < .02f || r > 4.5f ? "out_of_range" : "ok";
-  if (strcmp(multiMeasurement.status[1], "ok") == 0)
-    multiMeasurement.ranges[1] = r * sensorScale[1] + sensorOffset[1];
-  multiMeasurement.activeNode = 1;
-  multiMeasurement.deadline = millis() + quietMs;
-  multiMeasurement.phase = MultiMeasurement::QUIET;
-}
-
-void advanceMultiMeasurement()
-{
-  if (multiMeasurement.activeNode == 1)
-  {
-    multiMeasurement.activeNode = 2;
-    multiMeasurement.deadline = millis() + quietMs;
-    multiMeasurement.phase = MultiMeasurement::QUIET;
-    return;
-  }
-  finishMultiMeasurement();
-}
-
-void updateMultiMeasurement()
-{
-  if (multiMeasurement.phase == MultiMeasurement::IDLE)
-  {
-    return;
-  }
-
-  const uint32_t now = millis();
-  if (multiMeasurement.phase == MultiMeasurement::QUIET)
-  {
-    if (static_cast<int32_t>(now - multiMeasurement.deadline) >= 0)
-    {
-      sendMasterControl(wam::ARM);
-      multiMeasurement.deadline = now + wam::REPLY_TIMEOUT_MS;
-      multiMeasurement.phase = MultiMeasurement::WAIT_READY;
-    }
-    return;
-  }
-
-  // Expire the slot even if unrelated or delayed packets keep arriving.
-  if (wam::deadlineReached(now, multiMeasurement.deadline)) {
-    multiMeasurement.status[multiMeasurement.activeNode == 1 ? 0 : 2] =
-      multiMeasurement.phase == MultiMeasurement::WAIT_READY ? "no_ready" : "no_reply";
-    advanceMultiMeasurement(); return;
-  }
-  const int packetSize = udp.parsePacket();
-  if (packetSize <= 0)
-  {
-    return;
-  }
-
-  if (udp.remoteIP() != NODE_IPS[multiMeasurement.activeNode - 1] ||
-      udp.remotePort() != wam::NODE_UDP_PORT)
-  {
-    while (udp.available()) udp.read();
-    return;
-  }
-
-  if (multiMeasurement.phase == MultiMeasurement::WAIT_READY &&
-      packetSize == static_cast<int>(sizeof(wam::ControlPacket)))
-  {
-    wam::ControlPacket packet = {};
-    const int count = udp.read(reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
-    if (count == sizeof(packet) && packet.magic == wam::PACKET_MAGIC &&
-        packet.version == wam::PROTOCOL_VERSION && packet.type == wam::READY &&
-        packet.nodeId == multiMeasurement.activeNode && packet.session == masterSession &&
-        packet.sequence == multiMeasurement.sequence && packet.reserved == 0 &&
-        packet.crc == wam::packetCrc(packet))
-    {
-      sendMasterControl(wam::FIRE);
-      multiMeasurement.deadline = now + wam::REPLY_TIMEOUT_MS;
-      multiMeasurement.phase = MultiMeasurement::WAIT_RANGE;
-    }
-    return;
-  }
-
-  if (multiMeasurement.phase == MultiMeasurement::WAIT_RANGE &&
-      packetSize == static_cast<int>(sizeof(wam::RangePacket)))
-  {
-    wam::RangePacket packet = {};
-    const int count = udp.read(reinterpret_cast<uint8_t *>(&packet), sizeof(packet));
-    if (count == sizeof(packet) && packet.magic == wam::PACKET_MAGIC &&
-        packet.version == wam::PROTOCOL_VERSION && packet.type == wam::RANGES &&
-        packet.nodeId == multiMeasurement.activeNode && packet.session == masterSession &&
-        packet.sequence == multiMeasurement.sequence && packet.validMask <= 1 &&
-        packet.reserved == 0 && packet.crc == wam::packetCrc(packet))
-    {
-      const int index = multiMeasurement.activeNode == 1 ? 0 : 2;
-      multiMeasurement.raw[index] = packet.validMask ? packet.distanceMm * .001f : NAN;
-      multiMeasurement.status[index] = !packet.validMask ? "invalid_echo" :
-        packet.distanceMm < 20 || packet.distanceMm > 4500 ? "out_of_range" : "ok";
-      multiMeasurement.ranges[index] = strcmp(multiMeasurement.status[index], "ok") == 0
-          ? packet.distanceMm * 0.001f * sensorScale[index] + sensorOffset[index]
-          : NAN;
-      multiMeasurement.sampleMs[index] = now; // AP receive time, not a synchronized node clock.
-      advanceMultiMeasurement();
-    }
-    return;
-  }
-  while (udp.available()) udp.read();
-}
-
-void finishMultiMeasurement()
-{
-  const uint32_t now = millis();
-  for (int i=0;i<3;++i) multiMeasurement.ages[i] = now - multiMeasurement.sampleMs[i];
-  wam::Fix fix;
-  fix.reason = "disabled";
-  if (positionEnabled) fix = wam::solveBestAvailable(
-      sensors, multiMeasurement.ranges, multiArea, nullptr, solverMaxRms,
-      solverMaxResidual, solverHuberLimit, solverRangeNoise, solverMaxUncertainty,
-      0.10f, 0.25f, multiMeasurement.ages, 300);
-  Serial.printf("DATA,2,%lu,%lu,%lu,%lu,%lu,%lu,%.3f,%.3f,%.3f,%s,%s,%s,%lu,%lu,%lu,%lu,POS,%u,%.3f,%.3f,%.3f,%u,%s\n",
-                static_cast<unsigned long>(masterSession),
-                static_cast<unsigned long>(multiMeasurement.sequence),
-                static_cast<unsigned long>(multiMeasurement.startedMs), static_cast<unsigned long>(now),
-                static_cast<unsigned long>(quietMs), static_cast<unsigned long>(multiTest.delayMs),
-                multiMeasurement.raw[0] * 100.0f, multiMeasurement.raw[1] * 100.0f, multiMeasurement.raw[2] * 100.0f,
-                multiMeasurement.status[0], multiMeasurement.status[1], multiMeasurement.status[2],
-                static_cast<unsigned long>(multiMeasurement.sampleMs[0]), static_cast<unsigned long>(multiMeasurement.sampleMs[1]),
-                static_cast<unsigned long>(multiMeasurement.sampleMs[2]), static_cast<unsigned long>(multiMeasurement.localEchoUs),
-                fix.valid ? 1 : 0,
-                fix.valid ? fix.x : -1.0f, fix.valid ? fix.y : -1.0f,
-                fix.valid ? fix.rms : -1.0f, fix.count, fix.reason);
-  if (fix.valid)
-  {
-    lastDistanceCm = hypotf(fix.x - sensors[1].x, fix.y - sensors[1].y) * 100.0f;
-    showDistance(lastDistanceCm);
-  }
-  multiMeasurement.phase = MultiMeasurement::IDLE;
-  if (!multiTest.continuous && multiTest.remaining > 0) --multiTest.remaining;
-  acousticGuardUntil = now + quietMs;
-  if (!multiTest.continuous && multiTest.remaining == 0)
-  {
-    multiTest.active = false;
-    sensorMode = SensorMode::IDLE;
-    updateLedForMode();
-    updateDisplay();
-    Serial.printf("MULTI_DONE,%lu,%lu\n", static_cast<unsigned long>(masterSession), static_cast<unsigned long>(frameSequence));
-  }
-  else
-  {
-    multiTest.nextStart = now + quietMs + multiTest.delayMs;
-  }
-}
-
-void configureSensor(const String &command)
-{
-  int id = -1;
-  float x = 0, y = 0, bearing = 0, halfAngle = 0, maxRange = 0, scale = 1, offset = 0;
-  if (sscanf(command.c_str(), "CONFIG_SENSOR %d %f %f %f %f %f %f %f",
-             &id, &x, &y, &bearing, &halfAngle, &maxRange, &scale, &offset) != 8 ||
-      id < 0 || id > 2 || maxRange <= 0 || scale <= 0)
-  {
-    Serial.println("ERROR:CONFIG_SENSOR id x y bearing halfAngle maxRange scale offset");
-    return;
-  }
-  sensors[id] = {x, y, bearing, halfAngle, maxRange};
-  sensorScale[id] = scale;
-  sensorOffset[id] = offset;
-  Serial.printf("SENSOR,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
-                id, x, y, bearing, halfAngle, maxRange, scale, offset);
-}
-
-void configureSolver(const String &command)
-{
-  if (sscanf(command.c_str(), "CONFIG_SOLVER %f %f %f %f %f",
-             &solverMaxRms, &solverMaxResidual, &solverHuberLimit,
-             &solverRangeNoise, &solverMaxUncertainty) != 5 ||
-      solverMaxRms <= 0 || solverMaxResidual <= 0 || solverHuberLimit <= 0 ||
-      solverRangeNoise <= 0 || solverMaxUncertainty <= 0)
-  {
-    Serial.println("ERROR:CONFIG_SOLVER maxRms maxResidual huberLimit rangeNoise maxUncertainty");
-    return;
-  }
-  Serial.printf("SOLVER,%.4f,%.4f,%.4f,%.4f,%.4f\n", solverMaxRms,
-                solverMaxResidual, solverHuberLimit, solverRangeNoise,
-                solverMaxUncertainty);
-}
-
-void configureArea(const String &command)
-{
-  if (sscanf(command.c_str(), "CONFIG_AREA %f %f %f", &multiArea.width,
-             &multiArea.startY, &multiArea.depth) != 3 || multiArea.width <= 0 ||
-      multiArea.depth <= 0 || multiArea.startY < 0)
-  {
-    Serial.println("ERROR:CONFIG_AREA width startY depth");
-    return;
-  }
-  Serial.printf("AREA,%.4f,%.4f,%.4f\n", multiArea.width, multiArea.startY, multiArea.depth);
-}
-
 void updateLedForMode()
 {
   bool red = false;
@@ -722,10 +378,6 @@ void updateLedForMode()
   case SensorMode::ROOM_TEST:
     red = true;
     green = true;
-    break;
-  case SensorMode::MULTI_TEST:
-    red = true;
-    blue = true;
     break;
   case SensorMode::IDLE:
     updateIdleLed();
@@ -879,9 +531,6 @@ void playModeSound()
   case SensorMode::ROOM_TEST:
     startSound(roomTestSound, sizeof(roomTestSound) / sizeof(roomTestSound[0]));
     break;
-  case SensorMode::MULTI_TEST:
-    startSound(roomTestSound, sizeof(roomTestSound) / sizeof(roomTestSound[0]));
-    break;
   case SensorMode::IDLE:
     startSound(idleSound, sizeof(idleSound) / sizeof(idleSound[0]));
     break;
@@ -901,7 +550,6 @@ float readDistanceCm()
 
 unsigned long readEchoDurationUs()
 {
-  while (!wam::deadlineReached(millis(), acousticGuardUntil)) delay(1);
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG_PIN, HIGH);

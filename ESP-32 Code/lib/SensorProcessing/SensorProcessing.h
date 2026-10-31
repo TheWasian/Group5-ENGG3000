@@ -19,4 +19,5 @@ void initialiseSensor();
 void updateSensorData();
 uint32_t readSensorRaw();
 float readSensorCM();
+float convertToCM(uint32_t duration_us);
 

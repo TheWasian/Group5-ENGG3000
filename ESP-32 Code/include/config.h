@@ -17,6 +17,15 @@ extern int wifi_channel;
 extern const uint8_t BOX_ID1_broadcastAddress[];
 extern const uint8_t BOX_ID2_broadcastAddress[];
 extern const uint8_t BOX_ID3_broadcastAddress[];
+extern const uint8_t SENSOR_BURST_PACKET_SIZE;
+extern uint8_t SENSOR_BURST_IDLE_TIME;
+
+extern const uint8_t BATTERY_PIN;
+extern const uint8_t RGB_RED_PIN;
+extern const uint8_t RGB_GREEN_PIN;
+extern const uint8_t RGB_BLUE_PIN;
+extern const uint8_t BUZZER_PIN;
+extern const bool BUZZER_ENABLED;
 
 extern const uint8_t TFT_MOSI;
 extern const uint8_t TFT_SCLK;

@@ -1,10 +1,9 @@
-# Wacker5 three-sensor data logger
+# Wacker5 ultrasonic calibration logger
 
-This calibration firmware runs on the **centre ESP32**. It creates Wacker5,
-measures its own sensor, requests Node 1 and Node 2 in turn, and sends all three
-readings to a computer over **one USB serial connection**. It gathers data even
-when position solving fails; the solver is disabled by default. It does not run
-the game or the cone-page hole calibration.
+This calibration firmware runs on the **centre ESP32** and sends its local
+ultrasonic readings to a computer over **one USB serial connection**. Multi-board
+capture and positioning are not included because their shared headers are
+unavailable. It does not run the game or the cone-page hole calibration.
 
 ## Upload and connections
 
@@ -26,11 +25,11 @@ the game or the cone-page hole calibration.
 - Optional RGB output is disabled by default. Verify its GPIO assignments for your
   ESP32-S3/wiring before enabling `RGB_ENABLED`.
 
-From this folder:
+From the `ESP-32 Code` project folder:
 
 ```powershell
-pio run
-pio run --target upload --upload-port COM4
+pio run -e calibration
+pio run -e calibration --target upload --upload-port COM4
 python -m pip install -r requirements.txt
 ```
 
@@ -224,39 +223,19 @@ Commands end in newline; startup mode is idle.
 | Command | Purpose |
 |---|---|
 | HELLO | Returns LOGGER_READY,2,Wacker5,boot_id,network_ready |
-| CONFIG_TIMING 100 | Quiet interval after each sensor |
-| MULTI_STREAM 0 | Continuous capture with 0 ms extra cycle pause |
-| MULTI_TEST 20 500 | 20 cycles, 500 ms extra pause; MULTI_CALIBRATE is an alias |
 | STOP | Stop capture; returns MODE:IDLE |
-| POSITION ON / POSITION OFF | Enable/disable optional solver while idle |
 | CALIBRATE, then a positive count | Legacy single-sensor distances |
 | PULSE | Legacy single-sensor raw echo-time stream |
 | ROOM_TEST 20 100 | Legacy single-sensor echo-time test |
 
-Multi starts with MULTI_TEST_READY, emits versioned records, and finite runs end
-with MULTI_DONE,boot,frame. Other start/configuration commands are rejected during
-capture; send STOP first.
-
-```text
-DATA,2,boot,frame,start_ms,end_ms,quiet_ms,pause_ms,left_cm,master_cm,right_cm,left_status,master_status,right_status,left_received_ms,master_measured_ms,right_received_ms,master_echo_us,POS,valid,x_m,y_m,rms_m,count,reason
-```
-
-Unavailable ranges are `nan` on serial and blank in CSV.
-
-Optional solver configuration uses the existing CONFIG_SENSOR, CONFIG_AREA and
-CONFIG_SOLVER commands. **CONFIG_SENSOR IDs: 0=left, 1=centre, 2=right**; these are
-array indices, distinct from wireless node IDs. Default solver geometry is still
-the older 35 cm spacing; configure it for your actual setup before enabling.
-Scale/offset affect the optional solver only; raw CSV data remains uncorrected.
-Python capture deliberately selects POSITION OFF.
-
-Shared protocol and solver headers are read from ../Access_Point without edits.
+Multi-board capture, positioning, and their configuration commands are not
+available in this standalone build.
 
 ## Verification
 
 ```powershell
 python -m unittest discover -s test -p "test_*.py" -v
-pio run
+pio run -e calibration
 ```
 
 Tests cover all three channels, failed measurements, CSV preservation, statistics,

@@ -3,36 +3,21 @@
 from __future__ import annotations
 
 import argparse
-import configparser
 from pathlib import Path
 
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PLATFORMIO_CONFIG = PROJECT_ROOT / "platformio.ini"
+from calibration_mode import read_platformio_value
 
 
-def read_baud_rate(config_path: Path = PLATFORMIO_CONFIG) -> int:
-    """Read the monitor baud rate from the first PlatformIO environment."""
-    config = configparser.ConfigParser()
-    config.read(config_path)
-
-    for section in config.sections():
-        if section.startswith("env:") and config.has_option(section, "monitor_speed"):
-            return config.getint(section, "monitor_speed")
-
-    raise ValueError(f"No monitor_speed found in {config_path}")
+def read_baud_rate(config_path: Path | None = None) -> int:
+    """Read the calibration monitor baud rate from platformio.ini."""
+    kwargs = {} if config_path is None else {"config_path": config_path}
+    return int(read_platformio_value("monitor_speed", **kwargs))
 
 
-def read_serial_port(config_path: Path = PLATFORMIO_CONFIG) -> str:
-    """Read the serial port from the first PlatformIO environment."""
-    config = configparser.ConfigParser()
-    config.read(config_path)
-
-    for section in config.sections():
-        if section.startswith("env:") and config.has_option(section, "port"):
-            return config.get(section, "port").strip()
-
-    raise ValueError(f"No port found in {config_path}")
+def read_serial_port(config_path: Path | None = None) -> str:
+    """Read the calibration monitor port from platformio.ini."""
+    kwargs = {} if config_path is None else {"config_path": config_path}
+    return read_platformio_value("monitor_port", **kwargs)
 
 
 def parse_serial_line(line: str) -> list[int]:

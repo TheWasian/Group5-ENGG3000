@@ -19,3 +19,11 @@ extern void sendHeartbeat(uint8_t boxId);
 extern const uint8_t BOX_ID1_broadcastAddress[];
 extern const uint8_t BOX_ID2_broadcastAddress[];
 extern const uint8_t BOX_ID3_broadcastAddress[];
+
+extern bool BOX_ID1_connected;
+extern bool BOX_ID2_connected;
+extern bool BOX_ID3_connected;
+
+extern uint16_t BOX_ID1_heartbeat_LastReceived;
+extern uint16_t BOX_ID2_heartbeat_LastReceived;
+extern uint16_t BOX_ID3_heartbeat_LastReceived;
