@@ -283,15 +283,8 @@
    <script src="./backend/SensorService.js"></script>
    <script src="./backend/FrontendMetrics.js"></script>
    <script src="./backend/main.js"></script>
-   <script>
-     import("./backend/three/ThreeBoard.mjs")
-       .catch(function (error) {
-         document.getElementById("game-area").dataset.renderer = "css";
-         console.warn("3D scene could not load; using the CSS game.", error);
-       })
-       .finally(function () {
-         document.documentElement.classList.remove("scene-loading");
-       });
-   </script>
+   <script src="./backend/three/three-game.bundle.js"
+     onload="document.documentElement.classList.remove('scene-loading')"
+     onerror="document.getElementById('game-area').dataset.renderer='css';document.documentElement.classList.remove('scene-loading')"></script>
   </body>
 </html>

@@ -1,0 +1,12 @@
+{
+  "name": "wacker-game-ui",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-three.mjs",
+    "check:bundle": "node scripts/build-three.mjs --check",
+    "test": "node tests/three-models.test.mjs && node tests/three-bundle.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

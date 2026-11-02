@@ -38,4 +38,5 @@ fp-info-cache
 # Local firmware builds and verification scratch files
 .pio/
 tmp/
+node_modules/
 

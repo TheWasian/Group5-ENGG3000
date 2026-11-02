@@ -2,13 +2,28 @@
 
 This branch uses genuine 3D mesh models for the moles and holes. The existing JavaScript game services, six hole hit targets, sensor API and HTML hammer still drive the game. No firmware changes are required.
 
-From the repository root, run:
+To play, double-click `UI-Code/index.html`. Keep the entire `UI-Code` folder together when sharing it. The included `backend/three/three-game.bundle.js` contains Three.js and the 3D game modules as one regular browser script, so playing does not require Live Server, Python, Node or npm. A WebGL 2 capable browser is still required for the 3D graphics.
+
+For development, you can also run this from the repository root:
 
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Open [the game](http://127.0.0.1:8000/UI-Code/) or [the model gallery](http://127.0.0.1:8000/UI-Code/tests/three-preview.html). Use an HTTP server: opening `index.html` directly as a file prevents browsers from loading JavaScript modules.
+Open [the game](http://127.0.0.1:8000/UI-Code/) or [the model gallery](http://127.0.0.1:8000/UI-Code/tests/three-preview.html). The game and model gallery also work as local files. The sensor test fixture uses fetch to load the game HTML and still needs a development server.
+
+After editing `backend/three/*.mjs` or the vendored Three.js sources, regenerate the shipped bundle from `UI-Code`:
+
+```sh
+npm ci
+npm run build
+npm run check:bundle
+npm test
+```
+
+The esbuild dependency is only needed for development. Include the regenerated bundle when sharing source changes; players do not need to run a build. `check:bundle` detects when it no longer matches the source. The Three.js MIT license is preserved in the bundle and `vendor/three/LICENSE`.
+
+Live sensors still require the computer to be connected to Wacker5 and the browser to permit requests to `http://192.168.4.1`. Bundling removes the server requirement for graphics; it does not change sensor validity checks or browser network permissions.
 
 Three.js 0.180.0 is vendored locally with its MIT license. Rendering does not require npm, a CDN, downloaded model assets, or an internet connection. The existing optional Google font still uses its normal font fallback when offline.
 
@@ -18,7 +33,7 @@ Three.js 0.180.0 is vendored locally with its MIT license. Rendering does not re
 
 The moles, holes and landscape now share one perspective scene, lighting setup and full-screen canvas. `GroundLayout.mjs` projects each existing DOM hole onto the ground plane, and the terrain shader cuts a matching opening in the surface. The soil rims rise slightly above the ground and slope back into it; their top edge uses a subtly darker shade of each environment’s ground colour. The path and lava channel reroute around the full hole rims whenever the layout changes. The camera stays fixed; resizing and scrolling update the projection to preserve the scoring targets and sensor hammer mapping. The canvas passes clicks through to the game. Rendering is capped at 60 frames per second, respects reduced motion and pauses when the page is hidden. If WebGL 2 is unavailable or its context is lost, the CSS game and background remain available.
 
-A short loading state hides the CSS fallback until the first 3D frame is ready. If importing or initializing the renderer fails, that state clears and the CSS game remains playable.
+A short loading state hides the CSS fallback until the first 3D frame is ready. If loading or initializing the renderer fails, that state clears and the CSS game remains playable.
 
 The production page uses the available viewport height for its six-hole board, with compact controls and no diagnostic panels. Sensor tracking works without the removed debug elements.
 
