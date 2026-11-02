@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import * as THREE from "../vendor/three/three.module.min.js";
 import { createModelKit } from "../backend/three/MoleModels.mjs";
+import { findMoleAtPoint } from "../backend/three/HitTesting.mjs";
 import { MoleMotion } from "../backend/three/MoleMotion.mjs";
 import { createGardenScene } from "../backend/three/GardenScene.mjs";
 import { layoutGroundPlot } from "../backend/three/GroundLayout.mjs";
@@ -262,8 +263,65 @@ assert(parseFloat(marker.style.left) > 152.5, "continuous coordinates still move
 payload = sensorPayload();
 await context.SensorService.pollSensors();
 assert.equal(context.GameService.game.score, 100);
+const hitKit = createModelKit();
+const hitViewport = { width: 620, height: 720 };
+const hitCamera = new THREE.PerspectiveCamera(43, hitViewport.width / hitViewport.height, 0.1, 180);
+hitCamera.position.set(0, 18, 29);
+hitCamera.lookAt(0, 0, -8);
+hitCamera.updateMatrixWorld();
+const hitEntries = holes.map((hole) => {
+  const plot = hitKit.createPlot();
+  layoutGroundPlot(plot, hitCamera, hitViewport, hole.getBoundingClientRect());
+  return { plot, motion: new MoleMotion(plot.mole) };
+});
+Object.assign(marker, { offsetWidth: 85, offsetHeight: 105 });
+Object.assign(marker.querySelector(".hammer-head"), { offsetLeft: 6, offsetTop: 6, offsetWidth: 73, offsetHeight: 40 });
+element("game-area").dataset.renderer = "threejs";
+Object.assign(context.window.MoleBoard3D, {
+  hitTestMarker: (point) => findMoleAtPoint(hitEntries, hitCamera, hitViewport, point),
+  show(index, type, variant) {
+    hitEntries[index].motion.show(type, variant);
+    hitEntries[index].motion.update(0.2, 1, true);
+  },
+  hideAll() { hitEntries.forEach(({ motion }) => motion.hide()); },
+});
+for (let holeIndex = 0; holeIndex < 6; holeIndex++) {
+  for (const [type, skin] of variants) {
+    const level = skin.includes("-ice") ? 2 : skin.includes("-fire") ? 3 : 1;
+    Object.assign(context.GameService.game, { score: 0, lives: 3, level, maxLevel: level });
+    context.GameService.spawnMole(type, holeIndex);
+    payload = sensorPayload({ x_m: 0.45 + (holeIndex % 2 + 0.5) * 0.3, y_m: 1 + (Math.floor(holeIndex / 2) + 0.5) / 3 });
+    payload.current_hole = -1;
+    await context.SensorService.pollSensors();
+    assert.equal(context.GameService.game.mole, null, "the rendered mole under the hammer is hit even while AP hole confirmation is pending");
+    assert.equal(context.GameService.game.score, type === "golden" ? 200 : type === "bomb" ? 0 : 50);
+    assert.equal(context.GameService.game.lives, type === "bomb" ? 2 : 3);
+    assert(marker.classList.contains("swinging"));
+    context.GameService.spawnMole(type, holeIndex);
+    const previous = context.GameService.game.score;
+    await context.SensorService.pollSensors();
+    assert.equal(context.GameService.game.score, previous, "a duplicate frame cannot hit the next 3D mole");
+  }
+}
+Object.assign(context.GameService.game, { score: 0, lives: 3, level: 1, maxLevel: 1 });
+context.GameService.spawnMole("normal", 0);
+for (const invalid of [{ held: true }, { warning: true }, { age_ms: 501 }, { valid: false }, { in_game_area: false }, { in_play_area: false }, { sensors_used: 1 }]) {
+  payload = sensorPayload(invalid);
+  await context.SensorService.pollSensors();
+  assert.equal(context.GameService.game.score, 0, "3D overlap cannot bypass sensor validity checks");
+}
+payload = sensorPayload({ x_m: 0.9 });
+await context.SensorService.pollSensors();
+assert.equal(context.GameService.game.score, 0, "a confirmed AP hole cannot score when the hammer misses the rendered mole");
+const projected = hitEntries[0].plot.mole.rig.localToWorld(new THREE.Vector3(0, 1.5, 0.5)).project(hitCamera);
+const hitPoint = { x: (projected.x + 1) * hitViewport.width / 2, y: (1 - projected.y) * hitViewport.height / 2 };
+assert.equal(findMoleAtPoint(hitEntries, hitCamera, hitViewport, hitPoint), 0);
+hitEntries[0].motion.hide();
+assert.equal(findMoleAtPoint(hitEntries, hitCamera, hitViewport, hitPoint), null, "retreating moles cannot be hit again");
+hitKit.dispose();
+element("game-area").dataset.renderer = "css";
 delete context.window.MoleBoard3D;
 context.GameService.spawnMole("golden", 1);
 assert(holes[1].classList.contains("active"), "the CSS fallback works without a renderer");
 assert.equal(context.GameService.whackHole(1, "mouse").points, 200);
-console.log("PASS: eight 3D variants, distinct ice/freeze fur, grounded target projection at desktop/mobile sizes, five different scenery sets, terrain openings, path/lava clearance, automatic eruptions and reduced-motion suppression, clipped accessories, retreat/reuse/reduced-motion, live mouse/sensor scoring without debug panels, hammer mapping, duplicate rejection, and CSS fallback.");
+console.log("PASS: eight 3D variants, distinct ice/freeze fur, grounded target projection at desktop/mobile sizes, five different scenery sets, terrain openings, path/lava clearance, automatic eruptions and reduced-motion suppression, clipped accessories, retreat/reuse/reduced-motion, live mouse/sensor scoring without debug panels, real 3D raycast hits for all six holes and eight skins, rejected held/stale/off-target samples, hammer mapping, duplicate rejection, and CSS fallback.");

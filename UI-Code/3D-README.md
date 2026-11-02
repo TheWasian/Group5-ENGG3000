@@ -29,3 +29,7 @@ node UI-Code/tests/three-models.test.mjs
 ```
 
 The gallery includes controls for the special skins, retreat, immediate replacement, themes, graphics loss and restoration. It is a development preview, separate from the game. Physical sensor accuracy must still be checked using the actual arranged sensor boards.
+
+Fresh AP sensor frames use the hammer head’s screen position to raycast against the active, visible 3D mole via `HitTesting.mjs`. This allows an actual visual overlap to score while `current_hole` confirmation is pending. Stale, held, warning, invalid and out-of-area fixes remain rejected, as do duplicate frames. The CSS fallback retains AP hole-based scoring. Hammer geometry is recalculated when samples arrive so compact layout changes cannot leave stale coordinates.
+
+`tests/sensor-hits.html` loads the real game with simulated API responses and controls for fresh overlap, held overlap and misses; it never sends requests to the physical controller.

@@ -17,9 +17,7 @@ var SensorService = {
     this.sensorStatus = document.getElementById("sensor-status");
     this.playerMarker = document.getElementById("player-marker");
     this.gameArea = document.getElementById("game-area");
-    this.markerGeometry = null;
     window.addEventListener("resize", () => {
-      this.markerGeometry = null;
       if (this.lastPlayerPosition) this.positionPlayerMarker(this.lastPlayerPosition);
     });
     this.debugSensorLabels = [document.getElementById("debug-label-1"), document.getElementById("debug-label-2")];
@@ -95,7 +93,7 @@ var SensorService = {
           const key = `${data.boot_id}:${data.frame_id}`;
           if (key !== this.lastFrame) {
             this.lastFrame = key;
-            const player = this.resolvePlayerHole(data);
+            const player = this.resolvePlayerHit(data);
             if (player && data.position.held !== true && this.onHit) this.onHit(player.holeIndex, "occupancy");
           }
           this.lastEventId = data.event_id;
@@ -130,7 +128,24 @@ var SensorService = {
       typeof p.age_ms === "number" && p.age_ms >= 0 && p.age_ms <= this.MAX_POSITION_AGE_MS;
   },
 
-  // Moves the hammer between holes but only confirmed holes can score
+  resolvePlayerHit: function (data) {
+    const board = window.MoleBoard3D;
+    if (data?.source !== "access_point" || this.gameArea.dataset.renderer !== "threejs" ||
+        typeof board?.hitTestMarker !== "function") return this.resolvePlayerHole(data);
+    if (!this.hasValidAccessPointFix(data) || data.position.held === true) return null;
+    const position = this.resolvePlayerPosition(data);
+    if (!position) return null;
+    const point = this.markerPointForPosition(position);
+    const head = this.playerMarker.querySelector(".hammer-head");
+    if (!point || !head) return null;
+    const area = this.gameArea.getBoundingClientRect();
+    const holeIndex = board.hitTestMarker({
+      x: area.left + point.x - this.playerMarker.offsetWidth / 2 + head.offsetLeft + head.offsetWidth / 2,
+      y: area.top + point.y - this.playerMarker.offsetHeight / 2 + head.offsetTop + head.offsetHeight / 2,
+    });
+    return Number.isInteger(holeIndex) && holeIndex >= 0 && holeIndex < this.holes.length ? { holeIndex } : null;
+  },
+
   resolvePlayerPosition: function (data) {
     if (data?.source !== "access_point") return this.resolvePlayerHole(data);
     const p = data.position, g = data.game_area;
@@ -148,19 +163,16 @@ var SensorService = {
     };
   },
 
-  positionPlayerMarker: function (position) {
-    if (!this.markerGeometry) {
-      const board = this.gameArea.getBoundingClientRect();
-      const centres = this.holes.map(hole => {
-        const r = hole.getBoundingClientRect();
-        return {holeIndex: Number(hole.dataset.hole),
-          x: r.left - board.left + r.width / 2, y: r.top - board.top + r.height / 2};
-      });
-      if (!(board.width > 0 && board.height > 0) ||
-          !centres.every(c => Number.isFinite(c.x) && Number.isFinite(c.y))) return;
-      this.markerGeometry = {width: board.width, height: board.height, centres};
-    }
-    const {width, height, centres} = this.markerGeometry;
+  markerPointForPosition: function (position) {
+    const board = this.gameArea.getBoundingClientRect();
+    const centres = this.holes.map(hole => {
+      const r = hole.getBoundingClientRect();
+      return {holeIndex: Number(hole.dataset.hole),
+        x: r.left - board.left + r.width / 2, y: r.top - board.top + r.height / 2};
+    });
+    const {width, height} = board;
+    if (!(width > 0 && height > 0) ||
+        !centres.every(c => Number.isFinite(c.x) && Number.isFinite(c.y))) return;
     let x, y;
     if (position.gameArea) {
       const g = position.gameArea;
@@ -179,6 +191,13 @@ var SensorService = {
       x = centre.x; y = centre.y;
     }
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    return { x, y };
+  },
+
+  positionPlayerMarker: function (position) {
+    const point = this.markerPointForPosition(position);
+    if (!point) return;
+    const { x, y } = point;
     const left = `${x}px`, top = `${y}px`;
     // Same position so don't restart the movement
     if (this.playerMarker.style.left !== left) this.playerMarker.style.left = left;

@@ -3,6 +3,7 @@ import { createModelKit } from "./MoleModels.mjs";
 import { MoleMotion } from "./MoleMotion.mjs";
 import { GardenBackdrop } from "./GardenBackdrop.mjs";
 import { layoutGroundPlot } from "./GroundLayout.mjs";
+import { findMoleAtPoint } from "./HitTesting.mjs";
 
 export class ThreeBoard {
   constructor(element) {
@@ -80,6 +81,11 @@ export class ThreeBoard {
   flash(index) {
     const entry = this.entries[index];
     if (entry) entry.flashUntil = performance.now() + 250;
+  }
+
+  hitTestMarker(point) {
+    return findMoleAtPoint(this.entries, this.camera,
+      { width: window.innerWidth, height: window.innerHeight }, point);
   }
 
   setEnvironment(name) {

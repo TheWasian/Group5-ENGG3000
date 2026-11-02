@@ -573,6 +573,10 @@ body.garden-3d-ready::after {
   cursor: pointer;
 }
 
+.board-3d-ready .player-marker {
+  transition: none;
+}
+
 .hole {
   position: relative;
   height: 140px;

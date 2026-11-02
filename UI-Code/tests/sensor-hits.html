@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>3D sensor hit check</title>
+  <style>
+    body { margin: 0; background: #f3f4ee; color: #283725; font: 14px system-ui; }
+    nav { padding: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    button, select { font: inherit; padding: 7px; }
+    output { display: block; padding: 0 12px 10px; }
+    iframe { display: block; border: 0; width: 100%; height: 720px; }
+  </style>
+</head>
+<body>
+  <nav aria-label="Sensor test controls">
+    <label>Hole <select id="hole"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option><option value="4">5</option><option value="5">6</option></select></label>
+    <label>Mole <select id="type"><option>normal</option><option>golden</option><option>frozen</option><option>bomb</option></select></label>
+    <button id="overlap">Fresh overlap</button>
+    <button id="held">Held overlap</button>
+    <button id="miss">Hammer away</button>
+    <button id="resume">Confirm fresh position</button>
+  </nav>
+  <output id="report">Loading the real game with simulated sensor responses…</output>
+  <iframe id="game" title="Game with simulated sensors"></iframe>
+  <script>
+    const game = document.getElementById("game");
+    const report = document.getElementById("report");
+    const sourceRoot = new URL("../", location.href).href;
+    const setup = `
+      const originalFetch = window.fetch.bind(window);
+      window.sensorFixture = { hole: 0, held: true, frame: 0 };
+      window.fetch = async function (url, options) {
+        if (!String(url).startsWith("http://192.168.4.1")) return originalFetch(url, options);
+        await new Promise(resolve => setTimeout(resolve, 120));
+        const fixture = window.sensorFixture;
+        const data = {
+          source: "access_point", boot_id: 1, frame_id: ++fixture.frame, event_id: 0, current_hole: -1,
+          position: { valid: true, held: fixture.held, x_m: 0.45 + (fixture.hole % 2 + 0.5) * 0.3,
+            y_m: 1 + (Math.floor(fixture.hole / 2) + 0.5) / 3,
+            age_ms: 10, sensors_used: 3, in_game_area: true, in_play_area: true },
+          game_area: { x_min_m: 0.45, x_max_m: 1.05, start_y_m: 1, end_y_m: 2 },
+          node_online: [true,true], ranges_m: [1.2,1.3,1.4]
+        };
+        return { ok: true, json: async () => data };
+      };
+    `;
+    fetch(sourceRoot + "index.html").then(response => response.text()).then(html => {
+      game.srcdoc = html.replace("<head>", '<head><base href="' + sourceRoot + '"><script>' + setup + '<' + '/script>');
+    });
+    function run(mode) {
+      const app = game.contentWindow;
+      if (!app.MoleBoard3D || !app.GameService) return;
+      const hole = Number(document.getElementById("hole").value);
+      app.sensorFixture.held = true;
+      app.GameService.startGame();
+      app.GameService.clearGameTimers();
+      app.GameService.spawnMole(document.getElementById("type").value, hole);
+      app.GameService.clearGameTimers();
+      app.sensorFixture.hole = mode === "miss" ? (hole + 1) % 6 : hole;
+      app.sensorFixture.held = mode === "held";
+    }
+    document.getElementById("overlap").onclick = () => run("overlap");
+    document.getElementById("held").onclick = () => run("held");
+    document.getElementById("miss").onclick = () => run("miss");
+    document.getElementById("resume").onclick = () => {
+      game.contentWindow.sensorFixture.hole = Number(document.getElementById("hole").value);
+      game.contentWindow.sensorFixture.held = false;
+    };
+    setInterval(() => {
+      const app = game.contentWindow;
+      if (!app.GameService?.game) return;
+      const state = app.GameService.game;
+      const renderer = app.document.getElementById("game-area").dataset.renderer;
+      report.textContent = 'Renderer: ' + renderer + ' · Score: ' + state.score + ' · Lives: ' + state.lives +
+        ' · Mole: ' + (state.mole ? 'waiting in hole ' + (state.mole.hole + 1) : 'hit') +
+        ' · Simulated AP current_hole: -1 · ' + (app.sensorFixture.held ? 'held' : 'fresh');
+    }, 100);
+  </script>
+</body>
+</html>
