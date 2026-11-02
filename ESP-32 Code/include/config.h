@@ -1,6 +1,6 @@
 #pragma once  // Tells the compiler to include this file only once
 // include/config.h
-#ifndef CONFIG_H_
+#ifndef GROUP5_CONFIG_H_
 #define CONFIG_H_
 
 #include <Arduino.h>
@@ -14,12 +14,15 @@ extern const char *AP_SSID;
 extern const char *AP_PASSWORD;
 extern int wifi_channel;
 
+extern const uint8_t SENSOR_BUFFER_SIZE;
+extern float sensorData[][3]; 
+extern uint8_t SensorBufferHeadIndex;
+extern bool SendSensorDataFlag;
+
 extern const uint8_t BOX_ID1_broadcastAddress[];
 extern const uint8_t BOX_ID2_broadcastAddress[];
 extern const uint8_t BOX_ID3_broadcastAddress[];
-extern const uint8_t SENSOR_BURST_PACKET_SIZE;
-extern uint8_t SENSOR_BURST_IDLE_TIME;
-
+extern const uint8_t SENSOR_BURST_IDLE_TIME;
 extern const uint8_t BATTERY_PIN;
 extern const uint8_t RGB_RED_PIN;
 extern const uint8_t RGB_GREEN_PIN;
@@ -33,5 +36,4 @@ extern const uint8_t TFT_DC;
 extern const uint8_t TFT_RST;
 extern const uint8_t BUTTON_PIN;
 
-#endif // CONFIG_H_
-
+#endif // GROUP5_CONFIG_H_

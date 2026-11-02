@@ -20,13 +20,19 @@ void setup() {
 }
 
 void loop() {
-  updateSensorData();
-  // print the value to Serial Monitor
-  Serial.print("distance: ");
+  if (BOX_ID2_connected) {
+    //sendHeartbeat(boxId);
+  }
+  if (SendSensorDataFlag) {
+    updateSensorData();
+    SendSensorDataFlag = false;
+    sendSensorData(boxId, duration_us);
+    Serial.print("distance: ");
   Serial.print(distance_cm);
   Serial.print(" cm (echo: ");
   Serial.print(duration_us);
   Serial.println(" us)");
-  sendSensorData(boxId, duration_us);
-  delay(1000);
+  delay(1);
+  }
+  // print the value to Serial Monitor
 }

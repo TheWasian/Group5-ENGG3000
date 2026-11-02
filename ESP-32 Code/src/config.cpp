@@ -11,8 +11,13 @@ const uint32_t PULSEIN_TIMEOUT = 30000; // 30 ms, about 5 m maximum range
 const char *AP_SSID = "Wacker5";
 const char *AP_PASSWORD = "PasswordWacker123456!";
 const char *AP_CHANNEL = "1";
-const uint8_t SENSOR_BURST_PACKET_SIZE = 10; // Number of sensor readings in a burst
-uint8_t SENSOR_BURST_IDLE_TIME = 100; // Time between bursts in milliseconds
+//constexpr uint8_t SENSOR_BURST_PACKET_SIZE = 10; // Number of sensor readings in a burst
+const uint8_t SENSOR_BURST_IDLE_TIME = 100; // Time between bursts in milliseconds
+
+const uint8_t SENSOR_BUFFER_SIZE = 10;
+float sensorData[SENSOR_BUFFER_SIZE][3]; // 2D array to hold sensor readings for each box
+uint8_t SensorBufferHeadIndex;
+bool SendSensorDataFlag = false;
 
 bool BOX_ID1_connected = false;
 bool BOX_ID2_connected = false;
@@ -23,16 +28,15 @@ uint16_t BOX_ID2_heartbeat_LastReceived = 0;
 uint16_t BOX_ID3_heartbeat_LastReceived = 0;
 
 const uint8_t BATTERY_PIN = 4;
-const uint8_t BATTERY_PIN = 4;
 const uint8_t RGB_RED_PIN = 25;
 const uint8_t RGB_GREEN_PIN = 15;
 const uint8_t RGB_BLUE_PIN = 16;
 const uint8_t BUZZER_PIN = 17;
 const bool BUZZER_ENABLED = false;
 
-const uint8_t BOX_ID1_broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-const uint8_t BOX_ID2_broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-const uint8_t BOX_ID3_broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+const uint8_t BOX_ID1_broadcastAddress[] = {0x14, 0xC1, 0x9F, 0x44, 0x28, 0xA8};
+const uint8_t BOX_ID2_broadcastAddress[] = {0x7C, 0x4F, 0xAD, 0x17, 0x97, 0x0C};
+const uint8_t BOX_ID3_broadcastAddress[] = {0x44, 0xBD, 0x8D, 0xFD, 0x59, 0x04};
 
 // Set the pin numbers for the TFT display and button
 const uint8_t TFT_MOSI = 8;

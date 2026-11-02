@@ -7,7 +7,8 @@ enum PacketType : uint8_t
 {
     HEARTBEAT_PACKET = 0,
     SENSOR_DATA_PACKET = 1,
-    SENSOR_BURST_DATA_PACKET = 2
+    SENSOR_BURST_DATA_PACKET = 2,
+    SENSOR_REQUEST_PACKET = 3
 };
 
 typedef struct __attribute__((packed)) heartbeat_msg
@@ -27,8 +28,15 @@ typedef struct __attribute__((packed)) sensor_burst_msg
 {
     PacketType type = SENSOR_BURST_DATA_PACKET;
     uint8_t boxId;
-    uint32_t sensorReadingus;
+    uint32_t sensorReadingBurst[SENSOR_BURST_PACKET_SIZE]; // Array to hold burst readings
 } sensor_burst_msg;
+
+typedef struct __attribute__((packed)) sensor_request_msg
+{
+    PacketType type = SENSOR_REQUEST_PACKET;
+    RequestType requestType;
+    uint8_t boxId;
+} sensor_request_msg;
 
 esp_now_peer_info_t peerInfo;
 
@@ -74,8 +82,27 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len) {
             sensor_burst_msg sensorBurstData;
             if (len == sizeof(sensor_burst_msg)) {
                 memcpy(&sensorBurstData, incomingData, sizeof(sensorBurstData));
-                Serial.printf("Sensor Burst structure parsed. Node: %d, Value: %lu\n", 
-                              sensorBurstData.boxId, sensorBurstData.sensorReadingus);
+                for (int i = 0; i < SENSOR_BURST_PACKET_SIZE; i++) {
+                    Serial.printf("Sensor Burst structure parsed. Node: %d, Value: %lu\n", 
+                                  sensorBurstData.boxId, sensorBurstData.sensorReadingBurst[i]);
+                }
+            }
+            break;
+        }
+        case SENSOR_REQUEST_PACKET: {
+            sensor_request_msg sensorRequest;
+            if (len == sizeof(sensor_request_msg)) {
+                memcpy(&sensorRequest, incomingData, sizeof(sensorRequest));
+                Serial.printf("Sensor Request structure parsed. Node: %d, Request Type: %d\n", 
+                              sensorRequest.boxId, sensorRequest.requestType);
+
+                if (sensorRequest.requestType == REQUEST_SENSOR_DATA) {
+                    SendSensorDataFlag = true;
+                }
+                if (sensorRequest.requestType == REQUEST_SENSOR_BURST_DATA) {
+                    //SendSensorDataFlag = true;
+                }
+                              
             }
             break;
         }
@@ -139,13 +166,52 @@ void sendHeartbeat(uint8_t boxId)
     }
 }
 
+void sendSensorRequest(uint8_t boxId, const uint8_t broadcastAddress[], RequestType requestType)
+{
+    sensor_request_msg sensorRequest;
+    sensorRequest.boxId = boxId; 
+    sensorRequest.requestType = requestType;
+    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sensorRequest, sizeof(sensorRequest));
+    if (result == ESP_OK)
+    {
+        Serial.println("Sent sensor request successfully-1");
+    }
+    else
+    {
+        Serial.println("Error sending the sensor request-1");
+    }
+}
+
+void sendSensorBurstData(uint8_t boxId, uint32_t *sensorReadingBurst, size_t burstSize)
+{
+    if (burstSize > SENSOR_BURST_PACKET_SIZE)
+    {
+        Serial.println("Error: Burst size exceeds maximum allowed size.");
+        return;
+    }
+
+    sensor_burst_msg sensorBurstData;
+    sensorBurstData.boxId = boxId;
+    memcpy(sensorBurstData.sensorReadingBurst, sensorReadingBurst, burstSize * sizeof(uint32_t));
+
+    esp_err_t result = esp_now_send(BOX_ID1_broadcastAddress, (uint8_t *)&sensorBurstData, sizeof(sensorBurstData));
+    if (result == ESP_OK)
+    {
+        Serial.println("Sent sensor burst data successfully");
+    }
+    else
+    {
+        Serial.println("Error sending the sensor burst data");
+    }
+}
+
 void sendSensorData(uint8_t boxId, uint32_t sensorReadingus)
 {
     sensor_msg sensorData;
     sensorData.boxId = boxId;
     sensorData.sensorReadingus = sensorReadingus;
 
-    esp_err_t result = esp_now_send(BOX_ID1_broadcastAddress, (uint8_t *)&sensorData, sizeof(sensorData));
+    esp_err_t result = esp_now_send(BOX_ID2_broadcastAddress, (uint8_t *)&sensorData, sizeof(sensorData));
     if (result == ESP_OK)
     {
         Serial.println("Sent sensor data successfully");

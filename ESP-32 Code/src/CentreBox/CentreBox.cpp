@@ -3,7 +3,7 @@
 #include "espnow.h"
 #include "config.h"
 
-const uint8_t ThisBoxId = 2;
+const uint8_t boxId = SET_BOX_ID;
 
 // WebServer server(80);
 
@@ -29,10 +29,9 @@ void loop()
   Serial.print(" cm (echo: ");
   Serial.print(duration_us);
   Serial.println(" us)");
+  sendSensorRequest(boxId, BOX_ID1_broadcastAddress, REQUEST_SENSOR_DATA);
+  sendSensorRequest(boxId, BOX_ID3_broadcastAddress, REQUEST_SENSOR_DATA);
 
-  BOX_ID1_heartbeat_LastReceived = 0;
-  BOX_ID2_heartbeat_LastReceived = 0;
-  BOX_ID3_heartbeat_LastReceived = 0;
 
   delay(1000);
 }
