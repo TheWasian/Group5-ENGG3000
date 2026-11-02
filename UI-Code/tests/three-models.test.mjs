@@ -206,6 +206,7 @@ const context = {
     flash: (index) => calls.push(["flash", index]),
   } },
   FrontendMetrics: new Proxy({}, { get: () => () => {} }),
+  SoundService: { init() {}, unlock() {}, playHit() {}, playLifeLost() {} },
   performance: { now: () => 100 }, AbortController, console,
   setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
   fetch: async () => ({ ok: true, json: async () => payload }),

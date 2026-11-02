@@ -187,6 +187,7 @@ var GameService = {
     GameView.hideAllMoles();
     clearTimeout(this.moleLifetimeTimer);
 
+    if (type !== "bomb" && typeof SoundService !== "undefined") SoundService.playHit();
     var result;
     if (type === "bomb") result = this.bombMole();
     else if (type === "golden") result = this.goldenMole();
@@ -278,6 +279,7 @@ var GameService = {
   loseLife: function (prefix) {
     var g = this.game;
     g.lives -= 1;
+    if (typeof SoundService !== "undefined") SoundService.playLifeLost();
     GameView.setLives(g.lives);
     GameView.flashDamage();
     GameView.say(prefix + " " + g.lives + " " + (g.lives === 1 ? "life" : "lives") + " left.");

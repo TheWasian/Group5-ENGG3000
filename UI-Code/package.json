@@ -4,7 +4,7 @@
   "scripts": {
     "build": "node scripts/build-three.mjs",
     "check:bundle": "node scripts/build-three.mjs --check",
-    "test": "node tests/three-models.test.mjs && node tests/three-bundle.test.mjs"
+    "test": "node tests/three-models.test.mjs && node tests/three-bundle.test.mjs && node tests/sound.test.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.12"

@@ -1,5 +1,6 @@
 //This is just calling the main services
 FrontendMetrics.init();
+if (typeof SoundService !== "undefined") SoundService.init();
 GameView.init();
 SensorService.init();
 
@@ -18,11 +19,13 @@ SensorService.onHit = function (holeIndex, kind) {
 
 // Buttons
 document.getElementById("start-button").addEventListener("click", function () {
+  if (typeof SoundService !== "undefined") SoundService.unlock();
   GameService.startGame();
   SensorService.armSensorsForGameStart(); // rearming the ESP32 (won't work if offline)
 });
 document.querySelectorAll(".restart-button").forEach(function (button) {
   button.addEventListener("click", function () {
+    if (typeof SoundService !== "undefined") SoundService.unlock();
     GameService.startGame();
     SensorService.armSensorsForGameStart();
   });

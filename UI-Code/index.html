@@ -254,7 +254,10 @@
         Sensor controller: connecting...
       </p>
 
-      <button id="start-button" type="button">START GAME</button>
+      <div class="game-actions">
+        <button id="start-button" type="button">START GAME</button>
+        <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
+      </div>
 
       <div id="win-screen" class="screen hidden">
         <h2>You Won!</h2>
@@ -278,11 +281,12 @@
    <script src="./backend/services/EnvironmentService.js"></script>
    <script src="./backend/services/GameConditionService.js"></script>
    <script src="./backend/services/HighScoreService.js"></script>
-   <script src="./backend/services/GameService.js"></script>
+   <script src="./backend/SoundService.js"></script>
+   <script src="./backend/services/GameService.js?v=audio1"></script>
    <script src="./backend/GameView.js"></script>
    <script src="./backend/SensorService.js"></script>
    <script src="./backend/FrontendMetrics.js"></script>
-   <script src="./backend/main.js"></script>
+   <script src="./backend/main.js?v=audio1"></script>
    <script src="./backend/three/three-game.bundle.js"
      onload="document.documentElement.classList.remove('scene-loading')"
      onerror="document.getElementById('game-area').dataset.renderer='css';document.documentElement.classList.remove('scene-loading')"></script>

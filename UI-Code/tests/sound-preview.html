@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Silent sound rendering check</title></head>
+<body>
+  <h1>Sound rendering check</h1>
+  <p>This renders the sound effects into memory. It does not play through speakers.</p>
+  <button id="render" type="button">Render sound checks</button>
+  <pre id="report">Ready</pre>
+  <script src="../backend/SoundService.js"></script>
+  <script>
+    document.getElementById("render").onclick = async function () {
+      const report = document.getElementById("report");
+      const results = [];
+      try {
+        for (const kind of ["hit", "lifeLost"]) {
+          const context = new OfflineAudioContext(1, 44100, 44100);
+          const output = context.createGain();
+          output.gain.value = 0.18;
+          output.connect(context.destination);
+          SoundService.scheduleEffect(kind, context, output);
+          const audio = (await context.startRendering()).getChannelData(0);
+          let energy = 0, tail = 0, peak = 0;
+          for (let index = 0; index < audio.length; index++) {
+            energy += audio[index] * audio[index];
+            peak = Math.max(peak, Math.abs(audio[index]));
+            if (index > 22050) tail += audio[index] * audio[index];
+          }
+          if (!(energy > 0 && peak < 0.3 && tail < 0.000001)) throw new Error(kind + " has invalid output");
+          results.push("PASS " + kind + ": audible waveform, controlled peak " + peak.toFixed(3) + ", silent after effect ends");
+        }
+        report.textContent = results.join("\n") + "\nNo speaker playback.";
+      } catch (error) { report.textContent = "FAIL: " + error.message; }
+    };
+  </script>
+</body>
+</html>
