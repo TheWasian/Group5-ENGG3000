@@ -4,6 +4,7 @@ var FrontendMetrics = {
   pageLoadTime: null,
 
   init: function () {
+    if (!document.getElementById("performance-metrics")) return;
     // Page-load time
     if (typeof window !== "undefined" && window.addEventListener) {
       window.addEventListener("load", function () {
