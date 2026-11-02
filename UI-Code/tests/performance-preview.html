@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>3D render performance check</title>
+  <style>
+    body { margin: 0; font: 13px system-ui; background: #edf0e5; }
+    nav { display: flex; gap: 8px; padding: 8px; align-items: center; }
+    button { padding: 6px 10px; }
+    output { display: block; padding: 0 8px 8px; white-space: pre-wrap; }
+    iframe { display: block; width: 100%; height: 600px; border: 0; }
+  </style>
+</head>
+<body>
+  <nav>
+    <button id="one">Measure one mole</button>
+    <button id="six">Measure six moles</button>
+    <span>Four-second sample after shader warmup. Sound is not loaded.</span>
+  </nav>
+  <output id="report">Loading the model gallery…</output>
+  <iframe id="preview" title="Performance scene"></iframe>
+  <script>
+    const frame = document.getElementById("preview");
+    const report = document.getElementById("report");
+    const root = new URL("./", location.href).href;
+    fetch(root + "three-preview.html").then(r => r.text()).then(html => {
+      frame.srcdoc = html.replace("<head>", '<head><base href="' + root + '">');
+    });
+    let measuring = false;
+    async function measure(count) {
+      const app = frame.contentWindow;
+      const board = app.MoleBoard3D;
+      if (!board || measuring) return;
+      measuring = true;
+      board.hideAll();
+      board.setEnvironment("grassland");
+      const types = [["normal", ""], ["golden", "has-golden"], ["frozen", "has-frozen"], ["bomb", ""], ["normal", "has-normal-ice"], ["normal", "has-normal-fire"]];
+      for (let index = 0; index < count; index++) board.show(index, ...types[index]);
+      report.textContent = "Measuring " + count + " mole(s)…";
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const times = [], intervals = [], draws = [], triangles = [];
+      const backdrop = board.backdrop;
+      const render = backdrop.render;
+      let last = null, layoutReads = 0;
+      const rectMethods = board.holes.map(hole => hole.getBoundingClientRect);
+      board.holes.forEach((hole, index) => {
+        hole.getBoundingClientRect = function () { layoutReads++; return rectMethods[index].call(this); };
+      });
+      backdrop.render = function (seconds, time) {
+        const start = performance.now();
+        render.call(this, seconds, time);
+        times.push(performance.now() - start);
+        if (last !== null) intervals.push(time - last);
+        last = time;
+        draws.push(board.renderer.info.render.calls);
+        triangles.push(board.renderer.info.render.triangles);
+      };
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      backdrop.render = render;
+      board.holes.forEach((hole, index) => { hole.getBoundingClientRect = rectMethods[index]; });
+      const mean = values => values.reduce((a, b) => a + b, 0) / values.length;
+      times.sort((a,b) => a-b);
+      const sortedIntervals = [...intervals].sort((a,b) => a-b);
+      report.textContent = JSON.stringify({
+        moles: count, viewport: [app.innerWidth, app.innerHeight], pixelRatio: board.renderer.getPixelRatio(),
+        frames: times.length, fps: +(1000 / mean(intervals)).toFixed(1),
+        cpuMeanMs: +mean(times).toFixed(2), cpuP95Ms: +times[Math.floor(times.length * .95)].toFixed(2),
+        drawCallsMean: +mean(draws).toFixed(1), trianglesMean: Math.round(mean(triangles)), layoutReads,
+        frameGapsOver25Ms: intervals.filter(value => value > 25).length,
+        intervalP95Ms: +sortedIntervals[Math.floor(sortedIntervals.length * .95)].toFixed(2),
+        shortestIntervalMs: +sortedIntervals[0].toFixed(2)
+      }, null, 2);
+      measuring = false;
+    }
+    document.getElementById("one").onclick = () => measure(1);
+    document.getElementById("six").onclick = () => measure(6);
+  </script>
+</body>
+</html>

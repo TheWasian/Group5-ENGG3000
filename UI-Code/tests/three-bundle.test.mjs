@@ -6,7 +6,7 @@ const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 assert(!/<script\b[^>]*type=["']module["']/i.test(page));
 assert(!/\bimport\s*\(/.test(page), "opening the game must not initiate a module import");
 const scripts = Array.from(page.matchAll(/<script\b[^>]*src=["']([^"']+)["']/gi), ([, src]) => src);
-assert(scripts.includes("./backend/three/three-game.bundle.js"));
+assert(scripts.some(src => src.split("?")[0] === "./backend/three/three-game.bundle.js"));
 for (const src of scripts) assert(existsSync(new URL("../" + src, import.meta.url)), "shipped script exists: " + src);
 const bundle = readFileSync(new URL("../backend/three/three-game.bundle.js", import.meta.url), "utf8");
 const script = new vm.Script(bundle);

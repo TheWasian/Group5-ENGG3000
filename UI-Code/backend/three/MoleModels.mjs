@@ -1,4 +1,5 @@
 import * as THREE from "../../vendor/three/three.module.min.js";
+import { batchStaticMeshes } from "./BatchMeshes.mjs";
 
 const palettes = {
   normal: ["#946044", "#efd3ad", "#d98b95"],
@@ -21,6 +22,7 @@ export function createModelKit() {
   const materials = new Set();
   const keep = (geometry) => { geometries.add(geometry); return geometry; };
   const sphere = keep(new THREE.SphereGeometry(1, 24, 18));
+  const grassBlade = keep(new THREE.SphereGeometry(1, 8, 6));
   const crystal = keep(new THREE.ConeGeometry(1, 1, 5));
   const pebble = keep(new THREE.IcosahedronGeometry(1, 1));
   const circle = keep(new THREE.CircleGeometry(1, 48));
@@ -128,6 +130,7 @@ export function createModelKit() {
     mesh(bomb, sphere, gold, [0, 0.28, 0], [0.08, 0.05, 0.08]);
     mesh(bomb, fuse, cream, [0, 0, 0]);
     mesh(bomb, pebble, spark, [0.16, 0.42, 0.01], [0.065, 0.065, 0.065]);
+    batchStaticMeshes(rig, keep);
     function setVariant(type = "normal", variantClass = "") {
       const variant = type === "golden" ? "golden" : type === "frozen" ? "frozen"
         : variantClass.includes("-ice") ? "ice" : variantClass.includes("-fire") ? "fire" : "normal";
@@ -172,11 +175,12 @@ export function createModelKit() {
         stone.rotation.y = angle;
       } else {
         for (let blade = 0; blade < 3; blade++) {
-          const leaf = mesh(root, sphere, grass, [x + (blade - 1) * 0.07, 0.23, z], [0.035, 0.13, 0.018]);
+          const leaf = mesh(root, grassBlade, grass, [x + (blade - 1) * 0.07, 0.23, z], [0.035, 0.13, 0.018]);
           leaf.rotation.z = (blade - 1) * -0.4;
         }
       }
     }
+    batchStaticMeshes(root, keep);
     const mole = createMole(plane);
     root.add(mole.rig);
     mole.rig.position.y = -2.6;

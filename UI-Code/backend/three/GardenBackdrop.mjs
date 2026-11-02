@@ -3,13 +3,15 @@ import { createGardenScene } from "./GardenScene.mjs";
 
 export class GardenBackdrop {
   constructor() {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "low-power" });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.shadowDirty = true;
     this.renderer.localClippingEnabled = true;
     this.canvas = this.renderer.domElement;
     this.canvas.className = "garden-backdrop-3d";
@@ -81,6 +83,12 @@ export class GardenBackdrop {
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+    const distance = this.camera.aspect < 1 ? 29 : 24;
+    this.camera.position.set(0, 18, distance);
+    this.camera.lookAt(0, 0, -8);
+    this.camera.updateMatrixWorld();
+    this.shadowDirty = true;
+    this.onResize?.();
   }
 
   setEnvironment(name) {
@@ -89,16 +97,21 @@ export class GardenBackdrop {
     this.scene.fog.color.set(theme.sky);
     this.sun.color.set(theme.light);
     this.canvas.dataset.environment = name || "grassland";
+    this.shadowDirty = true;
   }
 
   render(seconds, time) {
-    const distance = this.camera.aspect < 1 ? 29 : 24;
-    this.camera.position.set(0, 18, distance);
-    this.camera.lookAt(0, 0, -8);
-    this.camera.updateMatrixWorld();
-    this.onUpdate?.(seconds, time);
+    const animating = Boolean(this.onUpdate?.(seconds, time));
     this.garden.update(seconds, time, this.reducedMotion.matches);
+    const updateShadow = this.shadowDirty || animating !== this.wasAnimating ||
+      (animating && time - this.lastShadowTime >= 1000 / 30 - 0.75);
+    this.renderer.shadowMap.needsUpdate = updateShadow;
     this.renderer.render(this.scene, this.camera);
+    if (updateShadow) {
+      this.lastShadowTime = time;
+      this.shadowDirty = false;
+    }
+    this.wasAnimating = animating;
   }
 
   frame(time) {

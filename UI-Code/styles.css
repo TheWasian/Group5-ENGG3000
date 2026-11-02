@@ -587,6 +587,8 @@ body.garden-3d-ready::after {
   cursor: pointer;
 }
 
+.board-3d-ready .hole.sensor-hit { animation: none; }
+
 .board-3d-ready .player-marker {
   transition: none;
 }

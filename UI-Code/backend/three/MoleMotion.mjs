@@ -31,6 +31,7 @@ export class MoleMotion {
   }
 
   update(seconds, time, reducedMotion = false) {
+    if (this.progress === 0 && this.target === 0 && !this.pending && !this.model.rig.visible) return;
     const step = seconds / (this.target ? 0.18 : 0.16);
     this.progress = reducedMotion ? this.target : this.target
       ? Math.min(1, this.progress + step) : Math.max(0, this.progress - step);

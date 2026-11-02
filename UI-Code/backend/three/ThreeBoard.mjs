@@ -14,6 +14,13 @@ export class ThreeBoard {
     this.scene = this.backdrop.scene;
     this.camera = this.backdrop.camera;
     this.canvas = this.backdrop.canvas;
+    this.layoutDirty = true;
+    this.nextLayoutCheck = 0;
+    this.layoutBoxes = null;
+    this.layoutViewport = null;
+    this.markLayoutDirty = () => { this.layoutDirty = true; };
+    this.backdrop.onResize = this.markLayoutDirty;
+    this.layoutObserver = new ResizeObserver(this.markLayoutDirty);
     this.kit = createModelKit();
     this.entries = this.holes.map(() => {
       const plot = this.kit.createPlot();
@@ -55,6 +62,9 @@ export class ThreeBoard {
   mount() {
     this.syncFromDOM();
     this.backdrop.mount();
+    this.layoutObserver.observe(this.element);
+    this.holes.forEach((hole) => this.layoutObserver.observe(hole));
+    window.addEventListener("scroll", this.markLayoutDirty, true);
   }
 
   syncFromDOM() {
@@ -72,10 +82,12 @@ export class ThreeBoard {
 
   show(index, type, variant) {
     this.entries[index]?.motion.show(type, variant);
+    this.backdrop.shadowDirty = true;
   }
 
   hideAll() {
     this.entries.forEach((entry) => entry.motion.hide());
+    this.backdrop.shadowDirty = true;
   }
 
   flash(index) {
@@ -84,6 +96,7 @@ export class ThreeBoard {
   }
 
   hitTestMarker(point) {
+    this.updateLayout(performance.now(), true);
     return findMoleAtPoint(this.entries, this.camera,
       { width: window.innerWidth, height: window.innerHeight }, point);
   }
@@ -93,20 +106,44 @@ export class ThreeBoard {
     this.backdrop.setEnvironment(name);
   }
 
-  frame(seconds, time) {
+  updateLayout(time, force = false) {
+    if (!force && !this.layoutDirty && time < this.nextLayoutCheck) return false;
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     const boxes = this.holes.map((hole) => hole.getBoundingClientRect());
+    this.layoutDirty = false;
+    this.nextLayoutCheck = time + 250;
+    const changed = !this.layoutViewport || viewport.width !== this.layoutViewport.width || viewport.height !== this.layoutViewport.height ||
+      boxes.some((box, index) => ["left", "top", "width", "height"].some((key) => box[key] !== this.layoutBoxes[index][key]));
+    if (!changed) return false;
+    this.layoutBoxes = boxes;
+    this.layoutViewport = viewport;
     const openings = this.entries.map((entry, index) => {
-      const opening = layoutGroundPlot(entry.plot, this.camera, viewport, boxes[index]);
-      entry.motion.update(seconds, time / 1000 + index * 1.7, this.reducedMotion.matches);
-      entry.plot.soil.emissive.setHex(entry.flashUntil > time ? 0x467d7d : 0);
-      entry.plot.soil.emissiveIntensity = 0.6;
-      return opening;
+      return layoutGroundPlot(entry.plot, this.camera, viewport, boxes[index]);
     });
     this.backdrop.garden.setOpenings(openings);
+    this.backdrop.shadowDirty = true;
+    return true;
+  }
+
+  frame(seconds, time) {
+    this.updateLayout(time);
+    let animating = false;
+    this.entries.forEach((entry, index) => {
+      entry.motion.update(seconds, time / 1000 + index * 1.7, this.reducedMotion.matches);
+      const flash = entry.flashUntil > time;
+      if (flash !== entry.flashing) {
+        entry.plot.soil.emissive.setHex(flash ? 0x467d7d : 0);
+        entry.plot.soil.emissiveIntensity = 0.6;
+        entry.flashing = flash;
+      }
+      animating ||= entry.motion.progress > 0 || entry.motion.target > 0 || Boolean(entry.motion.pending);
+    });
+    return animating && !this.reducedMotion.matches;
   }
 
   dispose() {
+    this.layoutObserver.disconnect();
+    window.removeEventListener("scroll", this.markLayoutDirty, true);
     this.backdrop.dispose();
     this.kit.dispose();
     this.environment.dispose();
