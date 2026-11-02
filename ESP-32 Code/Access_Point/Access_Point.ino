@@ -15,8 +15,20 @@
 
 // --------------------- EDIT YOUR SETUP HERE -------------------------
 // Preserve the GPIOs already configured for the centre board.
+constexpr int TFT_MOSI = 8;
+constexpr int TFT_SCLK = 9;
+constexpr int TFT_MISO = -1;
+constexpr int TFT_CS = -1;
+constexpr int TFT_DC = 14;
+constexpr int TFT_RST = 21;
 constexpr int TRIG_PIN = 10;
 constexpr int ECHO_PIN = 3;
+constexpr int BATTERY_PIN = 4;
+constexpr int RGB_RED_PIN = 25;
+constexpr int RGB_GREEN_PIN = 15;
+constexpr int RGB_BLUE_PIN = 16;
+constexpr bool RGB_ENABLED = false;
+constexpr int BUTTON_PIN = 40;
 constexpr int BUZZER_PIN = 18;       // Active buzzer; -1 disables output.
 constexpr int WARNING_LED_PIN = 7; // -1 disables output.
 
@@ -478,9 +490,20 @@ void setup() {
     Serial.println("ERROR: configure distinct sensor and warning GPIOs."); while (true) delay(1000);
   }
   pinMode(TRIG_PIN, OUTPUT); digitalWrite(TRIG_PIN, LOW); pinMode(ECHO_PIN, INPUT);
+  if (RGB_ENABLED) {
+    pinMode(RGB_RED_PIN, OUTPUT);
+    pinMode(RGB_GREEN_PIN, OUTPUT);
+    pinMode(RGB_BLUE_PIN, OUTPUT);
+  }
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
   if (BUZZER_PIN >= 0) { pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW); }
   if (WARNING_LED_PIN >= 0) { pinMode(WARNING_LED_PIN, OUTPUT); digitalWrite(WARNING_LED_PIN, LOW); }
   bootId = esp_random(); if (bootId == 0) bootId = 1;
+
+  tone(BUZZER_PIN, 10000,300);
+  tone(BUZZER_PIN, 15000,300);
+
   WiFi.mode(WIFI_AP); WiFi.setSleep(false);
   esp_now_peer_info_t broadcast = {};
   memcpy(broadcast.peer_addr, BROADCAST_MAC, 6); broadcast.channel = 0; broadcast.ifidx = WIFI_IF_AP;
