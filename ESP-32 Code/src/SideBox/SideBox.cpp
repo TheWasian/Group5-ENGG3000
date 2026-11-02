@@ -8,7 +8,17 @@ const uint8_t boxId = SET_BOX_ID;
 //WebServer server(80);
 
 void setup() {
-  delay(1000); // Wait for a second before starting the setup
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(RGB_RED_PIN, OUTPUT);
+  pinMode(RGB_GREEN_PIN, OUTPUT);
+  pinMode(RGB_BLUE_PIN, OUTPUT);
+  digitalWrite(RGB_RED_PIN, HIGH);
+  digitalWrite(RGB_GREEN_PIN, HIGH);
+  digitalWrite(RGB_BLUE_PIN, HIGH);
+
+  tone(BUZZER_PIN, 8000, 200);
+  tone(BUZZER_PIN, 15000, 200);
+
   // begin serial port
   Serial.begin(115200);
   delay(500);

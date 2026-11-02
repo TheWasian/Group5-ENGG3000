@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <CircularBuffer.h>
 #include "config.h"
 
 // Set the pin numbers for the ultrasonic sensor
@@ -13,10 +14,10 @@ const char *AP_PASSWORD = "PasswordWacker123456!";
 const char *AP_CHANNEL = "1";
 //constexpr uint8_t SENSOR_BURST_PACKET_SIZE = 10; // Number of sensor readings in a burst
 const uint8_t SENSOR_BURST_IDLE_TIME = 100; // Time between bursts in milliseconds
-
-const uint8_t SENSOR_BUFFER_SIZE = 10;
-float sensorData[SENSOR_BUFFER_SIZE][3]; // 2D array to hold sensor readings for each box
-uint8_t SensorBufferHeadIndex;
+CircularBuffer<uint32_t, 10> buffer1;
+CircularBuffer<uint32_t, 10> buffer2;
+CircularBuffer<uint32_t, 10> buffer3;
+uint8_t SensorBufferHeadIndex = 0;
 bool SendSensorDataFlag = false;
 
 bool BOX_ID1_connected = false;

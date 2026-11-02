@@ -2,6 +2,8 @@
 
 #include <Arduino.h> // Include dependencies needed for your types
 #include <esp_now.h>
+#include <CircularBuffer.h>
+#include "config.h"
 
 enum RequestType : uint8_t
 {
@@ -11,16 +13,18 @@ enum RequestType : uint8_t
 
 constexpr uint8_t SENSOR_BURST_PACKET_SIZE = 10;
 
+extern CircularBuffer<uint32_t, 10> buffer1;
+extern CircularBuffer<uint32_t, 10> buffer2;
+extern CircularBuffer<uint32_t, 10> buffer3;
+
 extern const char *AP_SSID;
 extern const char *AP_PASSWORD;
 extern const char *AP_CHANNEL;
 
 extern const uint8_t SENSOR_BURST_IDLE_TIME;
-
-extern const uint8_t SENSOR_BUFFER_SIZE;
-extern float sensorData[][3]; // 2D array to hold sensor readings for each box
-extern uint8_t SensorBufferHeadIndex;
 extern bool SendSensorDataFlag;
+
+extern float sensorData[][3]; // 2D array to hold sensor readings for each box
 extern void initEspNow();
 extern void initWiFi();
 extern void addPeerDevice(const uint8_t *mac_array, uint8_t boxId);

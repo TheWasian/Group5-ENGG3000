@@ -1,9 +1,10 @@
 #pragma once  // Tells the compiler to include this file only once
 // include/config.h
 #ifndef GROUP5_CONFIG_H_
-#define CONFIG_H_
+#define GROUP5_CONFIG_H_
 
 #include <Arduino.h>
+#include <CircularBuffer.h>
 
 extern const uint8_t TRIG_PIN;
 extern const uint8_t ECHO_PIN;
@@ -14,10 +15,15 @@ extern const char *AP_SSID;
 extern const char *AP_PASSWORD;
 extern int wifi_channel;
 
-extern const uint8_t SENSOR_BUFFER_SIZE;
-extern float sensorData[][3]; 
+extern CircularBuffer<uint32_t, 10> buffer1;
+extern CircularBuffer<uint32_t, 10> buffer2;
+extern CircularBuffer<uint32_t, 10> buffer3;
 extern uint8_t SensorBufferHeadIndex;
 extern bool SendSensorDataFlag;
+struct Point2D {
+    double x;
+    double y;
+};
 
 extern const uint8_t BOX_ID1_broadcastAddress[];
 extern const uint8_t BOX_ID2_broadcastAddress[];
