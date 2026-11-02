@@ -5,8 +5,13 @@
 namespace wam {
 constexpr uint32_t PACKET_MAGIC = 0x57414D35UL;
 constexpr uint8_t PROTOCOL_VERSION = 2;
-enum PacketType : uint8_t { ARM = 1, RANGES = 2, READY = 3, FIRE = 4 };
+// MEASURE is the ESP-NOW request used by the game AP. UDP ARM/READY/FIRE is
+// kept for the calibration logger, which still talks to nodes over UDP.
+enum PacketType : uint8_t { ARM = 1, RANGES = 2, READY = 3, FIRE = 4, MEASURE = 5 };
 constexpr uint16_t AP_UDP_PORT = 4210, NODE_UDP_PORT = 4211;
+// The AP's softAP channel. Nodes stay on it so ESP-NOW works even while they
+// are not associated with Wacker5.
+constexpr uint8_t ESPNOW_CHANNEL = 1;
 constexpr uint32_t ARM_LIFETIME_MS = 50;
 constexpr uint32_t REPLY_TIMEOUT_MS = 90;
 constexpr uint32_t QUIET_MS = 60;
@@ -55,6 +60,17 @@ struct TriggerGate {
     if (!armed || s != session || q != sequence) return false;
     armed = false;
     return now - armedMs <= ARM_LIFETIME_MS;
+  }
+};
+// ESP-NOW delivers in a few ms or not at all, so one MEASURE packet fires
+// immediately. Duplicates and older sequences of the same session are ignored.
+struct MeasureGate {
+  uint32_t session = 0, sequence = 0;
+  bool seen = false;
+  bool accept(uint32_t newSession, uint32_t newSequence) {
+    if (seen && session == newSession && static_cast<int32_t>(newSequence - sequence) <= 0) return false;
+    session = newSession; sequence = newSequence; seen = true;
+    return true;
   }
 };
 } // namespace wam

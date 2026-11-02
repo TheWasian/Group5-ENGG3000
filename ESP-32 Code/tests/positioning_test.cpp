@@ -99,5 +99,9 @@ int main() {
   assert(gate.arm(3,UINT32_MAX,UINT32_MAX-10));assert(gate.fire(3,UINT32_MAX,5));
   assert(gate.arm(3,0,6));assert(gate.fire(3,0,7)); // millis and sequence wrap.
   assert(!wam::deadlineReached(UINT32_MAX-5,10));assert(wam::deadlineReached(10,10));
+  wam::MeasureGate measure;
+  assert(measure.accept(7,1));assert(!measure.accept(7,1));assert(!measure.accept(7,0));
+  assert(measure.accept(7,2));assert(measure.accept(8,1)); // AP restart, new session.
+  assert(measure.accept(9,UINT32_MAX));assert(measure.accept(9,0)); // sequence wrap.
   printf("PASS: housing geometry (48 two/three-range fixes), %d grid points, noisy/partial/ambiguous/invalid fixes, all holes, CRC and trigger timing.\n",tested);
 }

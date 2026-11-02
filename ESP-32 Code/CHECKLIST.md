@@ -16,9 +16,9 @@ GPIO 7; set an optional output to `-1` if absent. These are the pins currently i
 your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
 
 1. Check the geometry below, select the actual board/port in Arduino IDE and
-   upload `Access_Point.ino` to the centre ESP32. Nodes already running the
-   current protocol-v2 sketches do not need reflashing for this integration.
-   Older protocol-v1 nodes must be updated using the node sketches above.
+   upload `Access_Point.ino` to the centre ESP32. **Reflash both nodes too**:
+   the game AP now talks to them over ESP-NOW, which older node sketches ignore.
+   The nodes still answer the calibration logger over UDP.
 2. Power all three boards. Connect the PC to **Wacker5**, password
    **PasswordWacker123456!**.
 3. Open **http://192.168.4.1/** (or `/cones`) for the live dashboard. It is served
@@ -242,15 +242,15 @@ The previous three-reading average has been replaced by:
    Invalid data clears range history.
 2. Position confirmation: a move over 14 cm must be followed by another fix
    within 8 cm of that new position. An isolated jump leaves the marker still.
-3. A grouped position mode replaces exponential averaging. The latest five
+3. A grouped position mode replaces exponential averaging. The latest three
    valid positions vote in 5 cm x/y cells (rounded to the nearest cell centre).
    The most frequent cell wins; ties favour the most recently observed cell.
    The actual position nearest the winning cell's centre represents that cell,
    with ties favouring its newest reading. With no repeated cell, use the latest
    position. No coordinates are averaged or snapped to an artificial point.
-   Two- and three-sensor fixes use the same filter. Votes expire after 1000 ms;
+   Two- and three-sensor fixes use the same filter. Votes expire after 500 ms;
    invalid fixes, track resets and confirmed large movements clear the history.
-   A five-sample window may delay smaller movements by several frames. Larger
+   A three-sample window may delay smaller movements by up to two frames. Larger
    windows increase that delay; cell boundaries can also cause mode switching.
    Nodes still report raw ranges, and the older standalone MVP sketch is unchanged.
 4. A display-only hold for at most 350 ms after a bad frame. Held fixes retain
@@ -265,9 +265,9 @@ Relevant editable constants in the AP sketch:
 | `RANGE_CONFIRM_TOLERANCE_M` | 0.10 | Agreement between changed ranges |
 | `POSITION_JUMP_LIMIT_M` | 0.14 | Position change requiring confirmation |
 | `POSITION_CONFIRM_RADIUS_M` | 0.08 | Agreement between changed fixes |
-| `POSITION_MODE_WINDOW` | 5 | Number of recent positions voting, from 1 to 9 |
+| `POSITION_MODE_WINDOW` | 3 | Number of recent positions voting, from 1 to 9 |
 | `POSITION_MODE_BIN_M` | 0.05 | Width of each x/y cell in metres |
-| `POSITION_MODE_HISTORY_MS` | 1000 | Maximum age of a position vote |
+| `POSITION_MODE_HISTORY_MS` | 500 | Maximum age of a position vote |
 | `PAIR_AGREEMENT_M` | 0.10 | Distance within which pair candidates agree |
 | `PAIR_PREVIOUS_RADIUS_M` | 0.25 | Maximum distance from recent track to resolve competing pairs |
 | `POSITION_HOLD_MS` | 350 | Maximum visual hold; never a fresh hit |
@@ -286,12 +286,22 @@ a stationary flat reflector at measured distances before testing a person.
 
 ## Timing, warning and API
 
-The AP measures locally, then requests each node in turn, with 60 ms quiet
-periods after measurements/replies/timeouts. Healthy frames take roughly
-0.2–0.3 s; Wi-Fi, no-echo timeouts and HTTP work affect this. Node protocol v2
-uses CRC32, source IP/port, random AP session IDs and matched sequences.
-An ARM/READY/FIRE exchange authorises one pulse within 50 ms; duplicate or
-expired triggers are ignored. Nodes reconnect without an indefinite wait.
+The AP measures locally, then asks each node in turn over **ESP-NOW** (raw
+Wi-Fi frames, no IP/UDP stack, typically a few ms). Each sensor gets a fixed
+`SLOT_MS` = 50 ms slot measured from its trigger, so a frame is ~150 ms
+(~6.7 Hz) whether or not echoes return. A node has `NODE_REPLY_TIMEOUT_MS` = 40 ms
+to answer. Raise `SLOT_MS` if ranges jump between sensors (cross-talk).
+`/api/position` reports the measured `frame_period_ms`; the serial `POS` line
+ends with it too.
+
+One `MEASURE` packet fires a node immediately (the old ARM/READY/FIRE round
+trips had to finish within 50 ms over UDP and often did not). Packets keep
+CRC32, the random AP session and matched sequences; nodes ignore repeated or
+older sequences. The AP broadcasts until a node answers, then unicasts to its
+learned MAC, and falls back to broadcast after three misses, so no MAC
+addresses need configuring. All boards use Wi-Fi channel `ESPNOW_CHANNEL` = 1
+(in `RangeProtocol.h`, keep the three copies identical). Nodes still join
+Wacker5 for the UDP calibration logger, but ESP-NOW works without that.
 
 Ranges expire after 500 ms and frames spanning over 300 ms are rejected.
 The local echo call can block for at most 27 ms; HTTP continues between slots.

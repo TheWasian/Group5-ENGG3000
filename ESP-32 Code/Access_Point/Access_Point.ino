@@ -3,8 +3,9 @@
   See ../CHECKLIST.md for geometry, upload steps and API details.
 */
 #include <WiFi.h>
-#include <WiFiUdp.h>
 #include <WebServer.h>
+#include <esp_now.h>
+#include <esp_wifi.h>
 #include <esp_system.h>
 #include "Positioning.h"
 #include "SensorMounting.h"
@@ -62,9 +63,9 @@ constexpr float RANGE_SPIKE_LIMIT_M = 0.16f;
 constexpr float RANGE_CONFIRM_TOLERANCE_M = 0.10f;
 constexpr float POSITION_JUMP_LIMIT_M = 0.14f;
 constexpr float POSITION_CONFIRM_RADIUS_M = 0.08f;
-constexpr uint8_t POSITION_MODE_WINDOW = 5; // Latest valid positions, from 1 to 9.
+constexpr uint8_t POSITION_MODE_WINDOW = 3; // Latest valid positions, from 1 to 9.
 constexpr float POSITION_MODE_BIN_M = 0.05f; // 5 cm cells for mode voting.
-constexpr uint32_t POSITION_MODE_HISTORY_MS = 1000; // Expire older votes.
+constexpr uint32_t POSITION_MODE_HISTORY_MS = 500; // Expire older votes.
 static_assert(POSITION_MODE_WINDOW >= 1 && POSITION_MODE_WINDOW <= wam::PositionMode::CAPACITY,
   "Position mode window must be between 1 and 9.");
 static_assert(POSITION_MODE_BIN_M > 0, "Position mode cell size must be positive.");
@@ -74,6 +75,14 @@ constexpr uint32_t MAX_FRAME_SPAN_MS = 300;
 constexpr float HOLE_HYSTERESIS_M = 0.05f;
 constexpr uint8_t STABLE_FRAMES = 2;
 constexpr uint32_t HIT_COOLDOWN_MS = 250;
+// Sensors fire one at a time; each gets a fixed slot measured from its trigger
+// so the previous ping has died away before the next fires. One frame is three
+// slots (150 ms, ~6.7 Hz). Raise SLOT_MS if ranges jump between sensors (cross-talk).
+constexpr uint32_t SLOT_MS = 50;
+constexpr uint32_t NODE_REPLY_TIMEOUT_MS = 40; // Node echo wait plus ESP-NOW delivery.
+constexpr uint8_t NODE_MISSES_BEFORE_BROADCAST = 3;
+static_assert(SLOT_MS * 1000 > wam::ECHO_TIMEOUT_US, "A slot must outlast the echo timeout.");
+static_assert(NODE_REPLY_TIMEOUT_MS <= SLOT_MS, "Node replies must arrive within their slot.");
 
 const char *AP_SSID = "Wacker5";
 const char *AP_PASSWORD = "PasswordWacker123456!";
@@ -104,7 +113,6 @@ const wam::Sensor SENSORS[3] = {
     SENSOR_FACE_SETBACK_M[2])
 };
 
-WiFiUDP udp;
 WebServer server(80);
 struct RangeSample { float raw = NAN, metres = NAN; uint32_t time = 0; bool seen = false; };
 RangeSample pending[3], ranges[3];
@@ -121,10 +129,20 @@ uint8_t candidateCount = 0;
 struct HitEvent { uint32_t id = 0, time = 0; int8_t hole = -1; float y = 0; };
 HitEvent hit;
 
-enum Phase { LOCAL, QUIET, WAIT_READY, WAIT_RANGE };
+enum Phase { LOCAL, QUIET, WAIT_RANGE };
 Phase phase = LOCAL;
 uint8_t activeNode = 0, nextNode = 1;
-uint32_t sequence = 0, deadline = 0;
+uint32_t sequence = 0, deadline = 0, slotStart = 0, framePeriodMs = 0;
+
+// ESP-NOW replies arrive in the WiFi task; keep the latest per node and handle
+// them in loop(). The arrival time lets a slow HTTP request not cause a false timeout.
+struct NodeReply { wam::RangePacket packet; uint8_t mac[6]; uint32_t arrivedMs; bool waiting; };
+portMUX_TYPE replyLock = portMUX_INITIALIZER_UNLOCKED;
+NodeReply replies[2] = {};
+const uint8_t BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+uint8_t nodeMac[2][6] = {};
+bool nodeMacKnown[2] = {};
+uint8_t nodeMisses[2] = {};
 
 bool rangeFresh(int i, uint32_t now) {
   return ranges[i].seen && isfinite(ranges[i].metres) && now - ranges[i].time <= RANGE_STALE_MS;
@@ -210,64 +228,82 @@ void finishFrame() {
     HUBER_LIMIT_M, ASSUMED_RANGE_NOISE_M, MAX_POSITION_UNCERTAINTY_M, PAIR_AGREEMENT_M, PAIR_PREVIOUS_RADIUS_M,
     ages, MAX_FRAME_SPAN_MS);
   position = tracker.update(rawPosition, now, trackingOptions);
+  framePeriodMs = frameId ? now - frameTime : 0;
   positionTime = tracker.acceptedMs; frameTime = now; ++frameId;
   updateWarning(now); updateGamePosition(now);
-  Serial.printf("POS,%.3f,%.3f,%d,%.3f,%u,%s\n", position.valid ? position.x : -1,
-    position.valid ? position.y : -1, warningActive, position.rms, position.count, position.reason);
+  Serial.printf("POS,%.3f,%.3f,%d,%.3f,%u,%s,%lu\n", position.valid ? position.x : -1,
+    position.valid ? position.y : -1, warningActive, position.rms, position.count, position.reason,
+    static_cast<unsigned long>(framePeriodMs));
 }
 
-void sendControl(uint8_t type) {
+#if ESP_IDF_VERSION_MAJOR >= 5
+void onEspNowReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
+  const uint8_t *mac = info->src_addr;
+#else
+void onEspNowReceive(const uint8_t *mac, const uint8_t *data, int len) {
+#endif
+  if (len != sizeof(wam::RangePacket)) return;
+  const uint8_t nodeId = data[offsetof(wam::RangePacket, nodeId)];
+  if (nodeId < 1 || nodeId > 2) return;
+  NodeReply &r = replies[nodeId - 1];
+  portENTER_CRITICAL(&replyLock);
+  memcpy(&r.packet, data, sizeof(r.packet)); memcpy(r.mac, mac, 6);
+  r.arrivedMs = millis(); r.waiting = true;
+  portEXIT_CRITICAL(&replyLock);
+}
+void rememberNodeMac(uint8_t node, const uint8_t *mac) {
+  if (nodeMacKnown[node] && memcmp(nodeMac[node], mac, 6) == 0) return;
+  if (!esp_now_is_peer_exist(mac)) {
+    esp_now_peer_info_t peer = {};
+    memcpy(peer.peer_addr, mac, 6); peer.channel = 0; peer.ifidx = WIFI_IF_AP; peer.encrypt = false;
+    if (esp_now_add_peer(&peer) != ESP_OK) return;
+  }
+  memcpy(nodeMac[node], mac, 6); nodeMacKnown[node] = true;
+}
+// Broadcast until a node has answered, then unicast (MAC-level ACK and retries).
+void sendMeasure() {
   wam::ControlPacket p = {};
-  p.magic = wam::PACKET_MAGIC; p.version = wam::PROTOCOL_VERSION; p.type = type;
+  p.magic = wam::PACKET_MAGIC; p.version = wam::PROTOCOL_VERSION; p.type = wam::MEASURE;
   p.nodeId = activeNode; p.session = bootId; p.sequence = sequence; p.crc = wam::packetCrc(p);
-  udp.beginPacket(NODE_IPS[activeNode - 1], wam::NODE_UDP_PORT);
-  udp.write(reinterpret_cast<const uint8_t *>(&p), sizeof(p)); udp.endPacket();
+  const uint8_t node = activeNode - 1;
+  esp_now_send(nodeMacKnown[node] ? nodeMac[node] : BROADCAST_MAC,
+    reinterpret_cast<const uint8_t *>(&p), sizeof(p));
+}
+bool takeReply() {
+  NodeReply r;
+  portENTER_CRITICAL(&replyLock);
+  r = replies[activeNode - 1]; replies[activeNode - 1].waiting = false;
+  portEXIT_CRITICAL(&replyLock);
+  const wam::RangePacket &p = r.packet;
+  if (!r.waiting || wam::deadlineReached(r.arrivedMs, deadline + 1)) return false;
+  if (p.magic != wam::PACKET_MAGIC || p.version != wam::PROTOCOL_VERSION || p.type != wam::RANGES ||
+      p.nodeId != activeNode || p.session != bootId || p.sequence != sequence ||
+      p.validMask > 1 || p.reserved != 0 || p.crc != wam::packetCrc(p)) return false;
+  storePending(activeNode == 1 ? 0 : 2, p.validMask ? p.distanceMm / 1000.0f : NAN);
+  rememberNodeMac(activeNode - 1, r.mac); nodeMisses[activeNode - 1] = 0;
+  nodeOnline[activeNode - 1] = true; nodeLastSeen[activeNode - 1] = millis();
+  return true;
 }
 void beginQuiet(uint8_t followingNode) {
-  nextNode = followingNode; deadline = millis() + wam::QUIET_MS; phase = QUIET;
-}
-bool receiveReply() {
-  const int size = udp.parsePacket();
-  if (size <= 0) return false;
-  const bool sourceOK = udp.remoteIP() == NODE_IPS[activeNode - 1] && udp.remotePort() == wam::NODE_UDP_PORT;
-  if (phase == WAIT_READY && size == sizeof(wam::ControlPacket) && sourceOK) {
-    wam::ControlPacket p = {};
-    const int n = udp.read(reinterpret_cast<uint8_t *>(&p), sizeof(p));
-    if (n == sizeof(p) && p.magic == wam::PACKET_MAGIC && p.version == wam::PROTOCOL_VERSION &&
-        p.type == wam::READY && p.nodeId == activeNode && p.session == bootId &&
-        p.sequence == sequence && p.reserved == 0 && p.crc == wam::packetCrc(p)) {
-      sendControl(wam::FIRE); deadline = millis() + wam::REPLY_TIMEOUT_MS; phase = WAIT_RANGE;
-    }
-  } else if (phase == WAIT_RANGE && size == sizeof(wam::RangePacket) && sourceOK) {
-    wam::RangePacket p = {};
-    const int n = udp.read(reinterpret_cast<uint8_t *>(&p), sizeof(p));
-    if (n == sizeof(p) && p.magic == wam::PACKET_MAGIC && p.version == wam::PROTOCOL_VERSION &&
-        p.type == wam::RANGES && p.nodeId == activeNode && p.session == bootId &&
-        p.sequence == sequence && p.validMask <= 1 && p.reserved == 0 && p.crc == wam::packetCrc(p)) {
-      storePending(activeNode == 1 ? 0 : 2, p.validMask ? p.distanceMm / 1000.0f : NAN);
-      nodeOnline[activeNode - 1] = true; nodeLastSeen[activeNode - 1] = millis();
-      return true;
-    }
-  } else { while (udp.available()) udp.read(); }
-  return false;
+  nextNode = followingNode; deadline = slotStart + SLOT_MS; phase = QUIET;
 }
 void runMeasurementStateMachine() {
   const uint32_t now = millis();
   switch (phase) {
     case LOCAL:
-      storePending(1, readUltrasonicMetres()); beginQuiet(1); break;
+      slotStart = now; storePending(1, readUltrasonicMetres()); beginQuiet(1); break;
     case QUIET:
       if (!wam::deadlineReached(now, deadline)) break;
       if (nextNode == 0) { phase = LOCAL; break; }
-      activeNode = nextNode; ++sequence; sendControl(wam::ARM);
-      deadline = millis() + wam::REPLY_TIMEOUT_MS; phase = WAIT_READY; break;
-    case WAIT_READY:
+      activeNode = nextNode; ++sequence; slotStart = now;
+      portENTER_CRITICAL(&replyLock); replies[activeNode - 1].waiting = false; portEXIT_CRITICAL(&replyLock);
+      sendMeasure(); deadline = slotStart + NODE_REPLY_TIMEOUT_MS; phase = WAIT_RANGE; break;
     case WAIT_RANGE:
-      // Check timeout before consuming buffered replies; late packets cannot
-      // extend a slot or introduce old ranges into a completed frame.
-      if (wam::deadlineReached(now, deadline)) {
+      if (!takeReply()) {
+        if (!wam::deadlineReached(now, deadline)) break;
         storePending(activeNode == 1 ? 0 : 2, NAN); nodeOnline[activeNode - 1] = false;
-      } else if (!receiveReply()) break;
+        if (++nodeMisses[activeNode - 1] >= NODE_MISSES_BEFORE_BROADCAST) nodeMacKnown[activeNode - 1] = false;
+      }
       if (activeNode == 2) finishFrame();
       beginQuiet(activeNode == 1 ? 2 : 0); break;
   }
@@ -331,7 +367,8 @@ void handlePositionJson() {
   const uint32_t now = millis();
   String s = positionJson(now); s.remove(s.length() - 1);
   s += ",\"protocol\":\"wam-position-v2\",\"boot_id\":" + String(bootId);
-  s += ",\"frame_id\":" + String(frameId) + rangeFields(now) + "}";
+  s += ",\"frame_id\":" + String(frameId) + ",\"frame_period_ms\":" + String(framePeriodMs);
+  s += rangeFields(now) + "}";
   addCorsHeaders(); server.send(200, "application/json", s);
 }
 String gameAreaJson() {
@@ -404,9 +441,13 @@ void setup() {
   if (BUZZER_PIN >= 0) { pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW); }
   if (WARNING_LED_PIN >= 0) { pinMode(WARNING_LED_PIN, OUTPUT); digitalWrite(WARNING_LED_PIN, LOW); }
   bootId = esp_random(); if (bootId == 0) bootId = 1;
-  WiFi.mode(WIFI_AP);
-  if (!WiFi.softAPConfig(AP_IP, AP_IP, SUBNET) || !WiFi.softAP(AP_SSID, AP_PASSWORD) || !udp.begin(wam::AP_UDP_PORT)) {
-    Serial.println("ERROR: failed to start AP/UDP."); while (true) delay(1000);
+  WiFi.mode(WIFI_AP); WiFi.setSleep(false);
+  esp_now_peer_info_t broadcast = {};
+  memcpy(broadcast.peer_addr, BROADCAST_MAC, 6); broadcast.channel = 0; broadcast.ifidx = WIFI_IF_AP;
+  if (!WiFi.softAPConfig(AP_IP, AP_IP, SUBNET) || !WiFi.softAP(AP_SSID, AP_PASSWORD, wam::ESPNOW_CHANNEL) ||
+      esp_now_init() != ESP_OK || esp_now_register_recv_cb(onEspNowReceive) != ESP_OK ||
+      esp_now_add_peer(&broadcast) != ESP_OK) {
+    Serial.println("ERROR: failed to start AP/ESP-NOW."); while (true) delay(1000);
   }
   server.on("/", HTTP_GET, [](){ server.send_P(200, "text/html", DASHBOARD_HTML); });
   server.on("/cones", HTTP_GET, [](){ server.send_P(200, "text/html", DASHBOARD_HTML); });
