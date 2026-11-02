@@ -41,12 +41,12 @@ The older two-sensor `MVP.ino` and its event API remain supported by the game UI
 Near the top of `Access_Point/Access_Point.ino`:
 
 ```cpp
-constexpr float SENSOR_GAP_LEFT_M = 0.35f;
-constexpr float SENSOR_GAP_RIGHT_M = 0.35f;
+constexpr float SENSOR_GAP_LEFT_M = 0.30f;
+constexpr float SENSOR_GAP_RIGHT_M = 0.30f;
 constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
 ```
 
-Values are metres. These preserve your updated 35 cm left gap, 35 cm right gap
+Values are metres. These preserve the measured 30 cm left gap, 30 cm right gap
 and 30 cm screen distance. Measure between matching centre reference points,
 not breadboard edges. Use metal sensor faces, or horn-mouth centres with the
 setback correction below; do not mix references.
@@ -55,14 +55,14 @@ display get their geometry from these settings.
 
 Coordinates use the player's left/right while facing the screen. `x=0` is the
 left edge of the physical 1.5 m-wide area; `y=0` is the screen and +y points
-towards the player. The reference points are at `(0.40,0.30)`, `(0.75,0.30)` and
-`(1.10,0.30)` m. The AP faces straight along +y. Side sensors aim at
-`AIM_X_M=0.75`, `AIM_Y_M=1.30`, giving about **19.3° inward on both sides**.
+towards the player. The reference points are at `(0.45,0.30)`, `(0.75,0.30)` and
+`(1.05,0.30)` m. The AP faces straight along +y. Side sensors aim at
+`AIM_X_M=0.75`, `AIM_Y_M=1.35` (middle of the holes), giving about **15.9° inward on both sides**.
 Physically aim them to match, or set measured
 angles using `SENSOR_BEARING_TRIM_DEG` (added to the nominal bearings).
 Positive bearing turns towards the player's right.
 
-`CONE_HALF_ANGLE_DEG=15` is an assumed beam half-angle, not a measured bearing.
+`CONE_HALF_ANGLE_DEG=25` is an assumed beam half-angle, not a measured bearing.
 Changing it does not widen a real beam. `MAX_RANGE_M=4.50` is slant range from
 the sensor, not the depth of the game. The nominal beam and 50 ms measurement
 cycle are described in the [RCWL-1601 specifications](https://www.adafruit.com/product/4007).
@@ -275,6 +275,13 @@ Relevant editable constants in the AP sketch:
 | `ASSUMED_RANGE_NOISE_M` | 0.025 | Range noise floor for geometry checks |
 | `MAX_POSITION_UNCERTAINTY_M` | 0.20 | Maximum model uncertainty |
 | `SENSOR_SCALE`, `SENSOR_OFFSET_M` | 1, 0 | Per-sensor distance calibration |
+| `RANGE_MARGIN_M` | 0.20 | Each sensor ignores echoes beyond the play area's farthest corner plus this (large-room noise) |
+| `MISSED_ECHO_HOLD_MS` | 200 | One missed echo reuses the previous range (about one frame) |
+
+`/api/position` also reports health counters for long sessions: `uptime_s`,
+`free_heap`, `min_free_heap`, `wifi_clients`, `node_timeouts`, and per sensor
+`echo_rate` (share of the last 32 frames with an echo) and `range_held`. If
+tracking degrades over time, compare these at start-up and when it has degraded.
 
 The dashboard shows accepted range arcs, rejected raw echoes, a hollow raw
 position and a solid filtered position. Contributing echoes are labelled

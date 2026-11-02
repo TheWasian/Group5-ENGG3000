@@ -22,7 +22,11 @@ constexpr int WARNING_LED_PIN = 7; // -1 disables output.
 
 constexpr float PLAY_AREA_WIDTH_M = 1.50f;
 constexpr float PLAY_AREA_DEPTH_M = 1.40f;
-constexpr float DEAD_ZONE_M = 0.60f; // y=0 is the screen; play ends at y=2 m.
+// Measured room layout (sensors 30 cm apart, 68 cm high, side boxes angled in):
+// sensor line tape 10 cm in front of the boxes, 10 cm hatched dead-zone strip,
+// play area ends 1.5 m past the sensor line. Boxes sit at y = 0.30 m, so the
+// dead zone ends at y = 0.50 m and play ends at y = 1.90 m.
+constexpr float DEAD_ZONE_M = 0.50f; // Buzzer zone: within 20 cm of the boxes.
 constexpr float SENSOR_GAP_LEFT_M = 0.30f;
 constexpr float SENSOR_GAP_RIGHT_M = 0.30f;
 constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
@@ -40,15 +44,25 @@ static_assert(SENSOR_FACE_SETBACK_M[0] >= 0 && SENSOR_FACE_SETBACK_M[1] >= 0 &&
 // y is from the screen. Change these independently of sensor spacing.
 constexpr float GAME_AREA_X_MIN_M = AP_X_M - 0.30f;
 constexpr float GAME_AREA_X_MAX_M = AP_X_M + 0.30f;
-constexpr float GAME_AREA_START_Y_M = 1.00f;
+// Holes start 50 cm in front of the boxes: closer than that, the narrow beams
+// cannot all see the player, so the front row would keep dropping out.
+constexpr float GAME_AREA_START_Y_M = 0.80f;
 constexpr float GAME_AREA_END_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M;
 // Aim both side sensors at this point. Physically rotate them to match.
 constexpr float AIM_X_M = AP_X_M;
-constexpr float AIM_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M / 2;
+constexpr float AIM_Y_M = (GAME_AREA_START_Y_M + GAME_AREA_END_Y_M) / 2; // Middle of the holes.
 // Estimated beam half-width, NOT an angle measured by the sensor or CAD flare.
-constexpr float CONE_HALF_ANGLE_DEG = 15.0f;
+// 25 deg keeps every hole inside at least two beams; a torso at close range
+// echoes well off-axis. Lower it if far-off reflections are accepted.
+constexpr float CONE_HALF_ANGLE_DEG = 25.0f;
 constexpr float MIN_RANGE_M = 0.02f;
 constexpr float MAX_RANGE_M = 4.50f; // Slant range, not playing-area depth.
+// Large rooms: each sensor ignores echoes farther than the play area's farthest
+// corner plus this margin (walls, passers-by, other people's reflections).
+constexpr float RANGE_MARGIN_M = 0.20f;
+// A sensor that misses one echo reuses its previous range for at most this long
+// (about one frame). The solver's age and frame-span checks still apply.
+constexpr uint32_t MISSED_ECHO_HOLD_MS = 200;
 constexpr float SENSOR_SCALE[3] = {1, 1, 1};
 constexpr float SENSOR_OFFSET_M[3] = {0, 0, 0};
 constexpr float MAX_FIT_RMS_M = 0.10f;
@@ -98,24 +112,34 @@ static_assert(GAME_AREA_X_MIN_M >= 0 && GAME_AREA_X_MAX_M <= PLAY_AREA_WIDTH_M &
 float aimBearing(float x) {
   return atan2f(AIM_X_M - x, AIM_Y_M - SENSOR_DISTANCE_FROM_SCREEN_M) * 180 / wam::PI_F;
 }
+wam::Sensor limitToPlayArea(wam::Sensor s) {
+  float farthest = 0;
+  for (float x : {0.0f, PLAY_AREA_WIDTH_M})
+    for (float y : {DEAD_ZONE_M, DEAD_ZONE_M + PLAY_AREA_DEPTH_M}) farthest = fmaxf(farthest, hypotf(x - s.x, y - s.y));
+  s.maxRange = fminf(MAX_RANGE_M, farthest + RANGE_MARGIN_M);
+  return s;
+}
 // Order throughout the API: Node 1 (player's left), AP (centre), Node 2.
 const wam::Sensor SENSORS[3] = {
-  wam::sensorBehindReference(
+  limitToPlayArea(wam::sensorBehindReference(
     {AP_X_M - SENSOR_GAP_LEFT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
      aimBearing(AP_X_M - SENSOR_GAP_LEFT_M) + SENSOR_BEARING_TRIM_DEG[0], CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
-    SENSOR_FACE_SETBACK_M[0]),
-  wam::sensorBehindReference(
+    SENSOR_FACE_SETBACK_M[0])),
+  limitToPlayArea(wam::sensorBehindReference(
     {AP_X_M, SENSOR_DISTANCE_FROM_SCREEN_M, SENSOR_BEARING_TRIM_DEG[1], CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
-    SENSOR_FACE_SETBACK_M[1]),
-  wam::sensorBehindReference(
+    SENSOR_FACE_SETBACK_M[1])),
+  limitToPlayArea(wam::sensorBehindReference(
     {AP_X_M + SENSOR_GAP_RIGHT_M, SENSOR_DISTANCE_FROM_SCREEN_M,
      aimBearing(AP_X_M + SENSOR_GAP_RIGHT_M) + SENSOR_BEARING_TRIM_DEG[2], CONE_HALF_ANGLE_DEG, MAX_RANGE_M},
-    SENSOR_FACE_SETBACK_M[2])
+    SENSOR_FACE_SETBACK_M[2]))
 };
 
 WebServer server(80);
 struct RangeSample { float raw = NAN, metres = NAN; uint32_t time = 0; bool seen = false; };
 RangeSample pending[3], ranges[3];
+bool rangeHeld[3] = {};
+uint32_t echoHistory[3] = {}; // One bit per frame, newest in bit 0.
+uint32_t nodeTimeouts[2] = {};
 wam::RangeGate rangeGates[3];
 wam::PositionTracker tracker;
 wam::TrackingOptions trackingOptions;
@@ -164,7 +188,7 @@ float readUltrasonicMetres() {
 }
 void storePending(int i, float raw) {
   float r = raw * SENSOR_SCALE[i] + SENSOR_OFFSET_M[i];
-  pending[i].raw = isfinite(r) && r >= MIN_RANGE_M && r <= MAX_RANGE_M ? r : NAN;
+  pending[i].raw = isfinite(r) && r >= MIN_RANGE_M && r <= SENSORS[i].maxRange ? r : NAN;
   pending[i].time = millis(); pending[i].seen = true;
 }
 int8_t holeForPosition(float x, float y, int8_t current) {
@@ -215,11 +239,18 @@ void finishFrame() {
   float input[3];
   uint32_t ages[3];
   for (int i = 0; i < 3; ++i) {
-    ranges[i] = pending[i];
+    const bool echo = pending[i].seen && isfinite(pending[i].raw);
+    echoHistory[i] = echoHistory[i] << 1 | echo;
+    // Bridge one missed echo with the previous range; its original timestamp
+    // keeps it subject to the age checks, so it cannot be reused twice.
+    rangeHeld[i] = !echo && isfinite(ranges[i].metres) && now - ranges[i].time <= MISSED_ECHO_HOLD_MS;
+    if (!rangeHeld[i]) {
+      ranges[i] = pending[i];
+      const float raw = ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS ? ranges[i].raw : NAN;
+      ranges[i].metres = rangeGates[i].update(raw, now, RANGE_SPIKE_LIMIT_M,
+        RANGE_CONFIRM_TOLERANCE_M, RANGE_STALE_MS);
+    }
     ages[i] = now - ranges[i].time;
-    const float raw = ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS ? ranges[i].raw : NAN;
-    ranges[i].metres = rangeGates[i].update(raw, now, RANGE_SPIKE_LIMIT_M,
-      RANGE_CONFIRM_TOLERANCE_M, RANGE_STALE_MS);
     input[i] = rangeFresh(i, now) ? ranges[i].metres : NAN;
   }
   const wam::Fix *previous = tracker.accepted.valid && now - tracker.acceptedMs <= POSITION_HOLD_MS
@@ -302,6 +333,7 @@ void runMeasurementStateMachine() {
       if (!takeReply()) {
         if (!wam::deadlineReached(now, deadline)) break;
         storePending(activeNode == 1 ? 0 : 2, NAN); nodeOnline[activeNode - 1] = false;
+        ++nodeTimeouts[activeNode - 1];
         if (++nodeMisses[activeNode - 1] >= NODE_MISSES_BEFORE_BROADCAST) nodeMacKnown[activeNode - 1] = false;
       }
       if (activeNode == 2) finishFrame();
@@ -359,6 +391,10 @@ String rangeFields(uint32_t now) {
     s += ",\"raw_m\":" + number(ranges[i].seen && now - ranges[i].time <= RANGE_STALE_MS ? ranges[i].raw : NAN);
     s += ",\"range_m\":" + number(fresh ? ranges[i].metres : NAN);
     s += ",\"age_ms\":" + (ranges[i].seen ? String(now - ranges[i].time) : String("null"));
+    s += ",\"range_held\":" + jsonBool(rangeHeld[i]);
+    const uint32_t frames = frameId < 32 ? frameId : 32;
+    const uint32_t recent = frames == 32 ? echoHistory[i] : echoHistory[i] & ((1UL << frames) - 1);
+    s += ",\"echo_rate\":" + number(frames ? __builtin_popcount(recent) / float(frames) : NAN, 2);
     s += ",\"player_in_cone\":" + jsonBool(agrees) + "}";
   }
   return s + "]";
@@ -368,6 +404,10 @@ void handlePositionJson() {
   String s = positionJson(now); s.remove(s.length() - 1);
   s += ",\"protocol\":\"wam-position-v2\",\"boot_id\":" + String(bootId);
   s += ",\"frame_id\":" + String(frameId) + ",\"frame_period_ms\":" + String(framePeriodMs);
+  // Health counters for long sessions: compare these early and after an hour.
+  s += ",\"uptime_s\":" + String(now / 1000) + ",\"free_heap\":" + String(ESP.getFreeHeap());
+  s += ",\"min_free_heap\":" + String(ESP.getMinFreeHeap()) + ",\"wifi_clients\":" + String(WiFi.softAPgetStationNum());
+  s += ",\"node_timeouts\":[" + String(nodeTimeouts[0]) + "," + String(nodeTimeouts[1]) + "]";
   s += rangeFields(now) + "}";
   addCorsHeaders(); server.send(200, "application/json", s);
 }
@@ -444,7 +484,7 @@ void setup() {
   WiFi.mode(WIFI_AP); WiFi.setSleep(false);
   esp_now_peer_info_t broadcast = {};
   memcpy(broadcast.peer_addr, BROADCAST_MAC, 6); broadcast.channel = 0; broadcast.ifidx = WIFI_IF_AP;
-  if (!WiFi.softAPConfig(AP_IP, AP_IP, SUBNET) || !WiFi.softAP(AP_SSID, AP_PASSWORD, wam::ESPNOW_CHANNEL) ||
+  if (!WiFi.softAPConfig(AP_IP, AP_IP, SUBNET) || !WiFi.softAP(AP_SSID, AP_PASSWORD, wam::ESPNOW_CHANNEL, 0, 8) ||
       esp_now_init() != ESP_OK || esp_now_register_recv_cb(onEspNowReceive) != ESP_OK ||
       esp_now_add_peer(&broadcast) != ESP_OK) {
     Serial.println("ERROR: failed to start AP/ESP-NOW."); while (true) delay(1000);
