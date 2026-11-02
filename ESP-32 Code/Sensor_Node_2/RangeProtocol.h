@@ -8,6 +8,7 @@ constexpr uint8_t PROTOCOL_VERSION = 2;
 // MEASURE is the ESP-NOW request used by the game AP. UDP ARM/READY/FIRE is
 // kept for the calibration logger, which still talks to nodes over UDP.
 enum PacketType : uint8_t { ARM = 1, RANGES = 2, READY = 3, FIRE = 4, MEASURE = 5 };
+enum LedState : uint8_t { LED_IDLE = 0, LED_GAME = 1 };
 constexpr uint16_t AP_UDP_PORT = 4210, NODE_UDP_PORT = 4211;
 // The AP's softAP channel. Nodes stay on it so ESP-NOW works even while they
 // are not associated with Wacker5.
@@ -25,7 +26,7 @@ struct __attribute__((packed)) RangePacket {
   uint32_t magic;
   uint8_t version, type, nodeId, validMask;
   uint32_t session, sequence;
-  uint16_t distanceMm, reserved;
+  uint16_t distanceMm, batteryMv;
   uint32_t crc;
 };
 static_assert(sizeof(ControlPacket) == 20, "Control packet layout changed");

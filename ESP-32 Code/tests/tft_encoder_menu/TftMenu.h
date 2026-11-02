@@ -143,6 +143,7 @@ static void IRAM_ATTR _tmEncoderISR() {
 class TftMenu {
 public:
   typedef void (*ChangeCallback)(const MenuItem& item);
+  typedef void (*ButtonCallback)();
 
   TftMenu(Adafruit_GFX& gfx, uint8_t pinA, uint8_t pinB, uint8_t pinButton)
     : _gfx(gfx), _pinA(pinA), _pinB(pinB), _pinBtn(pinButton) {}
@@ -167,21 +168,26 @@ public:
   }
 
   // Call every loop().
-  void update() {
+  bool update() {
     int delta = readEncoder();
+    bool activity = delta != 0;
     if (delta != 0) {
       if (_editing) adjustValue(delta);
       else          moveSelection(delta);
     }
-    switch (readButton()) {
+    const ButtonEvent button = readButton();
+    activity = activity || button != BTN_NONE;
+    switch (button) {
       case BTN_SHORT: selectItem(); break;
       case BTN_LONG:  goBack();     break;
       default: break;
     }
+    return activity;
   }
 
   // Optional: get notified whenever a TOGGLE or VALUE item changes.
   void onChange(ChangeCallback cb) { _onChange = cb; }
+  void onButtonPress(ButtonCallback cb) { _onButton = cb; }
 
   // Redraw the whole menu (e.g. after you drew something else on the screen).
   void redraw() {
@@ -246,6 +252,7 @@ private:
   unsigned long _lastChange = 0, _pressedAt = 0;
 
   ChangeCallback _onChange = nullptr;
+  ButtonCallback _onButton = nullptr;
 
   // ----- Input -----------------------------------------------------------
   int readEncoder() {
@@ -268,6 +275,7 @@ private:
       if (_stable == LOW) {            // pressed
         _pressedAt = now;
         _longFired = false;
+        if (_onButton) _onButton();
       } else if (!_longFired) {        // released after a short press
         return BTN_SHORT;
       }

@@ -9,6 +9,11 @@
 // Set these to this board's actual wiring before uploading.
 constexpr int TRIG_PIN = 10;
 constexpr int ECHO_PIN = 3;
+constexpr int BATTERY_PIN = 4;
+constexpr int RGB_RED_PIN = 25;
+constexpr int RGB_GREEN_PIN = 15;
+constexpr int RGB_BLUE_PIN = 16;
+constexpr int LOW_BATTERY_PERCENT = 20;
 constexpr uint8_t NODE_ID = 1;
 const char *AP_SSID = "Wacker5";
 const char *AP_PASSWORD = "PasswordWacker123456!";
@@ -26,6 +31,21 @@ portMUX_TYPE requestLock = portMUX_INITIALIZER_UNLOCKED;
 wam::ControlPacket espNowRequest;
 uint8_t espNowSender[6];
 volatile bool espNowWaiting = false;
+
+int batteryPercent(uint16_t millivolts) {
+  return static_cast<int>(constrain(
+    (millivolts / 1000.0f - 1.0f) / (1.4f - 1.0f), 0.0f, 1.0f) * 100.0f + 0.5f);
+}
+void setNodeLed(uint8_t state) {
+  const bool lowBattery = batteryPercent(analogReadMilliVolts(BATTERY_PIN)) <= LOW_BATTERY_PERCENT;
+  if (lowBattery) {
+    analogWrite(RGB_RED_PIN, 255); analogWrite(RGB_GREEN_PIN, 0); analogWrite(RGB_BLUE_PIN, 0);
+  } else if (state == wam::LED_GAME) {
+    analogWrite(RGB_RED_PIN, 0); analogWrite(RGB_GREEN_PIN, 255); analogWrite(RGB_BLUE_PIN, 0);
+  } else {
+    analogWrite(RGB_RED_PIN, 0); analogWrite(RGB_GREEN_PIN, 0); analogWrite(RGB_BLUE_PIN, 255);
+  }
+}
 
 float readUltrasonicMetres() {
   digitalWrite(TRIG_PIN, LOW); delayMicroseconds(3);
@@ -60,6 +80,8 @@ wam::RangePacket measure(const wam::ControlPacket &request) {
   wam::RangePacket p = {};
   p.magic = wam::PACKET_MAGIC; p.version = wam::PROTOCOL_VERSION;
   p.type = wam::RANGES; p.nodeId = NODE_ID; p.session = request.session; p.sequence = request.sequence;
+  setNodeLed(request.reserved);
+  p.batteryMv = static_cast<uint16_t>(analogReadMilliVolts(BATTERY_PIN));
   if (isfinite(range)) { p.validMask = 1; p.distanceMm = static_cast<uint16_t>(lroundf(range * 1000)); }
   p.crc = wam::packetCrc(p);
   Serial.printf("RANGE,%lu,%.3f\n", static_cast<unsigned long>(p.sequence), range);
@@ -67,7 +89,7 @@ wam::RangePacket measure(const wam::ControlPacket &request) {
 }
 bool validRequest(const wam::ControlPacket &p) {
   return p.magic == wam::PACKET_MAGIC && p.version == wam::PROTOCOL_VERSION &&
-    p.nodeId == NODE_ID && p.reserved == 0 && p.crc == wam::packetCrc(p);
+    p.nodeId == NODE_ID && p.crc == wam::packetCrc(p);
 }
 
 // ------------------------ UDP (calibration logger) -------------------
@@ -132,6 +154,9 @@ void setup() {
     while (true) delay(1000);
   }
   pinMode(TRIG_PIN, OUTPUT); digitalWrite(TRIG_PIN, LOW); pinMode(ECHO_PIN, INPUT);
+  analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
+  pinMode(RGB_RED_PIN, OUTPUT); pinMode(RGB_GREEN_PIN, OUTPUT); pinMode(RGB_BLUE_PIN, OUTPUT);
+  setNodeLed(wam::LED_IDLE);
   WiFi.mode(WIFI_STA); WiFi.setSleep(false);
   esp_wifi_set_channel(wam::ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
   if (!WiFi.config(LOCAL_IP, AP_IP, SUBNET)) {

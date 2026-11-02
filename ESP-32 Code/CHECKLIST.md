@@ -11,7 +11,7 @@ firmware. The old separate `Access_Point_Cones` program has been retired.
 | Player's left | `Sensor_Node_1/Sensor_Node_1.ino` | 192.168.4.101 | 10 / 3 |
 | Player's right | `Sensor_Node_2/Sensor_Node_2.ino` | 192.168.4.102 | 10 / 3 |
 
-Each board has one ultrasonic sensor. The AP keeps buzzer GPIO 18 and warning LED
+Each board has one ultrasonic sensor. The AP keeps buzzer GPIO 17 and warning LED
 GPIO 7; set an optional output to `-1` if absent. These are the pins currently in
 your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
 

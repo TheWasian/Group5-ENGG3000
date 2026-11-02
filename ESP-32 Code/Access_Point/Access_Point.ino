@@ -7,6 +7,11 @@
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <esp_system.h>
+#include <Preferences.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
+#include <SPI.h>
+#include "../tests/tft_encoder_menu/TftMenu.h"
 #include "Positioning.h"
 #include "SensorMounting.h"
 #include "RangeProtocol.h"
@@ -21,16 +26,27 @@ constexpr int TFT_MISO = -1;
 constexpr int TFT_CS = -1;
 constexpr int TFT_DC = 14;
 constexpr int TFT_RST = 21;
+constexpr int ENCODER_A = 42;
+constexpr int ENCODER_B = 1;
 constexpr int TRIG_PIN = 10;
 constexpr int ECHO_PIN = 3;
 constexpr int BATTERY_PIN = 4;
 constexpr int RGB_RED_PIN = 25;
 constexpr int RGB_GREEN_PIN = 15;
 constexpr int RGB_BLUE_PIN = 16;
-constexpr bool RGB_ENABLED = false;
+constexpr bool RGB_ENABLED = true;
 constexpr int BUTTON_PIN = 40;
-constexpr int BUZZER_PIN = 18;       // Active buzzer; -1 disables output.
+constexpr int BUZZER_PIN = 17;       // Active buzzer; -1 disables output.
 constexpr int WARNING_LED_PIN = 7; // -1 disables output.
+constexpr bool PROXIMITY_WARNING_OUTPUT_ENABLED = false;
+constexpr float BATTERY_EMPTY_VOLTAGE = 1.0f;
+constexpr float BATTERY_FULL_VOLTAGE = 1.4f;
+constexpr int LOW_BATTERY_PERCENT = 20;
+bool gameStarted = false;
+constexpr uint16_t SETTINGS_VERSION = 1;
+
+Adafruit_ST7735 tft(TFT_CS, TFT_DC, TFT_RST);
+TftMenu menu(tft, ENCODER_A, ENCODER_B, BUTTON_PIN);
 
 constexpr float PLAY_AREA_WIDTH_M = 1.50f;
 constexpr float PLAY_AREA_DEPTH_M = 1.40f;
@@ -157,9 +173,16 @@ wam::PositionTracker tracker;
 wam::TrackingOptions trackingOptions;
 bool nodeOnline[2] = {};
 uint32_t nodeLastSeen[2] = {};
+uint16_t nodeBatteryMv[2] = {};
 wam::Fix position, rawPosition;
 uint32_t positionTime = 0, frameTime = 0, frameId = 0, bootId = 0;
 bool warningActive = false;
+bool menuVisible = true;
+bool idleStatusDrawn = false;
+uint32_t lastMenuActivity = 0, lastStatusDraw = 0;
+uint8_t displayedWifiClients = 255;
+int displayedBatteryPercent[3] = {-1, -1, -1};
+bool displayedNodeOnline[2] = {};
 int8_t stableHole = -1, candidateHole = -1;
 uint8_t candidateCount = 0;
 struct HitEvent { uint32_t id = 0, time = 0; int8_t hole = -1; float y = 0; };
@@ -179,6 +202,245 @@ const uint8_t BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t nodeMac[2][6] = {};
 bool nodeMacKnown[2] = {};
 uint8_t nodeMisses[2] = {};
+
+int settingWarningOutput = 1;
+int settingBuzzerOutput = 1;
+int settingLedOutput = 1;
+Preferences settingsStore;
+
+void saveSettings() {
+  settingsStore.putBool("warning", settingWarningOutput != 0);
+  settingsStore.putBool("buzzer", settingBuzzerOutput != 0);
+  settingsStore.putBool("led", settingLedOutput != 0);
+}
+
+void resetSettings() {
+  settingWarningOutput = 1;
+  settingBuzzerOutput = 1;
+  settingLedOutput = 1;
+  settingsStore.clear();
+  settingsStore.putUShort("version", SETTINGS_VERSION);
+  saveSettings();
+}
+
+void loadSettings() {
+  if (settingsStore.getUShort("version", 0) != SETTINGS_VERSION) {
+    resetSettings();
+    return;
+  }
+  settingWarningOutput = settingsStore.getBool("warning", true) ? 1 : 0;
+  settingBuzzerOutput = settingsStore.getBool("buzzer", true) ? 1 : 0;
+  settingLedOutput = settingsStore.getBool("led", true) ? 1 : 0;
+}
+
+void resetGameState() {
+  stableHole = candidateHole = -1;
+  candidateCount = 0;
+  hit.hole = -1;
+}
+
+void menuResetGame() {
+  resetGameState();
+  Serial.println("Menu: game tracking reset");
+}
+
+void menuShowNodeStatus() {
+  Serial.printf("Menu: Node 1 %s, Node 2 %s\n",
+    nodeOnline[0] ? "online" : "offline", nodeOnline[1] ? "online" : "offline");
+}
+
+void menuShowPositionStatus() {
+  Serial.printf("Menu: position %s, frame %lu\n",
+    position.valid ? "valid" : "unavailable", static_cast<unsigned long>(frameId));
+}
+
+void menuShowBatteryLevel() {
+  const float voltage = analogReadMilliVolts(BATTERY_PIN) / 1000.0f;
+  const int percent = static_cast<int>(constrain(
+    (voltage - BATTERY_EMPTY_VOLTAGE) /
+      (BATTERY_FULL_VOLTAGE - BATTERY_EMPTY_VOLTAGE),
+    0.0f, 1.0f) * 100.0f + 0.5f);
+  char message[24];
+  snprintf(message, sizeof(message), "Battery: %d%%", percent);
+  menu.showToast(message);
+}
+
+void menuShowWifiClients() {
+  char message[24];
+  snprintf(message, sizeof(message), "WiFi devices: %u", WiFi.softAPgetStationNum());
+  menu.showToast(message);
+}
+
+void menuShowSsid() {
+  char message[24];
+  snprintf(message, sizeof(message), "SSID: %s", AP_SSID);
+  menu.showToast(message);
+}
+
+void menuShowPassword() {
+  char message[24];
+  snprintf(message, sizeof(message), "PASS: %.17s", AP_PASSWORD);
+  menu.showToast(message);
+  if (strlen(AP_PASSWORD) > 17) {
+    snprintf(message, sizeof(message), "PASS: %s", AP_PASSWORD + 17);
+    menu.showToast(message);
+  }
+}
+
+int batteryPercent(uint16_t millivolts) {
+  return static_cast<int>(constrain(
+    (millivolts / 1000.0f - BATTERY_EMPTY_VOLTAGE) /
+      (BATTERY_FULL_VOLTAGE - BATTERY_EMPTY_VOLTAGE),
+    0.0f, 1.0f) * 100.0f + 0.5f);
+}
+
+void setRgb(uint8_t red, uint8_t green, uint8_t blue) {
+  if (!RGB_ENABLED) return;
+  analogWrite(RGB_RED_PIN, red);
+  analogWrite(RGB_GREEN_PIN, green);
+  analogWrite(RGB_BLUE_PIN, blue);
+}
+
+void updateAccessPointLed() {
+  const bool lowBattery = batteryPercent(analogReadMilliVolts(BATTERY_PIN)) <= LOW_BATTERY_PERCENT;
+  if (lowBattery) setRgb(255, 0, 0);
+  else if (gameStarted) setRgb(0, 255, 0);
+  else setRgb(0, 0, 255);
+}
+
+void drawBatteryIcon(int x, int y, int percent, uint16_t color, bool disconnected = false) {
+  const int width = 24;
+  const int height = 11;
+  tft.drawRect(x, y, width, height, MENU_COL_DIM);
+  tft.fillRect(x + width, y + 3, 3, 5, MENU_COL_DIM);
+  const int fill = (width - 4) * constrain(percent, 0, 100) / 100;
+  if (fill > 0) tft.fillRect(x + 2, y + 2, fill, height - 4, color);
+  if (disconnected) {
+    tft.drawLine(x - 1, y - 2, x + width + 3, y + height + 2, ST77XX_RED);
+    tft.drawLine(x - 1, y + height + 2, x + width + 3, y - 2, ST77XX_RED);
+  }
+}
+
+void drawWifiIcon(int x, int y, bool connected, uint16_t color) {
+  tft.drawCircle(x, y + 12, 2, color);
+  if (connected) {
+    tft.drawCircle(x, y + 12, 7, color);
+    tft.drawCircle(x, y + 12, 11, color);
+    tft.fillCircle(x, y + 12, 4, MENU_COL_BG);
+  }
+}
+
+void drawIdleStatus(uint32_t now) {
+  if (now - lastStatusDraw < 500) return;
+  lastStatusDraw = now;
+  const bool firstDraw = !idleStatusDrawn;
+  const uint16_t accessPointMv = analogReadMilliVolts(BATTERY_PIN);
+  if (firstDraw) {
+    tft.fillScreen(MENU_COL_BG);
+    tft.fillRect(0, 0, tft.width(), 18, MENU_COL_HEADER_BG);
+    tft.setTextSize(1);
+    tft.setTextColor(MENU_COL_HEADER_TEXT);
+    tft.setCursor(4, 5);
+    tft.print("WACKER5  STATUS");
+    tft.drawFastHLine(0, 19, tft.width(), MENU_COL_SEL_BG);
+    tft.setTextColor(MENU_COL_DIM);
+    tft.setCursor(4, 24);
+    tft.print("POWER");
+    tft.drawFastHLine(4, 36, tft.width() - 8, MENU_COL_DIM);
+    idleStatusDrawn = true;
+  }
+  const uint8_t wifiClients = WiFi.softAPgetStationNum();
+  const int accessPointPercent = batteryPercent(accessPointMv);
+  if (firstDraw || displayedWifiClients != wifiClients) {
+    tft.fillRect(84, 3, 42, 12, MENU_COL_HEADER_BG);
+    tft.setTextColor(MENU_COL_HEADER_TEXT);
+    tft.setCursor(88, 5);
+    tft.printf("W:%u", wifiClients);
+    displayedWifiClients = wifiClients;
+  }
+  if (firstDraw || displayedBatteryPercent[0] != accessPointPercent) {
+    tft.fillRect(4, 40, tft.width() - 8, 20, MENU_COL_BG);
+    tft.setTextColor(ST77XX_CYAN);
+    tft.setCursor(34, 45);
+    tft.print("AP");
+    drawBatteryIcon(4, 44, accessPointPercent, ST77XX_CYAN);
+    tft.setTextColor(MENU_COL_TEXT);
+    tft.setCursor(78, 45);
+    tft.printf("%3d%%", accessPointPercent);
+    displayedBatteryPercent[0] = accessPointPercent;
+  }
+  for (uint8_t i = 0; i < 2; ++i) {
+    const int y = 64 + i * 28;
+    const bool online = nodeOnline[i];
+    const int percent = batteryPercent(nodeBatteryMv[i]);
+    const uint16_t color = i == 0 ? ST77XX_GREEN : ST77XX_YELLOW;
+    const int displayPercent = online ? percent : -1;
+    if (firstDraw || displayedNodeOnline[i] != online ||
+        displayedBatteryPercent[i + 1] != displayPercent) {
+      tft.fillRect(4, y - 2, tft.width() - 8, 22, MENU_COL_BG);
+      tft.setTextColor(online ? color : MENU_COL_DIM);
+      tft.setCursor(34, y + 2);
+      tft.printf("NODE %u", i + 1);
+      drawBatteryIcon(4, y, online ? percent : 0, online ? color : MENU_COL_DIM, !online);
+      drawWifiIcon(102, y - 2, online, online ? color : MENU_COL_DIM);
+      tft.setTextColor(online ? MENU_COL_TEXT : MENU_COL_DIM);
+      tft.setCursor(78, y + 2);
+      if (online) {
+        tft.printf("%3d%%", percent);
+      } else {
+        tft.print("OFF");
+      }
+      displayedNodeOnline[i] = online;
+      displayedBatteryPercent[i + 1] = displayPercent;
+    }
+  }
+  idleStatusDrawn = true;
+}
+
+void playPowerUpTune();
+
+void menuTestBuzzer() {
+  playPowerUpTune();
+  menu.showToast("Buzzer test");
+}
+
+void onMenuSettingChanged(const MenuItem& item) {
+  saveSettings();
+  Serial.printf("Menu: %s = %d\n", item.label, *item.value);
+}
+
+void menuResetSettings() {
+  resetSettings();
+  menu.showToast("Settings reset");
+}
+
+const MenuItem outputItems[] = {
+  TOGGLE("Buzzer output", &settingBuzzerOutput),
+  TOGGLE("Warning LED", &settingLedOutput),
+  TOGGLE("Warning enabled", &settingWarningOutput),
+  ACTION("Test buzzer", menuTestBuzzer),
+  ACTION("Reset settings", menuResetSettings),
+  BACK()
+};
+MENU(outputMenu, "Outputs", outputItems);
+
+const MenuItem statusItems[] = {
+  ACTION("Node status", menuShowNodeStatus),
+  ACTION("Position status", menuShowPositionStatus),
+  ACTION("Battery level", menuShowBatteryLevel),
+  ACTION("WiFi devices", menuShowWifiClients),
+  ACTION("Show SSID", menuShowSsid),
+  ACTION("Show password", menuShowPassword),
+  BACK()
+};
+MENU(statusMenu, "Status", statusItems);
+
+const MenuItem mainItems[] = {
+  ACTION("Reset game", menuResetGame),
+  SUBMENU("Outputs", &outputMenu),
+  SUBMENU("Status", &statusMenu)
+};
+MENU(mainMenu, "Access Point", mainItems);
 
 bool rangeFresh(int i, uint32_t now) {
   return ranges[i].seen && isfinite(ranges[i].metres) && now - ranges[i].time <= RANGE_STALE_MS;
@@ -243,8 +505,10 @@ void updateWarning(uint32_t now) {
         SENSORS[i].y + ranges[i].raw <= DEAD_ZONE_M) warn = true;
   }
   warningActive = warn;
-  if (BUZZER_PIN >= 0) digitalWrite(BUZZER_PIN, warn ? HIGH : LOW);
-  if (WARNING_LED_PIN >= 0) digitalWrite(WARNING_LED_PIN, warn ? HIGH : LOW);
+  if (BUZZER_PIN >= 0) digitalWrite(BUZZER_PIN,
+    PROXIMITY_WARNING_OUTPUT_ENABLED && warn && settingWarningOutput && settingBuzzerOutput ? HIGH : LOW);
+  if (WARNING_LED_PIN >= 0) digitalWrite(WARNING_LED_PIN,
+    PROXIMITY_WARNING_OUTPUT_ENABLED && warn && settingWarningOutput && settingLedOutput ? HIGH : LOW);
 }
 void finishFrame() {
   const uint32_t now = millis();
@@ -307,7 +571,9 @@ void rememberNodeMac(uint8_t node, const uint8_t *mac) {
 void sendMeasure() {
   wam::ControlPacket p = {};
   p.magic = wam::PACKET_MAGIC; p.version = wam::PROTOCOL_VERSION; p.type = wam::MEASURE;
-  p.nodeId = activeNode; p.session = bootId; p.sequence = sequence; p.crc = wam::packetCrc(p);
+  p.nodeId = activeNode; p.session = bootId; p.sequence = sequence;
+  p.reserved = gameStarted ? wam::LED_GAME : wam::LED_IDLE;
+  p.crc = wam::packetCrc(p);
   const uint8_t node = activeNode - 1;
   esp_now_send(nodeMacKnown[node] ? nodeMac[node] : BROADCAST_MAC,
     reinterpret_cast<const uint8_t *>(&p), sizeof(p));
@@ -321,7 +587,8 @@ bool takeReply() {
   if (!r.waiting || wam::deadlineReached(r.arrivedMs, deadline + 1)) return false;
   if (p.magic != wam::PACKET_MAGIC || p.version != wam::PROTOCOL_VERSION || p.type != wam::RANGES ||
       p.nodeId != activeNode || p.session != bootId || p.sequence != sequence ||
-      p.validMask > 1 || p.reserved != 0 || p.crc != wam::packetCrc(p)) return false;
+      p.validMask > 1 || p.crc != wam::packetCrc(p)) return false;
+  nodeBatteryMv[activeNode - 1] = p.batteryMv;
   storePending(activeNode == 1 ? 0 : 2, p.validMask ? p.distanceMm / 1000.0f : NAN);
   rememberNodeMac(activeNode - 1, r.mac); nodeMisses[activeNode - 1] = 0;
   nodeOnline[activeNode - 1] = true; nodeLastSeen[activeNode - 1] = millis();
@@ -469,14 +736,40 @@ void handleConfigJson() {
   }
   addCorsHeaders(); server.send(200, "application/json", s + "]}");
 }
+void playPowerUpTune() {
+  if (BUZZER_PIN < 0 || !settingWarningOutput || !settingBuzzerOutput) return;
+  // BUZZER_PIN is wired to an active buzzer, so it needs a DC pulse rather
+  // than tone(), which is intended for passive speakers.
+  constexpr uint16_t durations[] = {90, 90, 90, 180};
+  for (uint16_t duration : durations) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(duration);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(35);
+  }
+}
+void menuButtonBeep() {
+  if (BUZZER_PIN < 0 || !settingBuzzerOutput) return;
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(35);
+  digitalWrite(BUZZER_PIN, LOW);
+}
 void resetGameTracking() {
-  stableHole = candidateHole = -1; candidateCount = 0;
-  hit.hole = -1; // invalidate the previous event without rewinding its ID.
+  resetGameState(); // invalidate the previous event without rewinding its ID.
+  gameStarted = true;
   addCorsHeaders(); server.send(204, "text/plain", "");
 }
 void handleOptions() { addCorsHeaders(); server.send(204, "text/plain", ""); }
 void setup() {
   Serial.begin(115200); delay(300);
+  settingsStore.begin("access-point", false);
+  loadSettings();
+  SPI.begin(TFT_SCLK, TFT_MISO, TFT_MOSI, TFT_CS);
+  tft.initR(INITR_BLACKTAB);
+  tft.setRotation(0);
+  menu.onChange(onMenuSettingChanged);
+  menu.onButtonPress(menuButtonBeep);
+  menu.begin(&mainMenu);
   trackingOptions.jumpLimit = POSITION_JUMP_LIMIT_M;
   trackingOptions.confirmationRadius = POSITION_CONFIRM_RADIUS_M;
   trackingOptions.modeWindow = POSITION_MODE_WINDOW;
@@ -495,14 +788,15 @@ void setup() {
     pinMode(RGB_GREEN_PIN, OUTPUT);
     pinMode(RGB_BLUE_PIN, OUTPUT);
   }
+  setRgb(0, 0, 255);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
   if (BUZZER_PIN >= 0) { pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW); }
   if (WARNING_LED_PIN >= 0) { pinMode(WARNING_LED_PIN, OUTPUT); digitalWrite(WARNING_LED_PIN, LOW); }
+  lastMenuActivity = millis();
   bootId = esp_random(); if (bootId == 0) bootId = 1;
 
-  tone(BUZZER_PIN, 10000,300);
-  tone(BUZZER_PIN, 15000,300);
+  playPowerUpTune();
 
   WiFi.mode(WIFI_AP); WiFi.setSleep(false);
   esp_now_peer_info_t broadcast = {};
@@ -523,9 +817,24 @@ void setup() {
   server.begin(); Serial.println("Ready: connect to Wacker5, open http://192.168.4.1/");
 }
 void loop() {
-  runMeasurementStateMachine();
   const uint32_t now = millis();
+  if (menu.update()) {
+    lastMenuActivity = now;
+    if (!menuVisible) {
+      menuVisible = true;
+      idleStatusDrawn = false;
+      menu.redraw();
+    }
+  }
+  if (menuVisible && now - lastMenuActivity >= 5000) {
+    menuVisible = false;
+    idleStatusDrawn = false;
+    lastStatusDraw = 0;
+  }
+  runMeasurementStateMachine();
   for (int i = 0; i < 2; ++i) if (nodeOnline[i] && now - nodeLastSeen[i] > RANGE_STALE_MS) nodeOnline[i] = false;
   updateWarning(now);
+  updateAccessPointLed();
+  if (!menuVisible) drawIdleStatus(now);
   server.handleClient(); delay(1);
 }
