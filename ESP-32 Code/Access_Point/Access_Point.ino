@@ -17,6 +17,7 @@
 #include "RangeProtocol.h"
 #include "Tracking.h"
 #include "Dashboard.h"
+#include "image.h"
 
 // --------------------- EDIT YOUR SETUP HERE -------------------------
 // Preserve the GPIOs already configured for the centre board.
@@ -407,6 +408,16 @@ void drawIdleStatus(uint32_t now) {
 
 void playPowerUpTune();
 
+void showPowerOnImage() {
+  tft.drawRGBBitmap(0, 0, epd_bitmap_Screenshot_2026_11_03_at_11, 128, 160);
+  delay(5000);
+}
+
+void menuShowPowerOnImage() {
+  showPowerOnImage();
+  menu.redraw();
+}
+
 void menuTestBuzzer() {
   playPowerUpTune();
   menu.showToast("Buzzer test");
@@ -439,6 +450,7 @@ const MenuItem statusItems[] = {
   ACTION("WiFi devices", menuShowWifiClients),
   ACTION("Show SSID", menuShowSsid),
   ACTION("Show password", menuShowPassword),
+  ACTION("Show image", menuShowPowerOnImage),
   BACK()
 };
 MENU(statusMenu, "Status", statusItems);
@@ -775,6 +787,7 @@ void setup() {
   SPI.begin(TFT_SCLK, TFT_MISO, TFT_MOSI, TFT_CS);
   tft.initR(INITR_BLACKTAB);
   tft.setRotation(0);
+  showPowerOnImage();
   menu.onChange(onMenuSettingChanged);
   menu.onButtonPress(menuButtonBeep);
   menu.begin(&mainMenu);
