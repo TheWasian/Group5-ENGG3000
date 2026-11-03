@@ -39,7 +39,7 @@ constexpr bool RGB_ENABLED = true;
 constexpr int BUTTON_PIN = 40;
 constexpr int BUZZER_PIN = 17;       // Active buzzer; -1 disables output.
 constexpr int WARNING_LED_PIN = 7; // -1 disables output.
-constexpr bool PROXIMITY_WARNING_OUTPUT_ENABLED = false;
+constexpr bool PROXIMITY_WARNING_OUTPUT_ENABLED = true;
 constexpr float BATTERY_EMPTY_VOLTAGE = 1.0f;
 constexpr float BATTERY_FULL_VOLTAGE = 1.4f;
 constexpr int LOW_BATTERY_PERCENT = 20;
@@ -53,9 +53,9 @@ constexpr float PLAY_AREA_WIDTH_M = 1.50f;
 constexpr float PLAY_AREA_DEPTH_M = 1.40f;
 // Measured room layout (sensors 30 cm apart, 68 cm high, side boxes angled in):
 // sensor line tape 10 cm in front of the boxes, 10 cm hatched dead-zone strip,
-// play area ends 1.5 m past the sensor line. Boxes sit at y = 0.30 m, so the
-// dead zone ends at y = 0.50 m and play ends at y = 1.90 m.
-constexpr float DEAD_ZONE_M = 0.50f; // Buzzer zone: within 20 cm of the boxes.
+// play area ends 1.5 m past the sensor line. Boxes sit at y = 0.30 m; the
+// brief's dead zone ends 60 cm from the screen; the taped play area ends at y = 1.90 m.
+constexpr float DEAD_ZONE_M = 0.60f; // Buzzer zone: within 60 cm of the screen (brief).
 constexpr float SENSOR_GAP_LEFT_M = 0.30f;
 constexpr float SENSOR_GAP_RIGHT_M = 0.30f;
 constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
@@ -76,7 +76,7 @@ constexpr float GAME_AREA_X_MAX_M = AP_X_M + 0.30f;
 // Holes start 50 cm in front of the boxes: closer than that, the narrow beams
 // cannot all see the player, so the front row would keep dropping out.
 constexpr float GAME_AREA_START_Y_M = 0.80f;
-constexpr float GAME_AREA_END_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M;
+constexpr float GAME_AREA_END_Y_M = 1.90f; // Taped floor layout; keeps hole centres where they are marked.
 // Aim both side sensors at this point. Physically rotate them to match.
 constexpr float AIM_X_M = AP_X_M;
 constexpr float AIM_Y_M = (GAME_AREA_START_Y_M + GAME_AREA_END_Y_M) / 2; // Middle of the holes.
@@ -117,6 +117,10 @@ constexpr uint32_t RANGE_STALE_MS = 500;
 constexpr uint32_t MAX_FRAME_SPAN_MS = 300;
 constexpr float HOLE_HYSTERESIS_M = 0.05f;
 constexpr uint8_t STABLE_FRAMES = 2;
+// Raw (unfiltered) dead-zone evidence must repeat on this many consecutive
+// frames before it sounds the alarm, so one stray echo cannot beep. The
+// filtered position still warns immediately. 2 frames adds ~150 ms at most.
+constexpr uint8_t RAW_WARNING_CONFIRM_FRAMES = 2;
 constexpr uint32_t HIT_COOLDOWN_MS = 250;
 // Sensors fire one at a time; each gets a fixed slot measured from its trigger
 // so the previous ping has died away before the next fires. One frame is three
@@ -530,15 +534,22 @@ void updateGamePosition(uint32_t now) {
     ++hit.id; hit.time = now; hit.hole = measured; hit.y = position.y;
   }
 }
-void updateWarning(uint32_t now) {
-  bool warn = (positionFresh(now) && position.y <= DEAD_ZONE_M) ||
-    (rawPosition.valid && now - frameTime <= RANGE_STALE_MS && rawPosition.y <= DEAD_ZONE_M);
+uint8_t rawWarningStreak = 0;
+// Evaluated once per frame. Held (bridged) ranges are skipped so one spike
+// repeated by the missed-echo hold cannot count as two frames.
+bool rawWarningEvidence(uint32_t now) {
+  if (rawPosition.valid && rawPosition.y <= DEAD_ZONE_M) return true;
   // Only declare a direct-range warning when even the farthest possible y
   // of this echo lies inside the dead zone. Use raw data to avoid filter lag.
   for (int i = 0; i < 3; ++i) {
-    if (ranges[i].seen && isfinite(ranges[i].raw) && now - ranges[i].time <= RANGE_STALE_MS &&
-        SENSORS[i].y + ranges[i].raw <= DEAD_ZONE_M) warn = true;
+    if (!rangeHeld[i] && ranges[i].seen && isfinite(ranges[i].raw) && now - ranges[i].time <= RANGE_STALE_MS &&
+        SENSORS[i].y + ranges[i].raw <= DEAD_ZONE_M) return true;
   }
+  return false;
+}
+void updateWarning(uint32_t now) {
+  const bool rawConfirmed = rawWarningStreak >= RAW_WARNING_CONFIRM_FRAMES && now - frameTime <= RANGE_STALE_MS;
+  const bool warn = (positionFresh(now) && position.y <= DEAD_ZONE_M) || rawConfirmed;
   warningActive = warn;
   if (BUZZER_PIN >= 0) digitalWrite(BUZZER_PIN,
     PROXIMITY_WARNING_OUTPUT_ENABLED && warn && settingWarningOutput && settingBuzzerOutput ? HIGH : LOW);
@@ -572,6 +583,8 @@ void finishFrame() {
   position = tracker.update(rawPosition, now, trackingOptions);
   framePeriodMs = frameId ? now - frameTime : 0;
   positionTime = tracker.acceptedMs; frameTime = now; ++frameId;
+  if (!rawWarningEvidence(now)) rawWarningStreak = 0;
+  else if (rawWarningStreak < 255) ++rawWarningStreak;
   updateWarning(now); updateGamePosition(now);
   Serial.printf("POS,%.3f,%.3f,%d,%.3f,%u,%s,%lu\n", position.valid ? position.x : -1,
     position.valid ? position.y : -1, warningActive, position.rms, position.count, position.reason,
