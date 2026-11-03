@@ -50,7 +50,7 @@ const entries = boxes.map(() => {
   return { plot, motion: new MoleMotion(plot.mole) };
 });
 const board = Object.assign(Object.create(ThreeBoard.prototype), {
-  holes: boxes.map(box => ({ getBoundingClientRect() { reads++; return { ...box }; } })),
+  holes: boxes.map(box => ({ style: { setProperty() {} }, getBoundingClientRect() { reads++; return { ...box }; } })),
   camera, entries, layoutDirty: true, nextLayoutCheck: 0, layoutBoxes: null, layoutViewport: null,
   backdrop: { garden: { setOpenings(values) { this.openings = values; } } },
 });

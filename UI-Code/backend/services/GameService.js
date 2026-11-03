@@ -126,16 +126,13 @@ var GameService = {
     this.moleSpawnedAt = performance.now();
 
     var renderStart = performance.now();
-    GameView.showMole(hole, type, MoleService.moleVariant(type, g.level));
+    var staysUp = MoleService.moleLifetime(type, LevelingService.levelingLifetime(g.level));
+    GameView.showMole(hole, type, MoleService.moleVariant(type, g.level), staysUp);
     if (typeof FrontendMetrics !== "undefined") {
       FrontendMetrics.recordMoleRender(performance.now() - renderStart);
     }
 
     // Escaped: only a normal mole costs a life
-    var staysUp = MoleService.moleLifetime(
-      type,
-      LevelingService.levelingLifetime(g.level)
-    );
     clearTimeout(this.moleLifetimeTimer);
     var self = this;
     this.moleLifetimeTimer = setTimeout(function () {

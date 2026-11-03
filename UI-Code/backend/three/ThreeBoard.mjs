@@ -118,7 +118,12 @@ export class ThreeBoard {
     this.layoutBoxes = boxes;
     this.layoutViewport = viewport;
     const openings = this.entries.map((entry, index) => {
-      return layoutGroundPlot(entry.plot, this.camera, viewport, boxes[index]);
+      const opening = layoutGroundPlot(entry.plot, this.camera, viewport, boxes[index]);
+      entry.plot.root.updateMatrixWorld(true);
+      const anchor = entry.plot.root.localToWorld(new THREE.Vector3(0, 2.5, 0)).project(this.camera);
+      this.holes[index].style.setProperty("--mole-timer-x", ((anchor.x + 1) * viewport.width / 2 - boxes[index].left) + "px");
+      this.holes[index].style.setProperty("--mole-timer-y", ((1 - anchor.y) * viewport.height / 2 - boxes[index].top - 12) + "px");
+      return opening;
     });
     this.backdrop.garden.setOpenings(openings);
     this.backdrop.shadowDirty = true;
