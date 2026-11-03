@@ -408,8 +408,23 @@ void drawIdleStatus(uint32_t now) {
 
 void playPowerUpTune();
 
+uint16_t swapImageRedBlue(uint16_t color) {
+  return static_cast<uint16_t>(
+    ((color & 0x001F) << 11) |
+    (color & 0x07E0) |
+    ((color & 0xF800) >> 11));
+}
+
 void showPowerOnImage() {
-  tft.drawRGBBitmap(0, 0, epd_bitmap_Screenshot_2026_11_03_at_11, 128, 160);
+  static uint16_t row[128];
+  for (uint16_t y = 0; y < 160; ++y) {
+    for (uint16_t x = 0; x < 128; ++x) {
+      row[x] = swapImageRedBlue(
+        pgm_read_word(&epd_bitmap_Screenshot_2026_11_03_at_11[y * 128 + x]));
+    }
+    tft.drawRGBBitmap(0, y, row, 128, 1);
+    delay(1);
+  }
   delay(5000);
 }
 

@@ -13,6 +13,7 @@ constexpr int BATTERY_PIN = 4;
 constexpr int RGB_RED_PIN = 25;
 constexpr int RGB_GREEN_PIN = 15;
 constexpr int RGB_BLUE_PIN = 16;
+constexpr int BUZZER_PIN = 17; // Active buzzer; -1 disables output.
 constexpr int LOW_BATTERY_PERCENT = 20;
 constexpr uint8_t NODE_ID = 2;
 const char *AP_SSID = "Wacker5";
@@ -31,6 +32,17 @@ portMUX_TYPE requestLock = portMUX_INITIALIZER_UNLOCKED;
 wam::ControlPacket espNowRequest;
 uint8_t espNowSender[6];
 volatile bool espNowWaiting = false;
+
+void playPowerUpTune() {
+  if (BUZZER_PIN < 0) return;
+  constexpr uint16_t durations[] = {90, 90, 90, 180};
+  for (uint16_t duration : durations) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(duration);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(35);
+  }
+}
 
 int batteryPercent(uint16_t millivolts) {
   return static_cast<int>(constrain(
@@ -156,7 +168,9 @@ void setup() {
   pinMode(TRIG_PIN, OUTPUT); digitalWrite(TRIG_PIN, LOW); pinMode(ECHO_PIN, INPUT);
   analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
   pinMode(RGB_RED_PIN, OUTPUT); pinMode(RGB_GREEN_PIN, OUTPUT); pinMode(RGB_BLUE_PIN, OUTPUT);
+  if (BUZZER_PIN >= 0) { pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW); }
   setNodeLed(wam::LED_IDLE);
+  playPowerUpTune();
   WiFi.mode(WIFI_STA); WiFi.setSleep(false);
   esp_wifi_set_channel(wam::ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
   if (!WiFi.config(LOCAL_IP, AP_IP, SUBNET)) {
