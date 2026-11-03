@@ -37,7 +37,7 @@ var GameView = {
   },
 
 //Fixed a bit of the glow not working
-  showMole: function (holeIndex, moleType, variantClass) {
+  showMole: function (holeIndex, moleType, variantClass, lifetime) {
     this.hideAllMoles();
     var hole = this.holes[holeIndex];
     if (!hole) return;
@@ -50,9 +50,31 @@ var GameView = {
     if (typeof window !== "undefined" && window.MoleBoard3D) {
       window.MoleBoard3D.show(holeIndex, moleType, variantClass || "");
     }
+    if (Number.isFinite(lifetime) && lifetime > 0) {
+      var bar = hole.querySelector(".mole-timer");
+      if (!bar) {
+        bar = document.createElement("div");
+        bar.className = "mole-timer";
+        bar.setAttribute("role", "img");
+        bar.setAttribute("aria-label", "Time remaining before the mole disappears");
+        bar.innerHTML = '<span class="mole-timer-fill"></span>';
+        hole.appendChild(bar);
+      }
+      bar.hidden = false;
+      this.moleTimerBar = bar;
+      this.moleTimerAnimation = bar.querySelector(".mole-timer-fill").animate([
+        { transform: "scaleX(1)", backgroundColor: "#80d96b", offset: 0 },
+        { transform: "scaleX(0.4)", backgroundColor: "#f4cc56", offset: 0.6 },
+        { transform: "scaleX(0)", backgroundColor: "#f17465", offset: 1 },
+      ], { duration: lifetime, easing: "linear", fill: "forwards" });
+    }
   },
 
   hideAllMoles: function () {
+    if (this.moleTimerAnimation) this.moleTimerAnimation.cancel();
+    if (this.moleTimerBar) this.moleTimerBar.hidden = true;
+    this.moleTimerAnimation = null;
+    this.moleTimerBar = null;
     for (var i = 0; i < this.holes.length; i++) {
       this.holes[i].classList.remove("active");
     }

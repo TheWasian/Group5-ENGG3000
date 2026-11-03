@@ -184,6 +184,10 @@ function element(id) {
     },
     querySelector: (selector) => element(id + selector),
     addEventListener: (name, callback) => listeners.set(name, callback),
+    animate(keyframes, options) {
+      this.animation = { keyframes, options, cancelled: false, cancel() { this.cancelled = true; } };
+      return this.animation;
+    },
     removeAttribute() {},
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 620, height: 440 }),
   };
@@ -222,7 +226,15 @@ for (const [type, skin] of variants) {
   Object.assign(context.GameService.game, { score: 0, lives: 3, level, maxLevel: level });
   context.GameService.spawnMole(type, 0);
   assert.deepEqual(calls.at(-1), ["show", 0, type, skin]);
+  const timerBar = holes[0].querySelector(".mole-timer");
+  const timerAnimation = timerBar.querySelector(".mole-timer-fill").animation;
+  assert.equal(timerBar.hidden, false);
+  assert.equal(timerAnimation.options.duration, context.MoleService.moleLifetime(type, context.LevelingService.levelingLifetime(level)));
+  assert.equal(timerAnimation.keyframes[0].transform, "scaleX(1)");
+  assert.equal(timerAnimation.keyframes.at(-1).transform, "scaleX(0)");
   const result = context.GameService.whackHole(0, "mouse");
+  assert.equal(timerBar.hidden, true);
+  assert.equal(timerAnimation.cancelled, true);
   assert.equal(result.hit, true);
   assert.equal(context.GameService.game.score, type === "golden" ? 200 : type === "bomb" ? 0 : 50);
   assert.equal(context.GameService.game.lives, type === "bomb" ? 2 : 3);

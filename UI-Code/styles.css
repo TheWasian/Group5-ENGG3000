@@ -606,6 +606,35 @@ body.garden-3d-ready::after {
   --soil-rim: #ad8348;
 }
 
+.mole-timer {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 142px);
+  width: 62px;
+  height: 8px;
+  padding: 2px;
+  border: 1px solid #fff8;
+  border-radius: 8px;
+  background: #283528e6;
+  box-shadow: 0 2px 4px #15231555;
+  transform: translateX(-50%);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 4;
+}
+.mole-timer[hidden] { display: none; }
+.mole-timer-fill {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: #80d96b;
+  transform-origin: left center;
+}
+.board-3d-ready .mole-timer {
+  left: var(--mole-timer-x, 50%);
+  top: var(--mole-timer-y, -12px);
+}
+
 .mound {
   position: absolute;
   bottom: 0;
