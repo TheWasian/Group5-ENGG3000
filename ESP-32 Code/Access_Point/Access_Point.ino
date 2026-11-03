@@ -245,11 +245,19 @@ void menuResetGame() {
 }
 
 void menuShowNodeStatus() {
+  char message[24];
+  snprintf(message, sizeof(message), "N1:%s N2:%s",
+    nodeOnline[0] ? "ON" : "OFF", nodeOnline[1] ? "ON" : "OFF");
+  menu.showToast(message);
   Serial.printf("Menu: Node 1 %s, Node 2 %s\n",
     nodeOnline[0] ? "online" : "offline", nodeOnline[1] ? "online" : "offline");
 }
 
 void menuShowPositionStatus() {
+  const char *status = position.valid ? (position.held ? "HELD" : "VALID") : "NONE";
+  char message[24];
+  snprintf(message, sizeof(message), "Position: %s", status);
+  menu.showToast(message);
   Serial.printf("Menu: position %s, frame %lu\n",
     position.valid ? "valid" : "unavailable", static_cast<unsigned long>(frameId));
 }
@@ -382,7 +390,7 @@ void drawIdleStatus(uint32_t now) {
       tft.setCursor(34, y + 2);
       tft.printf("NODE %u", i + 1);
       drawBatteryIcon(4, y, online ? percent : 0, online ? color : MENU_COL_DIM, !online);
-      drawWifiIcon(102, y - 2, online, online ? color : MENU_COL_DIM);
+      drawWifiIcon(116, y - 2, online, online ? color : MENU_COL_DIM);
       tft.setTextColor(online ? MENU_COL_TEXT : MENU_COL_DIM);
       tft.setCursor(78, y + 2);
       if (online) {

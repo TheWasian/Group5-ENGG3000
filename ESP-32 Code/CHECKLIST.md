@@ -1,9 +1,24 @@
 # Three-ESP32 Whack-a-Mole tracker
 
-## Upload and connect
+## Setup and connect to the access point
 
 The main **Access_Point** now includes the cone dashboard and game API in one
 firmware. The old separate `Access_Point_Cones` program has been retired.
+
+### Before starting
+
+You need:
+
+- three ESP32-S3 boards and their USB data cables;
+- one sensor connected to each board;
+- Arduino IDE with the **ESP32 by Espressif Systems** board package installed,
+  or an equivalent PlatformIO Arduino environment; and
+- the three sketches and their matching header files from this folder.
+
+The current sensor wiring is the same on every board: trigger to **GPIO 10**
+and echo to **GPIO 3**. Check the sensor's supply voltage and echo logic level
+before connecting it to an ESP32. Do not power an ESP32 from a charge-only USB
+cable.
 
 | Board | Sketch | IP | Trigger / Echo GPIO |
 |---|---|---|---|
@@ -15,16 +30,48 @@ Each board has one ultrasonic sensor. The AP keeps buzzer GPIO 17 and warning LE
 GPIO 7; set an optional output to `-1` if absent. These are the pins currently in
 your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
 
-1. Check the geometry below, select the actual board/port in Arduino IDE and
-   upload `Access_Point.ino` to the centre ESP32. **Reflash both nodes too**:
-   the game AP now talks to them over ESP-NOW, which older node sketches ignore.
-   The nodes still answer the calibration logger over UDP.
-2. Power all three boards. Connect the PC to **Wacker5**, password
-   **PasswordWacker123456!**.
-3. Open **http://192.168.4.1/** (or `/cones`) for the live dashboard. It is served
-   from ESP flash: no internet, SD card or separate filesystem upload is needed.
-4. Run `GameLauncher.bat` for the game and reload its browser page to load the
+### Flash the boards
+
+1. Disconnect the sensor wiring if it prevents access to the board's USB port.
+2. In Arduino IDE, select **ESP32S3 Dev Module** (or the exact ESP32-S3 board
+   variant), select the board's actual USB port, and set the monitor speed to
+   **115200**. Enable USB CDC on boot if the selected board exposes that option.
+3. Open `Access_Point/Access_Point.ino` and upload it to the centre board.
+   Keep `Access_Point/Dashboard.h`, `Positioning.h`, `RangeProtocol.h`,
+   `SensorMounting.h`, and `Tracking.h` in the same sketch folder.
+4. Open and upload `Sensor_Node_1/Sensor_Node_1.ino` to the left board, then
+   upload `Sensor_Node_2/Sensor_Node_2.ino` to the right board. Keep each node's
+   `RangeProtocol.h` beside its sketch. **Reflash both nodes whenever the AP
+   firmware is updated**, because the game AP communicates with them over
+   ESP-NOW; older node sketches are not compatible.
+5. After uploading, reconnect the sensors and power the centre board first,
+   followed by both nodes. The nodes automatically retry joining the AP.
+
+### Connect and verify
+
+1. Wait for the centre board's serial monitor to show
+   `Ready: connect to Wacker5, open http://192.168.4.1/`. The AP creates its
+   own Wi-Fi network; internet access is not required.
+2. On the computer or phone, open the Wi-Fi list and connect to **Wacker5**
+   using password **PasswordWacker123456!**. Leave the client connected to
+   Wacker5 while using the dashboard or game; switching to another network
+   makes `192.168.4.1` unreachable.
+3. Open **http://192.168.4.1/** (or **http://192.168.4.1/cones**) for the live
+   dashboard. It is served from ESP flash, so no internet, SD card, or separate
+   filesystem upload is needed.
+4. Confirm the dashboard shows both nodes online and that
+   **http://192.168.4.1/api/config** loads. The centre board is `192.168.4.1`,
+   Node 1 is `192.168.4.101`, and Node 2 is `192.168.4.102`; these are static
+   addresses on the Wacker5 network and are not addresses to enter in the
+   computer's Wi-Fi settings.
+5. Run `GameLauncher.bat` for the game and reload its browser page to load the
    updated backend. The game and cone page use the same AP simultaneously.
+
+If Wacker5 is not visible, restart the centre board and check its serial output
+for `ERROR: failed to start AP/ESP-NOW.` If the dashboard loads but a node is
+offline, check that the node is powered, its sensor wiring is correct, and its
+serial monitor repeatedly reports `Connecting to Wacker5...`; then confirm the
+SSID, password, and channel remain unchanged in all three sketches.
 
 The current website (`gameLogic.js`) and the modular `main.js` backend now share
 `SensorService.js`. The current index loads it before the game script. Both
