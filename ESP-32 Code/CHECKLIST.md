@@ -30,6 +30,26 @@ Each board has one ultrasonic sensor. The AP keeps buzzer GPIO 17 and warning LE
 GPIO 7; set an optional output to `-1` if absent. These are the pins currently in
 your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
 
+### Close proximity warning
+
+The centre access point sounds its active buzzer and flashes its RGB LED red
+together when **any sensor reports a fresh distance of 60 cm or less**. Distance
+is from the sensor faces, not the screen, and no triangulated position is needed.
+The separate warning LED on GPIO 7 follows the same 250 ms ON / 250 ms OFF pattern.
+The warning clears when all fresh distances exceed 63 cm or the close readings
+expire. The 3 cm release margin prevents chatter at the boundary. Normal status
+colours resume afterwards. The remote nodes' lights and buzzers are unchanged.
+
+The settings are near the top of `Access_Point/Access_Point.ino`:
+`PROXIMITY_WARNING_DISTANCE_M = 0.60f`, `PROXIMITY_WARNING_RELEASE_MARGIN_M = 0.03f`,
+and `PROXIMITY_WARNING_HALF_PERIOD_MS = 250`. These do not change sensor timing
+or the game-area dimensions. Hits are suppressed while the proximity warning is active.
+
+On the centre board's **Outputs** menu, keep **Warning enabled**, **Buzzer output**,
+and **Warning LED** on. Saved off settings persist after an upload; **Reset settings**
+restores them. For this warning-only change, reflash just the access point with
+`ProximityWarning.h` included; existing compatible nodes need no reflash.
+
 ### Flash the boards
 
 1. Disconnect the sensor wiring if it prevents access to the board's USB port.
@@ -38,12 +58,12 @@ your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
    **115200**. Enable USB CDC on boot if the selected board exposes that option.
 3. Open `Access_Point/Access_Point.ino` and upload it to the centre board.
    Keep `Access_Point/Dashboard.h`, `Positioning.h`, `RangeProtocol.h`,
-   `SensorMounting.h`, and `Tracking.h` in the same sketch folder.
+   `SensorMounting.h`, `Tracking.h`, and `ProximityWarning.h` in the same sketch folder.
 4. Open and upload `Sensor_Node_1/Sensor_Node_1.ino` to the left board, then
    upload `Sensor_Node_2/Sensor_Node_2.ino` to the right board. Keep each node's
-   `RangeProtocol.h` beside its sketch. **Reflash both nodes whenever the AP
-   firmware is updated**, because the game AP communicates with them over
-   ESP-NOW; older node sketches are not compatible.
+   `RangeProtocol.h` beside its sketch. Reflash both nodes when updating the
+   communication protocol or migrating from the older UDP-only game firmware.
+   AP-only warning changes do not require reflashing compatible ESP-NOW nodes.
 5. After uploading, reconnect the sensors and power the centre board first,
    followed by both nodes. The nodes automatically retry joining the AP.
 

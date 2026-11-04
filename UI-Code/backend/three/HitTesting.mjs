@@ -6,7 +6,7 @@ const bounds = new THREE.Box3();
 const corner = new THREE.Vector3();
 
 // How far (in screen pixels) from the hammer head a mole can still be hit
-export const HIT_RADIUS_PX = 45;
+export const HIT_RADIUS_PX = 65;
 const RING_DIRECTIONS = 12;
 
 // Centre first, then rings outward so a mole right under the hammer always wins

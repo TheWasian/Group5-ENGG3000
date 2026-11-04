@@ -11,3 +11,6 @@ tmp/tests/tracking_test
 g++ -std=c++11 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
   'ESP-32 Code/tests/pair_selection_test.cpp' -o tmp/tests/pair_selection_test
 tmp/tests/pair_selection_test
+g++ -std=c++11 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
+  'ESP-32 Code/tests/proximity_warning_test.cpp' -o tmp/tests/proximity_warning_test
+tmp/tests/proximity_warning_test
