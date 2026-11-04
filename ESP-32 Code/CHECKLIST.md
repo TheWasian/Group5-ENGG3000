@@ -30,6 +30,31 @@ Each board has one ultrasonic sensor. The AP keeps buzzer GPIO 17 and warning LE
 GPIO 7; set an optional output to `-1` if absent. These are the pins currently in
 your files. Keep all `.h` files beside the `.ino` when opening/copying a sketch.
 
+### Physical placement: spacing and angles
+
+Use the player's left and right **while facing the screen**. Place all three
+sensor reference points on a straight line parallel to the screen, **30 cm in
+front of it**, with the sensors level and at the same height.
+
+| Sensor | Spacing from centre AP | Horizontal aim relative to straight out from the screen |
+|---|---|---|
+| Left / Node 1 | **30 cm to the left** | **15.9° inward**, towards the centre of the play area (`+15.9°`) |
+| Centre / Access Point | Centre reference | **0°**, straight towards the player |
+| Right / Node 2 | **30 cm to the right** | **15.9° inward**, towards the centre of the play area (`-15.9°`) |
+
+This gives **30 cm between each adjacent pair** and **60 cm from the left sensor
+reference to the right sensor reference**. Measure between matching reference
+centres, not the sides of the boxes. With the current **5.5 cm sensor-face
+setback** in the firmware, use the horn-mouth centres as those references and
+verify that the fitted transducers are recessed by that amount. If measuring
+directly at the metal sensor faces instead, set the setbacks to zero.
+
+The side sensors aim at a point on the centre line **135 cm from the screen**,
+or **105 cm in front of the sensor reference line**. The 15.9° is the physical
+rotation of each side unit; it is separate from the model's **±25° cone
+half-angle**. See [Sensor spacing and aiming](#sensor-spacing-and-aiming-edit-one-file)
+for the firmware settings to update if your measured layout differs.
+
 ### Close proximity warning
 
 The centre access point sounds its active buzzer and flashes its RGB LED red
@@ -113,7 +138,7 @@ constexpr float SENSOR_GAP_RIGHT_M = 0.30f;
 constexpr float SENSOR_DISTANCE_FROM_SCREEN_M = 0.30f;
 ```
 
-Values are metres. These preserve the measured 30 cm left gap, 30 cm right gap
+Values are metres. These configure the 30 cm left gap, 30 cm right gap
 and 30 cm screen distance. Measure between matching centre reference points,
 not breadboard edges. Use metal sensor faces, or horn-mouth centres with the
 setback correction below; do not mix references.
@@ -125,6 +150,7 @@ left edge of the physical 1.5 m-wide area; `y=0` is the screen and +y points
 towards the player. The reference points are at `(0.45,0.30)`, `(0.75,0.30)` and
 `(1.05,0.30)` m. The AP faces straight along +y. Side sensors aim at
 `AIM_X_M=0.75`, `AIM_Y_M=1.35` (middle of the holes), giving about **15.9° inward on both sides**.
+The angle is `atan(30 / (135 - 30)) = 15.9°`, using centimetres throughout.
 Physically aim them to match, or set measured
 angles using `SENSOR_BEARING_TRIM_DEG` (added to the nominal bearings).
 Positive bearing turns towards the player's right.
@@ -143,7 +169,7 @@ near the spacing settings in `Access_Point/Access_Point.ino`, in the order
 **Node 1, centre AP, Node 2**:
 
 ```cpp
-constexpr float SENSOR_FACE_SETBACK_M[3] = {0.0f, 0.0f, 0.0f};
+constexpr float SENSOR_FACE_SETBACK_M[3] = {0.055f, 0.055f, 0.055f};
 constexpr float SENSOR_BEARING_TRIM_DEG[3] = {0.0f, 0.0f, 0.0f};
 ```
 
@@ -151,14 +177,16 @@ The setback is the measured axial distance from the front horn rim to the
 fitted metal transducer faces (use their midpoint as the sensor centre).
 If the spacing and screen distance describe horn-mouth centres, enter that
 recess in metres for each sensor. If they already describe the metal faces,
-leave setback at zero. Identical housings can use equal values once the fitted
-recess is measured. Mixed reference measurements must first be made consistent.
+set the setback to zero. The current firmware uses **5.5 cm on all three
+sensors**; verify this against the fitted hardware before using it. Identical
+housings can use equal values once the fitted recess is measured. Mixed
+reference measurements must first be made consistent.
 
 The shared [Onshape model](https://cad.onshape.com/documents/96b2d6f588a1a8ec8a08cacf/w/d37ad5a438624d96a1035ca8/e/80441341eebd373975b8971e)
 has a measured 70 mm separation between its Front and Plane 1 reference planes.
-That does **not** establish where the fitted transducer faces sit. Defaults
-remain zero pending a physical recess measurement and confirmation of the
-spacing/screen-distance reference; no unverified 70 mm correction is enabled.
+That does **not** establish where the fitted transducer faces sit. The configured
+55 mm setback is separate from that CAD dimension; do not substitute 70 mm
+without measuring the actual recess and confirming the spacing reference.
 
 For actual bearing `theta`, the effective sensor origin becomes:
 
@@ -196,8 +224,8 @@ farther from the screen, independently of the physical area and warning zone:
 ```cpp
 constexpr float GAME_AREA_X_MIN_M = AP_X_M - 0.30f; // 0.45 m
 constexpr float GAME_AREA_X_MAX_M = AP_X_M + 0.30f; // 1.05 m
-constexpr float GAME_AREA_START_Y_M = 1.00f;
-constexpr float GAME_AREA_END_Y_M = DEAD_ZONE_M + PLAY_AREA_DEPTH_M; // 2.00 m
+constexpr float GAME_AREA_START_Y_M = 0.80f;
+constexpr float GAME_AREA_END_Y_M = 1.90f;
 ```
 
 All four settings are near the top of `Access_Point.ino`. The dashboard's
@@ -207,21 +235,22 @@ tooltips also show their physical target centres. The on-screen 2-column,
 
 | Visible holes | Internal IDs | Left/right of centre sensor | From screen |
 |---|---|---|---|
-| 1 / 2 (near) | 0 / 1 | 15 cm left / 15 cm right | 116.7 cm |
-| 3 / 4 (middle) | 2 / 3 | 15 cm left / 15 cm right | 150.0 cm |
-| 5 / 6 (far) | 4 / 5 | 15 cm left / 15 cm right | 183.3 cm |
+| 1 / 2 (near) | 0 / 1 | 15 cm left / 15 cm right | 98.3 cm |
+| 3 / 4 (middle) | 2 / 3 | 15 cm left / 15 cm right | 135.0 cm |
+| 5 / 6 (far) | 4 / 5 | 15 cm left / 15 cm right | 171.7 cm |
 
 Mark these six centres on the floor to test. Left/right divides at `x=0.75 m`;
-row boundaries are `y=1.333` and `1.667 m`. The grid accepts x from 0.45 to
-1.05 m and y over 1.00 through 2.00 m. It uses 5 cm boundary hysteresis and two
+row boundaries are approximately `y=1.167` and `1.533 m`. The grid accepts x from 0.45 to
+1.05 m and y over 0.80 through 1.90 m. It uses 5 cm boundary hysteresis and two
 consecutive fresh frames for a changed cell. Outside coordinates do not score
-and are never clamped into a hole. All six centres have three-beam coverage in
-the configured point-reflector model; the entire rectangles are not guaranteed
-to have that coverage. Confirm with the actual mounting and person.
+and are never clamped into a hole. Use the cone dashboard to inspect the
+configured overlap at each target, then confirm that at least two sensors
+produce usable readings with the actual mounting and person. Modelled coverage
+does not guarantee a usable echo across the entire target rectangle.
 
 The physical area remains 1.5 m wide and 1.4 m deep after the 0.6 m dead zone,
 as described in the supplied v2.1 brief. **The warning threshold is still 60 cm**
-from the screen. The region from 60 cm to 1 m is trackable but has no hole.
+from the screen. The region from 60 cm to 80 cm is trackable but has no hole.
 
 ## Cone-page hole calibration experiment
 

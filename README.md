@@ -38,15 +38,15 @@ Built by **Group 5 for ENGG3000**, the project brings together embedded firmware
 <table>
   <tr>
     <th>Physical prototype</th>
-    <th>Early game interface</th>
+    <th>Current game interface</th>
   </tr>
   <tr>
     <td align="center"><img src="IMG_3693.webp" alt="Three enclosed ultrasonic sensor units beside a laptop, with the play area marked on the floor" width="360"></td>
-    <td align="center"><img src="WeeklyLogs/Images/ImprovedUI.png.png" alt="Early two-dimensional Whack-A-Mole interface with six holes, score, level, and start button" width="360"></td>
+    <td align="center"><img src="docs/images/current-game.png" alt="Current 3D Whack-A-Mole game in the Sunny Garden environment, showing six holes, an active mole, score, lives, and hit streak" width="360"></td>
   </tr>
 </table>
 
-The prototype photo shows the physical tracking setup. The interface screenshot records an earlier milestone; the current game uses 3D moles and scenery.
+The prototype photo shows the physical tracking setup. The current game screenshot shows the Sunny Garden environment, with 3D moles, six targets, and the score, lives, and hit-streak displays.
 
 <details>
 <summary><strong>View the custom PCB layout</strong></summary>
@@ -98,9 +98,21 @@ On Windows, you can run [GameLauncher.bat](GameLauncher.bat) to connect to Wacke
 
 Keep the computer connected to Wacker5 while playing with sensors, and allow browser requests to the local controller if prompted. Sensor spacing, aiming, and target calibration are covered in the setup guide.
 
+### Sensor cone visualisation and calibration
+
+The [cones.html dashboard](ESP-32%20Code/Access_Point/cones.html) provides a live top-down view of the sensor setup. While connected to **Wacker5**, open [http://192.168.4.1/cones](http://192.168.4.1/cones) (the same dashboard is available at the controller's root address). The page is embedded in the access-point firmware, so there is no separate dashboard server to start.
+
+- **Visualise coverage:** see each sensor's configured cone, overlapping coverage, measured echo arcs, player position, and the six game targets. Switch between the playing-area view and full sensor range to inspect alignment.
+- **Check the setup:** use the live distances, sensor status, and aim angles to compare the physical layout with the firmware settings. The **Where to stand** table gives target positions in centimetres.
+- **Try floor-position calibration:** stand at a chosen spot, select **Calibrate hole N**, and stay still through the countdown and capture. Repeat for the six holes, then walk between them to test detection with a 10, 15, or 20 cm test radius.
+
+**Calibration on this page is a browser-only preview.** Saved positions stay in that browser's local storage; they do not change the ESP32 configuration or the game's hit zones. The cones represent the configured beam model, not measured detection boundaries. Recheck the physical setup and recalibrate after moving sensors. See the [calibration workflow](ESP-32%20Code/CHECKLIST.md#cone-page-hole-calibration-experiment) for details.
+
 ## Hardware
 
 The tracking system uses **three ESP32-S3 boards with one ultrasonic sensor per board**.
+
+The current layout has **30 cm between adjacent sensor references** (60 cm across the outer pair), with the centre sensor facing straight ahead and the side sensors angled **15.9° inward**. The [physical placement guide](ESP-32%20Code/CHECKLIST.md#physical-placement-spacing-and-angles) explains the reference points, screen distance, and housing setback.
 
 | Component | Role | Firmware |
 | --- | --- | --- |
